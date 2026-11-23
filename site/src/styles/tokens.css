@@ -1,6 +1,6 @@
 /*
- * Design tokens. A white page, navy ink, and the logo's colours (cobalt blue,
- * red, highlighter yellow) blended into one gradient for the hero and tile washes.
+ * Design tokens. A white page, navy ink, and a cobalt blue, pink, orange and mint
+ * accent blended into one gradient for the hero and tile washes.
  * scripts/check-contrast.mjs reads this file: keep the light palette first and
  * the dark palette in the media block below it. The gate checks these pairs:
  * --ink on --desk and --card, --red on --card, --on-mark on --mark.
@@ -17,7 +17,7 @@
  * --on-mint   text on --mint
  * --blue      primary buttons; --link: blue as text
  * --navy      the closing section, dark in both themes
- * --g1..--g5  gradient stops, blue to mint through the logo's red
+ * --g1..--g5  gradient stops, blue to mint through pink and orange
  */
 :root {
   color-scheme: light dark;
