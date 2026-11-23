@@ -1,0 +1,553 @@
+---
+import { siGmail } from 'simple-icons';
+import { TOOLS, TOOL_GROUPS } from '../data/site';
+
+// Fictional people and companies; 01 99 00 xx xx is the numbering range reserved for fiction in France.
+const SIGNATURE = [
+  'Camille Durand',
+  'CTO, Halvard Robotics',
+  '+33 1 99 00 12 34',
+  'camille@halvard.example',
+  'linkedin.com/in/c-example',
+];
+// `filled`: empty before, written by the assistant. The others were already there and stay untouched.
+const FIELDS = [
+  { label: 'Name', value: 'Camille Durand', filled: false },
+  { label: 'E-mail', value: 'camille@halvard.example', filled: false, mono: true },
+  { label: 'Company', value: 'Halvard Robotics', filled: true },
+  { label: 'Title', value: 'CTO', filled: true },
+  { label: 'Phone', value: '+33 1 99 00 12 34', filled: true, mono: true },
+  { label: 'LinkedIn', value: 'linkedin.com/in/c-example', filled: true, mono: true },
+];
+// Labels anyone might use: the page speaks to every visitor, not to one user's address book.
+const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
+---
+
+<section class="features wrap" aria-labelledby="features-title">
+  <h2 id="features-title" class="reveal">
+    10 tools, all on your Google Contacts.{' '}
+    <span class="soft">Your assistant picks the right one from what you ask.</span>
+  </h2>
+
+  <div class="grid">
+    <article class="tile wide signature reveal" aria-labelledby="sig-title">
+      <div class="tile-text">
+        <h3 id="sig-title">Add a contact from an e-mail signature</h3>
+        <p class="muted">
+          Ask Claude or ChatGPT to add the sender to Google Contacts. It fills the empty fields from the signature and
+          never overwrites yours. Reading the e-mail needs your assistant's own e-mail connector.
+        </p>
+      </div>
+      <div class="flow">
+        <figure class="mail">
+          <svg class="gmail" role="img" aria-label="Gmail" viewBox="0 0 24 24" fill={`#${siGmail.hex}`}>
+            <path d={siGmail.path} />
+          </svg>
+          <p>Thanks for the call today, I'll send the deck by Friday.</p>
+          <p class="sig">{SIGNATURE.map((line) => <span>{line}</span>)}</p>
+          <figcaption class="visually-hidden">The e-mail you received</figcaption>
+        </figure>
+        <!-- Decorative arrow from the e-mail to the contact; pathLength="1" lets CSS draw it without measuring. -->
+        <svg class="arrow" viewBox="0 0 56 24" aria-hidden="true">
+          <path d="M3 14 C 16 2, 32 24, 50 12" pathLength="1"></path>
+          <path d="M43 6 L 51 12 L 43 18" pathLength="1"></path>
+        </svg>
+        <figure class="card">
+          <dl class="contact">
+            {
+              FIELDS.map((field) => (
+                <div class:list={{ filled: field.filled }}>
+                  <dt>{field.label}</dt>
+                  <dd class:list={{ mono: field.mono }}>{field.value}</dd>
+                </div>
+              ))
+            }
+          </dl>
+          <figcaption class="legend muted">Highlighted: filled in by your assistant</figcaption>
+        </figure>
+      </div>
+    </article>
+
+    <article class="tile labels reveal" aria-labelledby="labels-title">
+      <div class="tile-text">
+        <h3 id="labels-title">Organize with labels</h3>
+        <p class="muted">Create labels and file people in them, in one sentence.</p>
+      </div>
+      <div class="ui" aria-hidden="true">
+        <ul class="chips">
+          {LABELS.map((label, index) => <li style={`--i:${index}`}>{label}</li>)}
+        </ul>
+        <div class="added">
+          <p><span class="avatar">C</span> Camille Durand added to <strong>Clients</strong></p>
+        </div>
+      </div>
+    </article>
+
+    <article class="tile full tools reveal" aria-labelledby="tools-title">
+      <h3 id="tools-title" class="visually-hidden">All tools</h3>
+      <div class="groups">
+        {
+          TOOL_GROUPS.map(({ group, title }) => (
+            <section class="group" aria-label={title}>
+              <h4>{title}</h4>
+              <dl>
+                {TOOLS.filter((tool) => tool.group === group).map((tool) => (
+                  <div>
+                    <dt>
+                      <code>{tool.name}</code>
+                    </dt>
+                    <dd class="muted">{tool.summary}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))
+        }
+      </div>
+    </article>
+  </div>
+</section>
+
+<style>
+  .features {
+    display: grid;
+    gap: var(--space-5);
+    padding-block: var(--space-7) var(--space-6);
+  }
+
+  h2 {
+    max-width: 30ch;
+    /* Breathing room below the hero's fading ribbon. */
+    margin-top: var(--space-5);
+  }
+
+  .grid {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  @media (min-width: 60rem) {
+    .grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .wide {
+      grid-column: span 2;
+    }
+
+    .full {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .tile {
+    position: relative;
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+
+  .tile-text {
+    display: grid;
+    gap: var(--space-2);
+    max-width: 52ch;
+  }
+
+  .tile code {
+    color: var(--link);
+    font-weight: 600;
+  }
+
+  /* Gradient washes: each visual tile glows in a corner with part of the hero's gradient. */
+  .tile::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    width: 75%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.55;
+  }
+
+  .signature::before {
+    left: -15%;
+    bottom: -45%;
+    background: radial-gradient(circle, var(--g4), var(--g3) 45%, transparent 70%);
+  }
+
+  .labels::before {
+    left: -25%;
+    bottom: -45%;
+    background: radial-gradient(circle, var(--g5), var(--g4) 50%, transparent 70%);
+  }
+
+  .tools::before {
+    display: none;
+  }
+
+  /* --- Signature tile --- */
+  .flow {
+    display: grid;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  @media (min-width: 40rem) {
+    .flow {
+      grid-template-columns: 0.9fr auto 1.1fr;
+    }
+  }
+
+  .arrow {
+    justify-self: center;
+    width: 3.5rem;
+    fill: none;
+    stroke: var(--link);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  @media (max-width: 39.99rem) {
+    .arrow {
+      transform: rotate(90deg);
+    }
+  }
+
+  .mail,
+  .card {
+    margin: 0;
+  }
+
+  .mail {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--step--1);
+  }
+
+  .gmail {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .sig {
+    display: grid;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .sig span:first-child {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .card {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .contact {
+    margin: 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--step--1);
+  }
+
+  .contact div {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: var(--space-2);
+    padding: 0.55rem var(--space-3);
+  }
+
+  .contact div + div {
+    border-top: 1px solid var(--line);
+  }
+
+  .contact dt {
+    color: var(--muted);
+  }
+
+  .contact dd {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .contact .filled {
+    background: var(--mark);
+    color: var(--on-mark);
+  }
+
+  .contact .filled dt {
+    color: inherit;
+  }
+
+  @media (max-width: 26rem) {
+    .contact div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+
+  .legend {
+    font-size: var(--step--1);
+  }
+
+  /* --- Labels tile --- */
+  .ui {
+    display: grid;
+    gap: var(--space-2);
+    font-size: var(--step--1);
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--blue);
+    color: var(--on-blue);
+    font-weight: 600;
+  }
+
+  /* --- Labels tile --- */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .chips li {
+    padding: 0.45rem 0.9rem;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    box-shadow: var(--shadow);
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+
+  .chips li:first-child {
+    background: var(--mark);
+    color: var(--on-mark);
+  }
+
+  .added {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .added p {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .added .avatar {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.8em;
+  }
+
+  /* --- Tools tile --- */
+  .groups {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  @media (min-width: 48rem) {
+    .groups {
+      /* The label column holds the longest tool name: it gets the most room. */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.3fr);
+    }
+  }
+
+  .group code {
+    font-size: 0.82em;
+  }
+
+  .group {
+    display: grid;
+    align-content: start;
+    gap: var(--space-3);
+  }
+
+  h4 {
+    margin: 0;
+    font-size: var(--step-0);
+    font-weight: 600;
+  }
+
+  .group dl {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .group dd {
+    margin: 0.1rem 0 0;
+    font-size: var(--step--1);
+    line-height: 1.5;
+  }
+
+  /* Scroll-linked motion: each tile's demo plays as it scrolls into view.
+     Without support, or with reduced motion, the final state is shown. */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      /* The assistant fills the empty fields one after another. */
+      .contact .filled {
+        animation: fill linear both;
+        animation-timeline: view();
+      }
+
+      .contact .filled:nth-child(3) {
+        animation-range: entry 60% cover 30%;
+      }
+
+      .contact .filled:nth-child(4) {
+        animation-range: entry 80% cover 34%;
+      }
+
+      .contact .filled:nth-child(5) {
+        animation-range: entry 100% cover 38%;
+      }
+
+      .contact .filled:nth-child(6) {
+        animation-range: cover 22% cover 42%;
+      }
+
+      /* Hyperframes "split-tilt-cards": the e-mail and the contact arrive tilted apart
+         in 3D and settle flat, side by side, as the tile scrolls in. */
+      .mail {
+        animation: tilt-left linear both;
+        animation-timeline: view();
+        animation-range: entry 10% cover 35%;
+      }
+
+      .card {
+        animation: tilt-right linear both;
+        animation-timeline: view();
+        animation-range: entry 10% cover 35%;
+      }
+
+      /* Hyperframes "svg-path-draw": the arrow draws itself, shaft then head. */
+      .arrow path {
+        stroke-dasharray: 1;
+        animation: draw linear both;
+        animation-timeline: view();
+      }
+
+      .arrow path:first-child {
+        animation-range: entry 70% cover 32%;
+      }
+
+      .arrow path:last-child {
+        animation-range: cover 32% cover 38%;
+      }
+
+      /* The labels drop in one by one, with a spring overshoot. */
+      .chips li {
+        animation: spring-in linear both;
+        animation-timeline: view();
+        animation-range: entry calc(60% + var(--i) * 10%) cover calc(30% + var(--i) * 4%);
+      }
+
+      /* Hyperframes "css-marker-patterns" highlight: the marker sweeps over the chosen label,
+         then the confirmation springs in. */
+      .chips li:first-child {
+        background: linear-gradient(90deg, var(--mark) 50%, var(--card) 50%) 100% 0 / 200% 100% no-repeat;
+        animation: marker-sweep linear both;
+        animation-timeline: view();
+        animation-range: cover 30% cover 40%;
+      }
+
+      .added {
+        animation: spring-in linear both;
+        animation-timeline: view();
+        animation-range: cover 34% cover 46%;
+      }
+    }
+  }
+
+  @keyframes fill {
+    from {
+      background: transparent;
+      color: var(--ink);
+    }
+  }
+
+  @keyframes tilt-left {
+    from {
+      opacity: 0;
+      transform: perspective(900px) translateX(-24px) rotateY(18deg) rotateZ(-3deg);
+    }
+  }
+
+  @keyframes tilt-right {
+    from {
+      opacity: 0;
+      transform: perspective(900px) translateX(24px) rotateY(-18deg) rotateZ(3deg);
+    }
+  }
+
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* A scroll-linked spring: linear timeline, the overshoot lives in the keyframes. */
+  @keyframes spring-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    65% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Not named "marker": that name is rejected in the animation shorthand. */
+  @keyframes marker-sweep {
+    to {
+      background-position: 0 0;
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.97);
+    }
+  }
+</style>

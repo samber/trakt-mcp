@@ -1,0 +1,130 @@
+---
+import { MCP_URL } from '../data/site';
+
+type Props = {
+  /** Unique per instance: the page shows the box twice (hero and closing section). */
+  id: string;
+  /** Id of an existing heading that names the box; when set, the "Connector URL" label is not shown. */
+  labelledBy?: string;
+};
+
+const { id, labelledBy } = Astro.props;
+const labelId = labelledBy ?? `${id}-label`;
+
+// The URL is split for reading: the scheme is dimmed, the host stands out. Copy and
+// selection still take the full URL.
+const { protocol, host, pathname } = new URL(MCP_URL);
+---
+
+<div class="connector" role="group" aria-labelledby={labelId} data-copy-root>
+  {!labelledBy && <p id={labelId} class="label">Connector URL</p>}
+  <div class="url-row">
+    <code class="url" data-url={MCP_URL}
+      ><span class="scheme">{protocol}//</span><span class="host">{host}</span><span class="path">{pathname}</span></code
+    >
+    <!-- Shown by the script below: without JavaScript the URL is still selectable text. -->
+    <button type="button" class="button copy" data-copy-button hidden>Copy</button>
+  </div>
+  <!-- Screen readers only: sighted users see the button label switch to "Copied". -->
+  <p class="visually-hidden" role="status" aria-live="polite" data-copy-status></p>
+</div>
+
+<script>
+  import { trackEvent } from '../scripts/analytics.ts';
+  import { copyText } from '../scripts/copy.ts';
+
+  const COPIED_LABEL_MS = 2000;
+
+  // One handler per copy box on the page.
+  for (const root of document.querySelectorAll<HTMLElement>('[data-copy-root]')) {
+    const button = root.querySelector<HTMLButtonElement>('[data-copy-button]');
+    const status = root.querySelector<HTMLElement>('[data-copy-status]');
+    const url = root.querySelector<HTMLElement>('[data-url]');
+    if (!button || !status || !url) continue;
+
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      const result = await copyText(url.dataset.url ?? '', navigator.clipboard, () => trackEvent('connector_url_copy'));
+      if (result === 'copied') {
+        status.textContent = 'Copied';
+        button.dataset.state = 'copied';
+        button.textContent = 'Copied';
+        setTimeout(() => {
+          delete button.dataset.state;
+          button.textContent = 'Copy';
+        }, COPIED_LABEL_MS);
+        return;
+      }
+      // No clipboard access: select the URL so the user can copy it by hand.
+      status.textContent = 'Select the URL to copy it';
+      const range = document.createRange();
+      range.selectNodeContents(url);
+      const selection = getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+  }
+</script>
+
+<style>
+  .connector {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .label {
+    color: var(--muted);
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+
+  .url-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: 0.5rem 0.5rem 0.5rem 1.1rem;
+    background: var(--card);
+    /* Sits on coloured sections: reset the text colour of the white box. */
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .url {
+    flex: 1 1 18rem;
+    /* Large enough to read at a glance; the 46-character URL still fits beside the button on desktop. */
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+    user-select: all;
+  }
+
+  .scheme {
+    color: var(--muted);
+  }
+
+  .host {
+    font-weight: 700;
+  }
+
+  .path {
+    color: var(--link);
+    font-weight: 700;
+  }
+
+  .copy {
+    min-height: 2.75rem;
+    padding-inline: 1.2rem;
+  }
+
+  .copy[hidden] {
+    display: none;
+  }
+
+  .copy[data-state='copied'] {
+    border-color: var(--mint);
+    background: var(--mint);
+    color: var(--on-mint);
+  }
+</style>

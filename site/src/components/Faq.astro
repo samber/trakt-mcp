@@ -1,0 +1,91 @@
+---
+import { FAQ } from '../data/site';
+---
+
+<section class="faq" aria-labelledby="faq-title">
+  <div class="wrap inner">
+    <div class="head reveal">
+      <h2 id="faq-title">
+        Questions, answered. <span class="soft">Before you connect.</span>
+      </h2>
+    </div>
+    <div class="items">
+      {
+        FAQ.map(({ question, answer }) => (
+          <details class="item reveal">
+            <summary>{question}</summary>
+            <p>{answer}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding-block: calc(var(--space-7) * 1.5) var(--space-5);
+  }
+
+  .inner {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  @media (min-width: 60rem) {
+    .inner {
+      grid-template-columns: 1fr 1.6fr;
+      gap: var(--space-6);
+      align-items: start;
+    }
+
+    .head {
+      position: sticky;
+      top: var(--space-5);
+    }
+  }
+
+  .items {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .item {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: var(--shadow);
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A plus that turns into a minus when the answer is open. */
+  summary::after {
+    content: '+';
+    flex: none;
+    color: var(--link);
+    font-size: 1.4em;
+    line-height: 1;
+  }
+
+  .item[open] summary::after {
+    content: '−';
+  }
+
+  .item p {
+    margin-top: var(--space-3);
+    color: var(--muted);
+  }
+</style>

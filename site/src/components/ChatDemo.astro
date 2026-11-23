@@ -1,0 +1,249 @@
+---
+// A conversation rendered as plain HTML: what using the connector looks like.
+// The steps describe the real tools (search_contacts, update_contact) in plain words, so visitors
+// who never heard of MCP can follow; the person and company are fictional.
+---
+
+<figure class="chat" aria-label="Example conversation with an assistant using the connector">
+  <div class="thread">
+    <p class="msg user">Who do I know at Halvard Robotics? Camille just became their CTO, update her card.</p>
+    <ul class="calls" aria-label="What the assistant did">
+      <li>Searched your contacts for "Halvard"<b class="done" aria-hidden="true">✓</b></li>
+      <li>Updated Camille's job title<b class="done" aria-hidden="true">✓</b></li>
+    </ul>
+    <div class="msg assistant">
+      <p class="dots" aria-hidden="true"><i></i><i></i><i></i></p>
+      <p>You have one contact there. Her card is updated:</p>
+      <dl class="contact">
+        <div><dt>Name</dt><dd>Camille Durand</dd></div>
+        <div><dt>Company</dt><dd>Halvard Robotics</dd></div>
+        <div class="changed"><dt>Title</dt><dd>CTO</dd></div>
+        <div><dt>E-mail</dt><dd class="mono">camille@halvard.example</dd></div>
+      </dl>
+    </div>
+  </div>
+</figure>
+
+<style>
+  .chat {
+    margin: 0;
+    padding: var(--space-4);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    font-size: var(--step--1);
+  }
+
+  .thread {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .msg.user {
+    justify-self: end;
+    max-width: 88%;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius) var(--radius) var(--radius-sm) var(--radius);
+    background: var(--blue);
+    color: var(--on-blue);
+    line-height: 1.45;
+  }
+
+  .calls {
+    display: grid;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .calls li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.6rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+
+  .done {
+    margin-left: auto;
+    color: var(--link);
+  }
+
+  .assistant {
+    position: relative;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* Typing indicator: hidden unless the animation below shows it, so without motion it never appears. */
+  .dots {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    gap: 4px;
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    opacity: 0;
+  }
+
+  .dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .contact {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+
+  .contact div {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr;
+    gap: var(--space-2);
+    padding: 0.5rem 0.85rem;
+  }
+
+  .contact div + div {
+    border-top: 1px solid var(--line);
+  }
+
+  .contact dt {
+    color: var(--muted);
+  }
+
+  .contact dd {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  /* The field the assistant just wrote. */
+  .contact .changed {
+    background: var(--mark);
+    color: var(--on-mark);
+  }
+
+  .contact .changed dt {
+    color: inherit;
+  }
+
+  @media (max-width: 26rem) {
+    .contact div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+
+  /* The exchange plays once, in reading order: request; tool calls spring in
+     (hyperframes "spring-pop-entrance") and get their check mark when done; the
+     assistant types (dots) then answers; the highlighter sweeps the changed field. */
+  @media (prefers-reduced-motion: no-preference) {
+    .user {
+      animation: pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
+    }
+
+    .calls li {
+      animation: spring 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .calls li:nth-child(1) {
+      animation-delay: 1.3s;
+    }
+
+    .calls li:nth-child(2) {
+      animation-delay: 1.8s;
+    }
+
+    .done {
+      animation: spring 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .calls li:nth-child(1) .done {
+      animation-delay: 1.7s;
+    }
+
+    .calls li:nth-child(2) .done {
+      animation-delay: 2.2s;
+    }
+
+    .dots {
+      animation: dots-life 0.9s ease 2.35s both;
+    }
+
+    .dots i {
+      animation: dot-bounce 0.6s ease-in-out 2.35s 2 both;
+    }
+
+    .dots i:nth-child(2) {
+      animation-delay: 2.45s;
+    }
+
+    .dots i:nth-child(3) {
+      animation-delay: 2.55s;
+    }
+
+    .assistant > :not(.dots) {
+      animation: pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .assistant > p:not(.dots) {
+      animation-delay: 3.25s;
+    }
+
+    .assistant > dl {
+      animation-delay: 3.4s;
+    }
+
+    .contact .changed {
+      background: linear-gradient(90deg, var(--mark) 50%, transparent 50%) right / 200% 100% no-repeat;
+      animation: sweep 0.6s cubic-bezier(0.65, 0, 0.35, 1) 4s forwards;
+    }
+  }
+
+  @keyframes spring {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  @keyframes dots-life {
+    0% {
+      opacity: 0;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes dot-bounce {
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+  }
+
+  @keyframes sweep {
+    to {
+      background-position: left;
+    }
+  }
+</style>

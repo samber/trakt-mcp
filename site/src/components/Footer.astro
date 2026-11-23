@@ -1,0 +1,52 @@
+---
+import { OPERATOR_EMAIL, OPERATOR_LINKEDIN, OPERATOR_NAME, REPO_URL, SECURITY_URL, SELF_HOSTING_URL } from '../data/site';
+---
+
+<footer class="site-footer">
+  <div class="wrap bar">
+    <p class="muted">
+      Operated by <a href={OPERATOR_LINKEDIN}>{OPERATOR_NAME}</a>.{' '}
+      <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a>
+    </p>
+    <ul>
+      <li><a href="/privacy">Privacy policy</a></li>
+      <li><a href="/terms">Terms of service</a></li>
+      <li><a href={REPO_URL}>GitHub</a></li>
+      <li><a href={SELF_HOSTING_URL}>Self-hosting</a></li>
+      <li><a href={SECURITY_URL}>Security</a></li>
+    </ul>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    margin-top: var(--space-7);
+    border-top: 1px solid var(--line);
+    font-size: var(--step--1);
+  }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-5);
+    padding-block: var(--space-5);
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    padding: 0;
+    list-style: none;
+  }
+
+  ul a {
+    color: var(--muted);
+  }
+
+  ul a:hover {
+    color: var(--ink);
+  }
+</style>

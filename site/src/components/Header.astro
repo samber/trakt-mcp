@@ -1,0 +1,106 @@
+---
+import { siGithub } from 'simple-icons';
+import { fetchStarCount, formatStarCount } from '../data/github';
+import { REPO_URL } from '../data/site';
+
+// Privacy and terms live in the footer only; the header keeps the brand and GitHub.
+const stars = await fetchStarCount();
+const starLabel = stars === null ? null : formatStarCount(stars);
+---
+
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="brand" href="/">
+      <img src="/favicon.svg" alt="" width="40" height="40" />
+      <span>Google Contacts MCP</span>
+    </a>
+    <nav aria-label="Main">
+      <a
+        class="github"
+        href={REPO_URL}
+        aria-label={stars === null ? 'Source code on GitHub' : `Source code on GitHub, ${stars} stars`}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">
+          <path d={siGithub.path} />
+        </svg>
+        <span>GitHub</span>
+        {
+          starLabel && (
+            <span class="stars" aria-hidden="true">
+              ★ {starLabel}
+            </span>
+          )
+        }
+      </a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  /* Transparent and above the home page's gradient ribbon, which starts behind it. */
+  .site-header {
+    position: relative;
+    z-index: 2;
+  }
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    min-height: 4.25rem;
+    padding-block: var(--space-2);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    color: var(--ink);
+    font-size: var(--step-1);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: none;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+
+  .github {
+    color: var(--ink);
+    box-shadow: var(--shadow);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.25rem;
+    padding: 0 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--card);
+    text-decoration: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .github:hover {
+    border-color: var(--ink);
+  }
+
+  .stars {
+    margin-left: 0.15rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: var(--radius-sm);
+    background: var(--mint);
+    color: var(--on-mint);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

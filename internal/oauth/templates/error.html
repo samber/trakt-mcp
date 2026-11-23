@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>{{.Title}}</title>
+{{template "head"}}
+</head>
+<body>
+<main>
+<div class="card">
+{{template "brand"}}
+<div class="icon-error"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5"/><path d="M12 16h.01"/></svg></div>
+<h1>{{.Title}}</h1>
+<p class="muted">{{.Message}}</p>
+{{if .RetryURL}}<div class="actions"><a class="button primary" href="{{.RetryURL}}">Try again</a></div>{{else}}<p class="muted">You can close this tab and start again from your assistant.</p>{{end}}
+</div>
+</main>
+</body>
+</html>

@@ -1,0 +1,133 @@
+---
+import '@fontsource-variable/schibsted-grotesk';
+import '../styles/tokens.css';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { SITE_NAME, SITE_URL } from '../data/site';
+// Hashed URL of the Latin subset, which holds every glyph the pages use: preloading it
+// starts the font download with the HTML, which improves LCP and avoids a text reflow.
+import latinFontUrl from '@fontsource-variable/schibsted-grotesk/files/schibsted-grotesk-latin-wght-normal.woff2?url';
+
+// PostHog, configured like the samber/ro docs: first-party proxy host, no session recording.
+// The key is a public, write-only project key. Production builds only.
+const POSTHOG_KEY = 'phc_wDDVmAjuZPAoCvfzvattNMFQstZXS2jJBQeCxBhUN4iC';
+const POSTHOG_HOST = 'https://hogpost3.samber.dev';
+// Ahrefs Web Analytics; the key is public. Production builds only.
+// Google Tag Manager is also production only; all three load after the window load event.
+const AHREFS_SRC = 'https://analytics.ahrefs.com/analytics.js';
+const AHREFS_KEY = 'ZlVVDleFCGZPB8Nd2KkKrw';
+const GTM_SRC = 'https://www.googletagmanager.com/gtm.js?id=GTM-TQ9RT3C6';
+// Lets search engines show full-size image previews and unbounded snippets.
+const INDEX_DIRECTIVES = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+// Browser chrome colours; equal to --desk in tokens.css, light and dark.
+const THEME_LIGHT = '#ffffff';
+const THEME_DARK = '#0a1424';
+// public/og.png is rendered at this size by scripts/og.mjs.
+const OG_IMAGE_WIDTH = 1200;
+const OG_IMAGE_HEIGHT = 630;
+const OG_IMAGE_ALT = 'Google Contacts MCP: let Claude and ChatGPT manage your Google Contacts.';
+
+type Props = {
+  title: string;
+  description: string;
+  /** Canonical path, for example "/" or "/privacy". */
+  path: string;
+  /** Path of the social preview image; defaults to the site-wide one. */
+  ogImage?: string;
+  /** Error pages: keep out of search indexes and skip the canonical link. */
+  noindex?: boolean;
+};
+
+const { title, description, path, ogImage = '/og.png', noindex = false } = Astro.props;
+const canonical = new URL(path, SITE_URL).href;
+const image = new URL(ogImage, SITE_URL).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {
+      noindex ? (
+        <meta name="robots" content="noindex" />
+      ) : (
+        <>
+          <link rel="canonical" href={canonical} />
+          <meta name="robots" content={INDEX_DIRECTIVES} />
+        </>
+      )
+    }
+    <meta name="theme-color" content={THEME_LIGHT} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={THEME_DARK} media="(prefers-color-scheme: dark)" />
+    <link rel="preload" href={latinFontUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="Summary for AI assistants" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={image} />
+    <meta property="og:image:width" content={String(OG_IMAGE_WIDTH)} />
+    <meta property="og:image:height" content={String(OG_IMAGE_HEIGHT)} />
+    <meta property="og:image:alt" content={OG_IMAGE_ALT} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+    <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
+    <link rel="icon" href="/favicon-96x96.png" type="image/png" sizes="96x96" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    {
+      /* Top level on purpose: inside a {condition && (...)} expression, Astro emits a
+         template-literal script body verbatim, which the browser runs as a no-op string
+         statement. `enabled` keeps third-party tags out of development builds. */
+    }
+    <script
+      is:inline
+      define:vars={{
+        enabled: import.meta.env.PROD,
+        gtmSrc: GTM_SRC,
+        posthogKey: POSTHOG_KEY,
+        posthogHost: POSTHOG_HOST,
+        ahrefsSrc: AHREFS_SRC,
+        ahrefsKey: AHREFS_KEY,
+      }}
+    >
+      function initPostHog() {
+        if (!window.posthog) return;
+        posthog.init(posthogKey, {
+          api_host: posthogHost,
+          disable_session_recording: true,
+        });
+      }
+      function loadScript(src,attrs,onload){var el=document.createElement('script');el.async=true;el.src=src;el.onload=onload;for(var name in attrs)el.setAttribute(name,attrs[name]);document.head.appendChild(el)}function loadAnalytics(){window.dataLayer=window.dataLayer||[];window.dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});loadScript(gtmSrc);loadScript(posthogHost+'/static/array.js',0,initPostHog);loadScript(ahrefsSrc,{'data-key':ahrefsKey})}function whenIdle(){'requestIdleCallback'in window?requestIdleCallback(loadAnalytics):setTimeout(loadAnalytics,0)}if(enabled)document.readyState==='complete'?whenIdle():addEventListener('load',whenIdle)
+    </script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <Header />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import { trackEvent } from '../scripts/analytics.ts';
+
+      const GITHUB_LINK_SELECTOR = 'a[href^="https://github.com/"]';
+
+      // One delegated listener covers every GitHub link on the page.
+      document.addEventListener('click', (event) => {
+        if (event.target instanceof Element && event.target.closest(GITHUB_LINK_SELECTOR)) trackEvent('github_click');
+      });
+    </script>
+  </body>
+</html>

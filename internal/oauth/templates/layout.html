@@ -1,0 +1,72 @@
+{{/*
+Shared head and logo of the OAuth pages. Colours mirror site/src/styles/tokens.css
+so the hand-off from the landing page looks like one product. The CSP allows
+inline styles only: no web font, no image file, so the logo is inline SVG.
+*/}}
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<style>
+:root {
+  --desk: #f6f9fc; --card: #ffffff; --ink: #0d253f; --muted: #50617a;
+  --line: #e3e8ee; --line-strong: #c9d3df; --blue: #2340c7; --blue-hover: #1b33a3;
+  --on-blue: #ffffff; --link: #2340c7; --mark: #d9f7ea; --on-mark: #0d253f; --red: #c8372d;
+  --shadow: 0 2px 5px -1px rgb(13 37 63 / 0.12), 0 1px 3px -1px rgb(0 0 0 / 0.08), 0 24px 48px -24px rgb(13 37 63 / 0.25);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --desk: #0a1424; --card: #101d31; --ink: #e8eef6; --muted: #9aabc1;
+    --line: #1d2c42; --line-strong: #2a3c56; --blue: #3a57e8; --blue-hover: #4f6bf0;
+    --link: #8ea2ff; --mark: #12402f; --on-mark: #d9f7ea; --red: #ff7a6b;
+    --shadow: 0 2px 5px -1px rgb(0 0 0 / 0.5), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 2rem 1rem; background: var(--desk); color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 1rem; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+main { width: 100%; max-width: 27rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 2rem; }
+.brand { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.9375rem; }
+.brand svg { flex: none; }
+h1 { margin: 0 0 0.5rem; font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.02em; font-weight: 650; text-wrap: balance; }
+p { margin: 0 0 1rem; }
+.muted { color: var(--muted); font-size: 0.9375rem; }
+strong { font-weight: 600; overflow-wrap: anywhere; }
+.perms { list-style: none; margin: 1.25rem 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; }
+.perms li { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem 1rem; font-size: 0.9375rem; }
+.perms li + li { border-top: 1px solid var(--line); }
+.perms svg { flex: none; margin-top: 0.15rem; }
+.note { display: flex; gap: 0.6rem; align-items: flex-start; background: var(--mark); color: var(--on-mark); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.875rem; margin: 0 0 1.5rem; }
+.note svg { flex: none; margin-top: 0.1rem; }
+.actions { display: flex; flex-direction: column; gap: 0.6rem; }
+button, .button {
+  font: inherit; font-weight: 600; font-size: 0.9375rem; display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.5rem; width: 100%; min-height: 2.75rem; padding: 0.6rem 1.25rem; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: transparent; color: var(--ink); text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+button:hover, .button:hover { border-color: var(--muted); }
+.primary { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+.primary:hover { background: var(--blue-hover); border-color: var(--blue-hover); }
+button:focus-visible, .button:focus-visible, a:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+a { color: var(--link); }
+.icon-error { display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; margin-bottom: 1rem; color: var(--red); border: 1px solid var(--line); }
+footer { margin-top: 1.25rem; text-align: center; color: var(--muted); font-size: 0.8125rem; }
+@media (max-width: 30rem) { .card { padding: 1.5rem 1.25rem; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+{{end}}
+
+{{define "brand"}}
+<div class="brand">
+<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20" rx="2" fill="#ffffff" stroke="#b4cbe3" stroke-width="1.5"/><rect x="3" y="11" width="26" height="2" fill="#d33f49"/><rect x="7" y="17" width="14" height="1.6" fill="#b4cbe3"/><rect x="7" y="21" width="10" height="1.6" fill="#b4cbe3"/></svg>
+<span>Google Contacts MCP</span>
+</div>
+{{end}}

@@ -1,0 +1,308 @@
+---
+import ChatDemo from '../components/ChatDemo.astro';
+import Closing from '../components/Closing.astro';
+import ConnectorUrl from '../components/ConnectorUrl.astro';
+import Faq from '../components/Faq.astro';
+import Features from '../components/Features.astro';
+import StoredCards from '../components/StoredCards.astro';
+import Base from '../layouts/Base.astro';
+import {
+  FAQ,
+  OPERATOR_GITHUB,
+  OPERATOR_LINKEDIN,
+  OPERATOR_NAME,
+  REPO_URL,
+  SELF_HOSTING_URL,
+  SITE_NAME,
+  SITE_SUMMARY,
+  SITE_URL,
+  TOOLS,
+} from '../data/site';
+
+// One @graph, linked by @id: the site, the software, its operator and the FAQ. The FAQ comes
+// from the same array as the visible section, so the markup cannot drift from the page.
+// BusinessApplication: the closest schema.org category for a tool that manages contacts for work.
+const PERSON_ID = `${SITE_URL}/#operator`;
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      inLanguage: 'en',
+      publisher: { '@id': PERSON_ID },
+      about: { '@id': `${SITE_URL}/#software` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      '@id': `${SITE_URL}/#software`,
+      name: SITE_NAME,
+      alternateName: 'Google Contacts MCP server',
+      description: SITE_SUMMARY,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: SITE_URL,
+      image: `${SITE_URL}/og.png`,
+      isAccessibleForFree: true,
+      // The hosted service costs nothing and the source is MIT.
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      license: 'https://opensource.org/license/mit',
+      softwareHelp: { '@type': 'WebPage', url: SELF_HOSTING_URL },
+      // One feature per MCP tool, from the same list the page and the gate use.
+      featureList: TOOLS.map((tool) => `${tool.name}: ${tool.summary}`),
+      author: { '@id': PERSON_ID },
+      sameAs: [REPO_URL],
+    },
+    {
+      '@type': 'Person',
+      '@id': PERSON_ID,
+      name: OPERATOR_NAME,
+      url: OPERATOR_GITHUB,
+      sameAs: [OPERATOR_GITHUB, OPERATOR_LINKEDIN],
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${SITE_URL}/#faq`,
+      mainEntity: FAQ.map(({ question, answer }) => ({
+        '@type': 'Question',
+        name: question,
+        acceptedAnswer: { '@type': 'Answer', text: answer },
+      })),
+    },
+  ],
+};
+
+// The headline's first sentence, one span per word for the waterfall entrance.
+// The last HIGHLIGHT_WORDS words get the gradient sweep.
+const HEADLINE = 'Your assistant keeps your Google Contacts up to date.'.split(' ');
+const HIGHLIGHT_WORDS = 3;
+---
+
+<Base
+  title="Google Contacts MCP server for Claude and ChatGPT"
+  description="Free, open source Google Contacts MCP server for Claude and ChatGPT. Search, create and enrich contacts in plain language. No contact data stored."
+  path="/"
+>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  <section class="hero" aria-labelledby="hero-title">
+    <!-- Decorative: the logo's colours swirling slowly inside a diagonal band. -->
+    <div class="ribbon" aria-hidden="true"><div class="swirl"></div></div>
+    <div class="wrap hero-grid">
+      <div class="intro">
+        <h1 id="hero-title">
+          <span class="line">
+            {
+              HEADLINE.map((word, index) => (
+                <>
+                  <span
+                    class:list={['w', { hl: index >= HEADLINE.length - HIGHLIGHT_WORDS }]}
+                    style={`--i:${index}; --h:${index - (HEADLINE.length - HIGHLIGHT_WORDS)}`}
+                  >
+                    {word}
+                  </span>{' '}
+                </>
+              ))
+            }
+          </span>
+          <span class="soft">Claude and ChatGPT search, create and enrich them.</span>
+        </h1>
+        <p class="free">A free, open source MCP server. No install.</p>
+        <ConnectorUrl id="hero-url" />
+      </div>
+      <div class="demo">
+        <ChatDemo />
+      </div>
+    </div>
+  </section>
+
+  <Features />
+  <StoredCards />
+  <Closing />
+  <Faq />
+</Base>
+
+<style>
+  /* The hero starts behind the transparent header, so the ribbon reaches the top edge. */
+  .hero {
+    position: relative;
+    margin-top: -4.25rem;
+    padding-top: 4.25rem;
+    isolation: isolate;
+  }
+
+  .ribbon {
+    position: absolute;
+    inset: 0 0 -6rem 0;
+    z-index: -1;
+    overflow: hidden;
+    /* A band falling from the top right corner to the lower middle, behind the demo. */
+    clip-path: polygon(0 62%, 100% 30%, 100% 100%, 0 100%);
+    /* Fades out at the bottom instead of ending on a hard edge above the next section. */
+    mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  }
+
+  @media (min-width: 60rem) {
+    .ribbon {
+      clip-path: polygon(64% 0, 100% 0, 100% 100%, 36% 100%);
+    }
+  }
+
+  .swirl {
+    position: absolute;
+    inset: -40%;
+    background:
+      radial-gradient(circle at 25% 30%, var(--g1), transparent 42%),
+      radial-gradient(circle at 75% 25%, var(--g3), transparent 40%),
+      radial-gradient(circle at 70% 75%, var(--g5), transparent 42%),
+      radial-gradient(circle at 30% 72%, var(--g2), transparent 45%),
+      radial-gradient(circle at 52% 50%, var(--g4), transparent 40%),
+      linear-gradient(135deg, var(--g1), var(--g3), var(--g5));
+  }
+
+  /* Ambient brand motion: the colours drift, slowly enough to never pull the eye from the copy. */
+  @media (prefers-reduced-motion: no-preference) {
+    .swirl {
+      animation: swirl 40s linear infinite;
+    }
+  }
+
+  @keyframes swirl {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .hero-grid {
+    display: grid;
+    gap: var(--space-5);
+    align-items: center;
+    padding-block: var(--space-5) var(--space-6);
+  }
+
+  @media (min-width: 60rem) {
+    .hero-grid {
+      grid-template-columns: 1.1fr 1fr;
+      gap: var(--space-6);
+      min-height: min(46rem, calc(100dvh - 4.25rem));
+      padding-block: var(--space-4) var(--space-6);
+    }
+  }
+
+  .intro {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  h1 {
+    font-size: clamp(2rem, 1.2rem + 2.4vw, 3.1rem);
+  }
+
+  .free {
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .demo {
+    justify-self: center;
+    width: min(100%, 30rem);
+  }
+
+  .w {
+    display: inline-block;
+  }
+
+  /* Load-in, in reading order (hyperframes "waterfall-entry"): the headline's words
+     whip up one after another, each starting before the previous settles (9 words x
+     55 ms keeps the wave under 0.6 s), then the grey line, the URL box and the demo. */
+  @media (prefers-reduced-motion: no-preference) {
+    .w {
+      animation: word-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation-delay: calc(var(--i) * 55ms);
+    }
+
+    h1 .soft {
+      animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+    }
+
+    .intro > :nth-child(2) {
+      animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.7s both;
+    }
+
+    .intro > :nth-child(3) {
+      animation: rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.8s both;
+    }
+
+    .demo {
+      animation: rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+    }
+
+    /* Hyperframes "gradient-text-sweep": the logo's colours travel through
+       "up to date.", word to word, then the words rest in plain ink. The sweep
+       replays every 5 s (owner's choice): 1.3 s of travel, then a hold. */
+    .w.hl {
+      background: linear-gradient(90deg, var(--ink) 0 35%, var(--g1) 42%, var(--g3) 50%, var(--g4) 58%, var(--ink) 65% 100%)
+        0% 0 / 300% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation:
+        word-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i) * 55ms) both,
+        sweep-text 5s linear calc(1.1s + var(--h) * 0.12s) infinite both;
+    }
+  }
+
+  @keyframes word-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.55em) rotate(2deg);
+    }
+  }
+
+  /* 26% of the 5 s period = 1.3 s of travel (eased), then the words hold in ink. */
+  @keyframes sweep-text {
+    0% {
+      background-position: 100% 0;
+      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+    }
+    26%,
+    100% {
+      background-position: 0% 0;
+    }
+  }
+
+  /* Hyperframes "ambient-glow-bloom": one soft light blooms behind the demo card and holds. */
+  .demo {
+    position: relative;
+  }
+
+  .demo::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -12%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(255 255 255 / 0.45), transparent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .demo::before {
+      animation: bloom 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
+    }
+  }
+
+  @keyframes bloom {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+</style>

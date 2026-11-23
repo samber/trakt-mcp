@@ -1,0 +1,33 @@
+{
+  "name": "google-contacts",
+  "version": "1.0.0",
+  "description": "Search, read, create, update and delete your Google Contacts, and manage contact groups, from ChatGPT or Codex. Hosted MCP server with OAuth sign-in through your Google account.",
+  "author": {
+    "name": "Samuel Berthe",
+    "email": "hello@samuel-berthe.fr",
+    "url": "https://github.com/samber"
+  },
+  "homepage": "https://google-contacts-mcp.samber.dev",
+  "extensions": {
+    "com.openai.interface": {
+      "displayName": "Google Contacts",
+      "shortDescription": "Manage your Google Contacts",
+      "longDescription": "Ask your assistant to find a phone number or e-mail, add a new contact, fix a job title, merge details into an existing contact by e-mail, or organize contacts into groups. You sign in with your Google account and grant access to Google Contacts only. Contact data is read and written live through the Google People API and is never stored on the server. Every tool that changes your address book says so in its description, and deleting a contact is flagged as destructive.",
+      "developerName": "Samuel Berthe",
+      "websiteURL": "https://google-contacts-mcp.samber.dev",
+      "supportURL": "https://github.com/samber/google-contacts-mcp/issues",
+      "privacyPolicyURL": "https://google-contacts-mcp.samber.dev/privacy",
+      "termsOfServiceURL": "https://google-contacts-mcp.samber.dev/terms",
+      "defaultPrompt": [
+        "Find the e-mail address of my contact named Alex.",
+        "Add a contact: Jane Doe, jane@example.com, works at Acme.",
+        "List my contact groups and how many contacts each one has."
+      ],
+      "brandColor": "#D33F49",
+      "brandColorDark": "#D33F49"
+    }
+  },
+  "publication": {
+    "countries": []
+  }
+}
