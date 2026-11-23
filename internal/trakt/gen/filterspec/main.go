@@ -326,6 +326,8 @@ func typeParameterList(v any) {
 	}
 }
 
+// typeParameter sets type "string" on an untyped parameter schema; an
+// untyped enum keeps its values and becomes a string enum.
 func typeParameter(p any) {
 	param, ok := p.(map[string]any)
 	if !ok {

@@ -310,6 +310,38 @@ func TestDowngradeKeepsMediaTypeExamples(t *testing.T) {
 	}
 }
 
+func TestDowngradeKeepsPropertiesNamedLikeKeywords(t *testing.T) {
+	t.Parallel()
+	// Trakt objects have fields called "type"; property names must never be
+	// read as schema keywords, while their own schemas are still rewritten.
+	input := `{"type": "object", "properties": {
+		"type": {"type": ["string", "null"]},
+		"const": {"type": "integer"},
+		"examples": {"type": "array", "items": {"type": "string"}}
+	}}`
+	want := `{"properties": {
+		"const": {"type": "integer"},
+		"examples": {"items": {"type": "string"}, "type": "array"},
+		"type": {"nullable": true, "type": "string"}
+	}, "type": "object"}`
+
+	var in, wantValue any
+	if err := json.Unmarshal([]byte(input), &in); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := json.Unmarshal([]byte(want), &wantValue); err != nil {
+		t.Fatal(err)
+	}
+
+	gotJSON, _ := json.Marshal(downgradeSchemas(in))
+
+	wantJSON, _ := json.Marshal(wantValue)
+	if string(gotJSON) != string(wantJSON) {
+		t.Fatalf("got %s, want %s", gotJSON, wantJSON)
+	}
+}
+
 func TestFilterDowngradesOnlyOpenAPI31(t *testing.T) {
 	t.Parallel()
 	spec := loadFixture(t)
@@ -435,12 +467,16 @@ const maxFilteredSpecBytes = 1 << 20
 // specInEnv names the full downloaded spec, as in the Makefile.
 const specInEnv = "SPEC_IN"
 
-func TestEndpointsFileEntriesExistInSpec(t *testing.T) {
+// TestLocalAidLiveSpecHasEndpoints is a local aid, not a CI gate: it skips
+// unless SPEC_IN names a downloaded full spec, and reports every endpoints.txt
+// line the upstream spec no longer has. The offline gate is
+// TestFilteredSpecMatchesEndpoints; upstream drift in CI is spec-drift.yml.
+func TestLocalAidLiveSpecHasEndpoints(t *testing.T) {
 	t.Parallel()
 
 	specPath := os.Getenv(specInEnv)
 	if specPath == "" {
-		t.Skipf("%s not set: run `make spec-fetch` and pass the downloaded spec", specInEnv)
+		t.Skipf("local aid: %s not set; run `make spec-fetch` and pass the downloaded spec", specInEnv)
 	}
 
 	spec, err := readSpec(specPath)

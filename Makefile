@@ -5,6 +5,8 @@ SPEC_URL := https://developer.trakt.tv/openapi.json
 # Download timeout in seconds: the spec is about 2 MB.
 SPEC_FETCH_TIMEOUT := 60
 # SPEC_OUT is where spec-fetch writes; SPEC_IN is what generate filters.
+# generate reuses the spec cached in $TMPDIR; run `make spec-fetch` to
+# refresh it from Trakt before regenerating.
 SPEC_OUT ?= $(or $(TMPDIR),/tmp)/trakt-openapi.json
 SPEC_IN ?= $(SPEC_OUT)
 
