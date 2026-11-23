@@ -1,0 +1,11 @@
+# oapi-codegen configuration for the Trakt API client. Run `make generate`.
+package: api
+output: api.gen.go
+generate:
+  # Client only: ClientWithResponses and RequestEditorFn come with "client".
+  client: true
+  models: true
+output-options:
+  # Every schema in the Trakt spec is inline; collisions between the many
+  # anonymous response types are renamed instead of failing generation.
+  resolve-type-name-collisions: true

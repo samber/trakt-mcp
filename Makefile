@@ -1,5 +1,25 @@
 MODULES=$(shell go list -m)
 
+# Trakt's official OpenAPI document. Only the filtered subset is committed.
+SPEC_URL := https://developer.trakt.tv/openapi.json
+# Download timeout in seconds: the spec is about 2 MB.
+SPEC_FETCH_TIMEOUT := 60
+# SPEC_OUT is where spec-fetch writes; SPEC_IN is what generate filters.
+SPEC_OUT ?= $(or $(TMPDIR),/tmp)/trakt-openapi.json
+SPEC_IN ?= $(SPEC_OUT)
+
+spec-fetch:
+	curl -fsSL --max-time $(SPEC_FETCH_TIMEOUT) -o "$(SPEC_OUT)" "$(SPEC_URL)"
+
+# generate filters SPEC_IN (fetched first when missing) down to the endpoints
+# in internal/trakt/endpoints.txt, then regenerates the Go client.
+generate:
+	@if [ ! -f "$(SPEC_IN)" ]; then $(MAKE) spec-fetch SPEC_OUT="$(SPEC_IN)"; fi
+	go run ./internal/trakt/gen/filterspec -spec "$(SPEC_IN)" -endpoints internal/trakt/endpoints.txt -out internal/trakt/openapi.filtered.json
+	go generate ./internal/trakt/api
+
+.PHONY: spec-fetch generate
+
 build:
 	go build -v ./...
 

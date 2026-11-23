@@ -30,6 +30,13 @@ jobs:
           go-version: ${{ matrix.go != 'go.mod' && matrix.go || '' }}
           go-version-file: ${{ matrix.go == 'go.mod' && 'go.mod' || '' }}
 
+      # Regenerates the filtered spec from Trakt's live OpenAPI document and the
+      # Go client from it; fails when the committed output is stale.
+      - name: Check generated Trakt client
+        run: |
+          make generate SPEC_IN="$RUNNER_TEMP/trakt-openapi.json"
+          git diff --exit-code internal/trakt
+
       - name: Build
         run: make build
 
