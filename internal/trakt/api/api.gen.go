@@ -9391,6 +9391,33 @@ type GetSyncCollectionAll200JSONResponseBody_Item struct {
 	union json.RawMessage
 }
 
+// GetSyncHistoryAllParams defines parameters for GetSyncHistoryAll.
+type GetSyncHistoryAllParams struct {
+	// Extended Extended information to include in the response.
+	Extended *string `form:"extended,omitempty" json:"extended,omitempty"`
+
+	// Page The page number to retrieve
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Limit The number of items per page. Defaults and maximums vary by endpoint. When pagination parameters are omitted, a low default limit is applied (often 10). When a limit is provided, it is capped at the endpoint maximum (often 250); higher values are clamped rather than rejected.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// StartAt Start date for the range. Must be formatted as "YYYY-MM-DD".
+	StartAt *string `form:"start_at,omitempty" json:"start_at,omitempty"`
+
+	// EndAt End date for the range. Must be formatted as "YYYY-MM-DD".
+	EndAt *string `form:"end_at,omitempty" json:"end_at,omitempty"`
+}
+
+// GetSyncHistoryAll200JSONResponseBody_Item defines parameters for GetSyncHistoryAll.
+type GetSyncHistoryAll200JSONResponseBody_Item struct {
+	Action               string                 `json:"action"`
+	Id                   int                    `json:"id"`
+	Type                 string                 `json:"type"`
+	WatchedAt            string                 `json:"watched_at"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // PostSyncHistoryAddJSONBody defines parameters for PostSyncHistoryAdd.
 type PostSyncHistoryAddJSONBody struct {
 	Episodes *[]struct {
@@ -10588,6 +10615,33 @@ type PostSyncHistoryRemove200JSONResponseBody_NotFound_Shows_Ids struct {
 	union json.RawMessage
 }
 
+// GetSyncHistoryByTypeParams defines parameters for GetSyncHistoryByType.
+type GetSyncHistoryByTypeParams struct {
+	// Extended Extended information to include in the response.
+	Extended *string `form:"extended,omitempty" json:"extended,omitempty"`
+
+	// Page The page number to retrieve
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Limit The number of items per page. Defaults and maximums vary by endpoint. When pagination parameters are omitted, a low default limit is applied (often 10). When a limit is provided, it is capped at the endpoint maximum (often 250); higher values are clamped rather than rejected.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// StartAt Start date for the range. Must be formatted as "YYYY-MM-DD".
+	StartAt *string `form:"start_at,omitempty" json:"start_at,omitempty"`
+
+	// EndAt End date for the range. Must be formatted as "YYYY-MM-DD".
+	EndAt *string `form:"end_at,omitempty" json:"end_at,omitempty"`
+}
+
+// GetSyncHistoryByType200JSONResponseBody_Item defines parameters for GetSyncHistoryByType.
+type GetSyncHistoryByType200JSONResponseBody_Item struct {
+	Action               string                 `json:"action"`
+	Id                   int                    `json:"id"`
+	Type                 string                 `json:"type"`
+	WatchedAt            string                 `json:"watched_at"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
 // GetSyncHistoryGetParams defines parameters for GetSyncHistoryGet.
 type GetSyncHistoryGetParams struct {
 	// Extended Extended information to include in the response.
@@ -10803,6 +10857,26 @@ type GetSyncProgressWatched200JSONResponseBodyProgressNextEpisode1 = string
 // GetSyncProgressWatched200JSONResponseBody_Progress_NextEpisode defines parameters for GetSyncProgressWatched.
 type GetSyncProgressWatched200JSONResponseBody_Progress_NextEpisode struct {
 	union json.RawMessage
+}
+
+// GetSyncRatingsAllParams defines parameters for GetSyncRatingsAll.
+type GetSyncRatingsAllParams struct {
+	// Extended Extended information to include in the response.
+	Extended *string `form:"extended,omitempty" json:"extended,omitempty"`
+
+	// Page The page number to retrieve
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Limit The number of items per page. Defaults and maximums vary by endpoint. When pagination parameters are omitted, a low default limit is applied (often 10). When a limit is provided, it is capped at the endpoint maximum (often 250); higher values are clamped rather than rejected.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetSyncRatingsAll200JSONResponseBody_Item defines parameters for GetSyncRatingsAll.
+type GetSyncRatingsAll200JSONResponseBody_Item struct {
+	RatedAt              string                 `json:"rated_at"`
+	Rating               int                    `json:"rating"`
+	Type                 string                 `json:"type"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // PostSyncRatingsAddJSONBody defines parameters for PostSyncRatingsAdd.
@@ -11961,6 +12035,26 @@ type PostSyncRatingsRemove200JSONResponseBodyNotFoundShowsIds4 struct {
 // PostSyncRatingsRemove200JSONResponseBody_NotFound_Shows_Ids defines parameters for PostSyncRatingsRemove.
 type PostSyncRatingsRemove200JSONResponseBody_NotFound_Shows_Ids struct {
 	union json.RawMessage
+}
+
+// GetSyncRatingsByTypeParams defines parameters for GetSyncRatingsByType.
+type GetSyncRatingsByTypeParams struct {
+	// Extended Extended information to include in the response.
+	Extended *string `form:"extended,omitempty" json:"extended,omitempty"`
+
+	// Page The page number to retrieve
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// Limit The number of items per page. Defaults and maximums vary by endpoint. When pagination parameters are omitted, a low default limit is applied (often 10). When a limit is provided, it is capped at the endpoint maximum (often 250); higher values are clamped rather than rejected.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetSyncRatingsByType200JSONResponseBody_Item defines parameters for GetSyncRatingsByType.
+type GetSyncRatingsByType200JSONResponseBody_Item struct {
+	RatedAt              string                 `json:"rated_at"`
+	Rating               int                    `json:"rating"`
+	Type                 string                 `json:"type"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // GetSyncRatingsGetParams defines parameters for GetSyncRatingsGet.
@@ -13827,6 +13921,216 @@ type PostSyncWatchlistRemoveJSONRequestBody PostSyncWatchlistRemoveJSONBody
 // PostUsersHiddenRemoveSectionJSONRequestBody defines body for PostUsersHiddenRemoveSection for application/json ContentType.
 type PostUsersHiddenRemoveSectionJSONRequestBody PostUsersHiddenRemoveSectionJSONBody
 
+// Getter for additional properties for GetSyncHistoryAll200JSONResponseBody_Item. Returns the specified
+// element and whether it was found
+func (a GetSyncHistoryAll200JSONResponseBody_Item) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for GetSyncHistoryAll200JSONResponseBody_Item
+func (a *GetSyncHistoryAll200JSONResponseBody_Item) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for GetSyncHistoryAll200JSONResponseBody_Item to handle AdditionalProperties
+func (a *GetSyncHistoryAll200JSONResponseBody_Item) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["action"]; found {
+		err = json.Unmarshal(raw, &a.Action)
+		if err != nil {
+			return fmt.Errorf("error reading 'action': %w", err)
+		}
+		delete(object, "action")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if raw, found := object["watched_at"]; found {
+		err = json.Unmarshal(raw, &a.WatchedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'watched_at': %w", err)
+		}
+		delete(object, "watched_at")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for GetSyncHistoryAll200JSONResponseBody_Item to handle AdditionalProperties
+func (a GetSyncHistoryAll200JSONResponseBody_Item) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["action"], err = json.Marshal(a.Action)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'action': %w", err)
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
+	}
+
+	object["watched_at"], err = json.Marshal(a.WatchedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'watched_at': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for GetSyncHistoryByType200JSONResponseBody_Item. Returns the specified
+// element and whether it was found
+func (a GetSyncHistoryByType200JSONResponseBody_Item) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for GetSyncHistoryByType200JSONResponseBody_Item
+func (a *GetSyncHistoryByType200JSONResponseBody_Item) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for GetSyncHistoryByType200JSONResponseBody_Item to handle AdditionalProperties
+func (a *GetSyncHistoryByType200JSONResponseBody_Item) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["action"]; found {
+		err = json.Unmarshal(raw, &a.Action)
+		if err != nil {
+			return fmt.Errorf("error reading 'action': %w", err)
+		}
+		delete(object, "action")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if raw, found := object["watched_at"]; found {
+		err = json.Unmarshal(raw, &a.WatchedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'watched_at': %w", err)
+		}
+		delete(object, "watched_at")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for GetSyncHistoryByType200JSONResponseBody_Item to handle AdditionalProperties
+func (a GetSyncHistoryByType200JSONResponseBody_Item) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["action"], err = json.Marshal(a.Action)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'action': %w", err)
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
+	}
+
+	object["watched_at"], err = json.Marshal(a.WatchedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'watched_at': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for GetSyncHistoryGet200JSONResponseBody_Item. Returns the specified
 // element and whether it was found
 func (a GetSyncHistoryGet200JSONResponseBody_Item) Get(fieldName string) (value interface{}, found bool) {
@@ -13921,6 +14225,190 @@ func (a GetSyncHistoryGet200JSONResponseBody_Item) MarshalJSON() ([]byte, error)
 	object["watched_at"], err = json.Marshal(a.WatchedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'watched_at': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for GetSyncRatingsAll200JSONResponseBody_Item. Returns the specified
+// element and whether it was found
+func (a GetSyncRatingsAll200JSONResponseBody_Item) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for GetSyncRatingsAll200JSONResponseBody_Item
+func (a *GetSyncRatingsAll200JSONResponseBody_Item) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for GetSyncRatingsAll200JSONResponseBody_Item to handle AdditionalProperties
+func (a *GetSyncRatingsAll200JSONResponseBody_Item) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["rated_at"]; found {
+		err = json.Unmarshal(raw, &a.RatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'rated_at': %w", err)
+		}
+		delete(object, "rated_at")
+	}
+
+	if raw, found := object["rating"]; found {
+		err = json.Unmarshal(raw, &a.Rating)
+		if err != nil {
+			return fmt.Errorf("error reading 'rating': %w", err)
+		}
+		delete(object, "rating")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for GetSyncRatingsAll200JSONResponseBody_Item to handle AdditionalProperties
+func (a GetSyncRatingsAll200JSONResponseBody_Item) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["rated_at"], err = json.Marshal(a.RatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'rated_at': %w", err)
+	}
+
+	object["rating"], err = json.Marshal(a.Rating)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'rating': %w", err)
+	}
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for GetSyncRatingsByType200JSONResponseBody_Item. Returns the specified
+// element and whether it was found
+func (a GetSyncRatingsByType200JSONResponseBody_Item) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for GetSyncRatingsByType200JSONResponseBody_Item
+func (a *GetSyncRatingsByType200JSONResponseBody_Item) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for GetSyncRatingsByType200JSONResponseBody_Item to handle AdditionalProperties
+func (a *GetSyncRatingsByType200JSONResponseBody_Item) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["rated_at"]; found {
+		err = json.Unmarshal(raw, &a.RatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'rated_at': %w", err)
+		}
+		delete(object, "rated_at")
+	}
+
+	if raw, found := object["rating"]; found {
+		err = json.Unmarshal(raw, &a.Rating)
+		if err != nil {
+			return fmt.Errorf("error reading 'rating': %w", err)
+		}
+		delete(object, "rating")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for GetSyncRatingsByType200JSONResponseBody_Item to handle AdditionalProperties
+func (a GetSyncRatingsByType200JSONResponseBody_Item) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["rated_at"], err = json.Marshal(a.RatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'rated_at': %w", err)
+	}
+
+	object["rating"], err = json.Marshal(a.Rating)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'rating': %w", err)
+	}
+
+	object["type"], err = json.Marshal(a.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'type': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -25143,6 +25631,14 @@ type ClientInterface interface {
 	// Corresponds with GET /sync/collection/{type} (the `GetSyncCollectionAll` operationId).
 	GetSyncCollectionAll(ctx context.Context, pType string, params *GetSyncCollectionAllParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetSyncHistoryAll Get watched history
+	//
+	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+	// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+	//
+	// Corresponds with GET /sync/history (the `GetSyncHistoryAll` operationId).
+	GetSyncHistoryAll(ctx context.Context, params *GetSyncHistoryAllParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PostSyncHistoryAddWithBody Add items to watched history
 	//
 	// #### 🔒 OAuth Required
@@ -25243,6 +25739,14 @@ type ClientInterface interface {
 	// Corresponds with POST /sync/history/remove (the `PostSyncHistoryRemove` operationId).
 	PostSyncHistoryRemove(ctx context.Context, body PostSyncHistoryRemoveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetSyncHistoryByType Get watched history
+	//
+	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+	// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+	//
+	// Corresponds with GET /sync/history/{type} (the `GetSyncHistoryByType` operationId).
+	GetSyncHistoryByType(ctx context.Context, pType string, params *GetSyncHistoryByTypeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetSyncHistoryGet Get watched history
 	//
 	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
@@ -25283,13 +25787,13 @@ type ClientInterface interface {
 	// Corresponds with GET /sync/playback/movies (the `GetSyncProgressMovies` operationId).
 	GetSyncProgressMovies(ctx context.Context, params *GetSyncProgressMoviesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteSyncProgressDropMovie Remove a playback item
+	// DeleteSyncPlaybackItem Remove a playback item
 	//
 	// #### 🔒 OAuth Required
 	// Remove a playback item from a user's playback progress list. A `404` will be returned if the `id` is invalid.
 	//
-	// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncProgressDropMovie` operationId).
-	DeleteSyncProgressDropMovie(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncPlaybackItem` operationId).
+	DeleteSyncPlaybackItem(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSyncProgressWatched Get watched progress
 	//
@@ -25298,6 +25802,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /sync/progress/watched (the `GetSyncProgressWatched` operationId).
 	GetSyncProgressWatched(ctx context.Context, params *GetSyncProgressWatchedParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSyncRatingsAll Get ratings
+	//
+	// Returns all ratings for the requested media type and rating value.
+	//
+	// Corresponds with GET /sync/ratings (the `GetSyncRatingsAll` operationId).
+	GetSyncRatingsAll(ctx context.Context, params *GetSyncRatingsAllParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostSyncRatingsAddWithBody Add new ratings
 	//
@@ -25388,6 +25899,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /sync/ratings/remove (the `PostSyncRatingsRemove` operationId).
 	PostSyncRatingsRemove(ctx context.Context, body PostSyncRatingsRemoveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSyncRatingsByType Get ratings
+	//
+	// Returns all ratings for the requested media type and rating value.
+	//
+	// Corresponds with GET /sync/ratings/{type} (the `GetSyncRatingsByType` operationId).
+	GetSyncRatingsByType(ctx context.Context, pType string, params *GetSyncRatingsByTypeParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSyncRatingsGet Get ratings
 	//
@@ -27167,6 +27685,24 @@ func (c *Client) GetSyncCollectionAll(ctx context.Context, pType string, params 
 	return c.Client.Do(req)
 }
 
+// GetSyncHistoryAll Get watched history
+//
+// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+//
+// Corresponds with GET /sync/history (the `GetSyncHistoryAll` operationId).
+func (c *Client) GetSyncHistoryAll(ctx context.Context, params *GetSyncHistoryAllParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSyncHistoryAllRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // PostSyncHistoryAddWithBody Add items to watched history
 //
 // #### 🔒 OAuth Required
@@ -27307,6 +27843,24 @@ func (c *Client) PostSyncHistoryRemove(ctx context.Context, body PostSyncHistory
 	return c.Client.Do(req)
 }
 
+// GetSyncHistoryByType Get watched history
+//
+// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+//
+// Corresponds with GET /sync/history/{type} (the `GetSyncHistoryByType` operationId).
+func (c *Client) GetSyncHistoryByType(ctx context.Context, pType string, params *GetSyncHistoryByTypeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSyncHistoryByTypeRequest(c.Server, pType, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetSyncHistoryGet Get watched history
 //
 // #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
@@ -27387,14 +27941,14 @@ func (c *Client) GetSyncProgressMovies(ctx context.Context, params *GetSyncProgr
 	return c.Client.Do(req)
 }
 
-// DeleteSyncProgressDropMovie Remove a playback item
+// DeleteSyncPlaybackItem Remove a playback item
 //
 // #### 🔒 OAuth Required
 // Remove a playback item from a user's playback progress list. A `404` will be returned if the `id` is invalid.
 //
-// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncProgressDropMovie` operationId).
-func (c *Client) DeleteSyncProgressDropMovie(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteSyncProgressDropMovieRequest(c.Server, id)
+// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncPlaybackItem` operationId).
+func (c *Client) DeleteSyncPlaybackItem(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteSyncPlaybackItemRequest(c.Server, id)
 	if err != nil {
 		return nil, err
 	}
@@ -27413,6 +27967,23 @@ func (c *Client) DeleteSyncProgressDropMovie(ctx context.Context, id int, reqEdi
 // Corresponds with GET /sync/progress/watched (the `GetSyncProgressWatched` operationId).
 func (c *Client) GetSyncProgressWatched(ctx context.Context, params *GetSyncProgressWatchedParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSyncProgressWatchedRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSyncRatingsAll Get ratings
+//
+// Returns all ratings for the requested media type and rating value.
+//
+// Corresponds with GET /sync/ratings (the `GetSyncRatingsAll` operationId).
+func (c *Client) GetSyncRatingsAll(ctx context.Context, params *GetSyncRatingsAllParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSyncRatingsAllRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -27543,6 +28114,23 @@ func (c *Client) PostSyncRatingsRemoveWithBody(ctx context.Context, contentType 
 // Corresponds with POST /sync/ratings/remove (the `PostSyncRatingsRemove` operationId).
 func (c *Client) PostSyncRatingsRemove(ctx context.Context, body PostSyncRatingsRemoveJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPostSyncRatingsRemoveRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSyncRatingsByType Get ratings
+//
+// Returns all ratings for the requested media type and rating value.
+//
+// Corresponds with GET /sync/ratings/{type} (the `GetSyncRatingsByType` operationId).
+func (c *Client) GetSyncRatingsByType(ctx context.Context, pType string, params *GetSyncRatingsByTypeParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSyncRatingsByTypeRequest(c.Server, pType, params)
 	if err != nil {
 		return nil, err
 	}
@@ -36157,6 +36745,108 @@ func NewGetSyncCollectionAllRequest(server string, pType string, params *GetSync
 	return req, nil
 }
 
+// NewGetSyncHistoryAllRequest constructs an http.Request for the GetSyncHistoryAll method
+func NewGetSyncHistoryAllRequest(server string, params *GetSyncHistoryAllParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sync/history")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Extended != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "extended", *params.Extended, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.StartAt != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "start_at", *params.StartAt, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndAt != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "end_at", *params.EndAt, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewPostSyncHistoryAddRequest calls the generic PostSyncHistoryAdd builder with application/json body
 func NewPostSyncHistoryAddRequest(server string, body PostSyncHistoryAddJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -36233,6 +36923,115 @@ func NewPostSyncHistoryRemoveRequestWithBody(server string, contentType string, 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSyncHistoryByTypeRequest constructs an http.Request for the GetSyncHistoryByType method
+func NewGetSyncHistoryByTypeRequest(server string, pType string, params *GetSyncHistoryByTypeParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "type", pType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sync/history/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Extended != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "extended", *params.Extended, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.StartAt != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "start_at", *params.StartAt, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.EndAt != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "end_at", *params.EndAt, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -36659,8 +37458,8 @@ func NewGetSyncProgressMoviesRequest(server string, params *GetSyncProgressMovie
 	return req, nil
 }
 
-// NewDeleteSyncProgressDropMovieRequest constructs an http.Request for the DeleteSyncProgressDropMovie method
-func NewDeleteSyncProgressDropMovieRequest(server string, id int) (*http.Request, error) {
+// NewDeleteSyncPlaybackItemRequest constructs an http.Request for the DeleteSyncPlaybackItem method
+func NewDeleteSyncPlaybackItemRequest(server string, id int) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -36843,6 +37642,84 @@ func NewGetSyncProgressWatchedRequest(server string, params *GetSyncProgressWatc
 	return req, nil
 }
 
+// NewGetSyncRatingsAllRequest constructs an http.Request for the GetSyncRatingsAll method
+func NewGetSyncRatingsAllRequest(server string, params *GetSyncRatingsAllParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sync/ratings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Extended != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "extended", *params.Extended, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewPostSyncRatingsAddRequest calls the generic PostSyncRatingsAdd builder with application/json body
 func NewPostSyncRatingsAddRequest(server string, body PostSyncRatingsAddJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -36919,6 +37796,91 @@ func NewPostSyncRatingsRemoveRequestWithBody(server string, contentType string, 
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetSyncRatingsByTypeRequest constructs an http.Request for the GetSyncRatingsByType method
+func NewGetSyncRatingsByTypeRequest(server string, pType string, params *GetSyncRatingsByTypeParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "type", pType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/sync/ratings/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Extended != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "extended", *params.Extended, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -38454,6 +39416,16 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /sync/collection/{type} (the `GetSyncCollectionAll` operationId).
 	GetSyncCollectionAllWithResponse(ctx context.Context, pType string, params *GetSyncCollectionAllParams, reqEditors ...RequestEditorFn) (*GetSyncCollectionAllResponse, error)
 
+	// GetSyncHistoryAllWithResponse Get watched history
+	//
+	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+	// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sync/history (the `GetSyncHistoryAll` operationId).
+	GetSyncHistoryAllWithResponse(ctx context.Context, params *GetSyncHistoryAllParams, reqEditors ...RequestEditorFn) (*GetSyncHistoryAllResponse, error)
+
 	// PostSyncHistoryAddWithBodyWithResponse Add items to watched history
 	//
 	// #### 🔒 OAuth Required
@@ -38554,6 +39526,16 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /sync/history/remove (the `PostSyncHistoryRemove` operationId).
 	PostSyncHistoryRemoveWithResponse(ctx context.Context, body PostSyncHistoryRemoveJSONRequestBody, reqEditors ...RequestEditorFn) (*PostSyncHistoryRemoveResponse, error)
 
+	// GetSyncHistoryByTypeWithResponse Get watched history
+	//
+	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+	// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sync/history/{type} (the `GetSyncHistoryByType` operationId).
+	GetSyncHistoryByTypeWithResponse(ctx context.Context, pType string, params *GetSyncHistoryByTypeParams, reqEditors ...RequestEditorFn) (*GetSyncHistoryByTypeResponse, error)
+
 	// GetSyncHistoryGetWithResponse Get watched history
 	//
 	// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
@@ -38602,15 +39584,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /sync/playback/movies (the `GetSyncProgressMovies` operationId).
 	GetSyncProgressMoviesWithResponse(ctx context.Context, params *GetSyncProgressMoviesParams, reqEditors ...RequestEditorFn) (*GetSyncProgressMoviesResponse, error)
 
-	// DeleteSyncProgressDropMovieWithResponse Remove a playback item
+	// DeleteSyncPlaybackItemWithResponse Remove a playback item
 	//
 	// #### 🔒 OAuth Required
 	// Remove a playback item from a user's playback progress list. A `404` will be returned if the `id` is invalid.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
-	// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncProgressDropMovie` operationId).
-	DeleteSyncProgressDropMovieWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteSyncProgressDropMovieResponse, error)
+	// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncPlaybackItem` operationId).
+	DeleteSyncPlaybackItemWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteSyncPlaybackItemResponse, error)
 
 	// GetSyncProgressWatchedWithResponse Get watched progress
 	//
@@ -38621,6 +39603,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /sync/progress/watched (the `GetSyncProgressWatched` operationId).
 	GetSyncProgressWatchedWithResponse(ctx context.Context, params *GetSyncProgressWatchedParams, reqEditors ...RequestEditorFn) (*GetSyncProgressWatchedResponse, error)
+
+	// GetSyncRatingsAllWithResponse Get ratings
+	//
+	// Returns all ratings for the requested media type and rating value.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sync/ratings (the `GetSyncRatingsAll` operationId).
+	GetSyncRatingsAllWithResponse(ctx context.Context, params *GetSyncRatingsAllParams, reqEditors ...RequestEditorFn) (*GetSyncRatingsAllResponse, error)
 
 	// PostSyncRatingsAddWithBodyWithResponse Add new ratings
 	//
@@ -38711,6 +39702,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /sync/ratings/remove (the `PostSyncRatingsRemove` operationId).
 	PostSyncRatingsRemoveWithResponse(ctx context.Context, body PostSyncRatingsRemoveJSONRequestBody, reqEditors ...RequestEditorFn) (*PostSyncRatingsRemoveResponse, error)
+
+	// GetSyncRatingsByTypeWithResponse Get ratings
+	//
+	// Returns all ratings for the requested media type and rating value.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /sync/ratings/{type} (the `GetSyncRatingsByType` operationId).
+	GetSyncRatingsByTypeWithResponse(ctx context.Context, pType string, params *GetSyncRatingsByTypeParams, reqEditors ...RequestEditorFn) (*GetSyncRatingsByTypeResponse, error)
 
 	// GetSyncRatingsGetWithResponse Get ratings
 	//
@@ -49607,6 +50607,47 @@ func (r GetSyncCollectionAllResponse) ContentType() string {
 	return ""
 }
 
+type GetSyncHistoryAllResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]GetSyncHistoryAll200JSONResponseBody_Item
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSyncHistoryAllResponse) GetJSON200() *[]GetSyncHistoryAll200JSONResponseBody_Item {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSyncHistoryAllResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSyncHistoryAllResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSyncHistoryAllResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSyncHistoryAllResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type PostSyncHistoryAddResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -49991,6 +51032,47 @@ func (r PostSyncHistoryRemoveResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PostSyncHistoryRemoveResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSyncHistoryByTypeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]GetSyncHistoryByType200JSONResponseBody_Item
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSyncHistoryByTypeResponse) GetJSON200() *[]GetSyncHistoryByType200JSONResponseBody_Item {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSyncHistoryByTypeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSyncHistoryByTypeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSyncHistoryByTypeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSyncHistoryByTypeResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -50783,7 +51865,7 @@ func (r GetSyncProgressMoviesResponse) ContentType() string {
 	return ""
 }
 
-type DeleteSyncProgressDropMovieResponse struct {
+type DeleteSyncPlaybackItemResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	// JSON204 the response for an HTTP 204 `application/json` response
@@ -50791,17 +51873,17 @@ type DeleteSyncProgressDropMovieResponse struct {
 }
 
 // GetJSON204 returns the response for an HTTP 204 `application/json` response
-func (r DeleteSyncProgressDropMovieResponse) GetJSON204() *interface{} {
+func (r DeleteSyncPlaybackItemResponse) GetJSON204() *interface{} {
 	return r.JSON204
 }
 
 // GetBody returns the raw response body bytes
-func (r DeleteSyncProgressDropMovieResponse) GetBody() []byte {
+func (r DeleteSyncPlaybackItemResponse) GetBody() []byte {
 	return r.Body
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteSyncProgressDropMovieResponse) Status() string {
+func (r DeleteSyncPlaybackItemResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -50809,7 +51891,7 @@ func (r DeleteSyncProgressDropMovieResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteSyncProgressDropMovieResponse) StatusCode() int {
+func (r DeleteSyncPlaybackItemResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -50817,7 +51899,7 @@ func (r DeleteSyncProgressDropMovieResponse) StatusCode() int {
 }
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r DeleteSyncProgressDropMovieResponse) ContentType() string {
+func (r DeleteSyncPlaybackItemResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -51013,6 +52095,47 @@ func (r GetSyncProgressWatchedResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSyncProgressWatchedResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSyncRatingsAllResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]GetSyncRatingsAll200JSONResponseBody_Item
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSyncRatingsAllResponse) GetJSON200() *[]GetSyncRatingsAll200JSONResponseBody_Item {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSyncRatingsAllResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSyncRatingsAllResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSyncRatingsAllResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSyncRatingsAllResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -51331,6 +52454,47 @@ func (r PostSyncRatingsRemoveResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PostSyncRatingsRemoveResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSyncRatingsByTypeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]GetSyncRatingsByType200JSONResponseBody_Item
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSyncRatingsByTypeResponse) GetJSON200() *[]GetSyncRatingsByType200JSONResponseBody_Item {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSyncRatingsByTypeResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSyncRatingsByTypeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSyncRatingsByTypeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSyncRatingsByTypeResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -53985,6 +55149,22 @@ func (c *ClientWithResponses) GetSyncCollectionAllWithResponse(ctx context.Conte
 	return ParseGetSyncCollectionAllResponse(rsp)
 }
 
+// GetSyncHistoryAllWithResponse Get watched history
+//
+// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sync/history (the `GetSyncHistoryAll` operationId).
+func (c *ClientWithResponses) GetSyncHistoryAllWithResponse(ctx context.Context, params *GetSyncHistoryAllParams, reqEditors ...RequestEditorFn) (*GetSyncHistoryAllResponse, error) {
+	rsp, err := c.GetSyncHistoryAll(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSyncHistoryAllResponse(rsp)
+}
+
 // PostSyncHistoryAddWithBodyWithResponse Add items to watched history
 //
 // #### 🔒 OAuth Required
@@ -54109,6 +55289,22 @@ func (c *ClientWithResponses) PostSyncHistoryRemoveWithResponse(ctx context.Cont
 	return ParsePostSyncHistoryRemoveResponse(rsp)
 }
 
+// GetSyncHistoryByTypeWithResponse Get watched history
+//
+// #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
+// Returns movies and episodes that a user has watched, sorted by most recent. Specify a `type` and Trakt `id` to limit the history for just that item.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sync/history/{type} (the `GetSyncHistoryByType` operationId).
+func (c *ClientWithResponses) GetSyncHistoryByTypeWithResponse(ctx context.Context, pType string, params *GetSyncHistoryByTypeParams, reqEditors ...RequestEditorFn) (*GetSyncHistoryByTypeResponse, error) {
+	rsp, err := c.GetSyncHistoryByType(ctx, pType, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSyncHistoryByTypeResponse(rsp)
+}
+
 // GetSyncHistoryGetWithResponse Get watched history
 //
 // #### 🔒 OAuth Required 📄 Pagination ✨ Extended Info
@@ -54181,20 +55377,20 @@ func (c *ClientWithResponses) GetSyncProgressMoviesWithResponse(ctx context.Cont
 	return ParseGetSyncProgressMoviesResponse(rsp)
 }
 
-// DeleteSyncProgressDropMovieWithResponse Remove a playback item
+// DeleteSyncPlaybackItemWithResponse Remove a playback item
 //
 // #### 🔒 OAuth Required
 // Remove a playback item from a user's playback progress list. A `404` will be returned if the `id` is invalid.
 //
 // Returns a wrapper object for the known response body format(s).
 //
-// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncProgressDropMovie` operationId).
-func (c *ClientWithResponses) DeleteSyncProgressDropMovieWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteSyncProgressDropMovieResponse, error) {
-	rsp, err := c.DeleteSyncProgressDropMovie(ctx, id, reqEditors...)
+// Corresponds with DELETE /sync/playback/{id} (the `DeleteSyncPlaybackItem` operationId).
+func (c *ClientWithResponses) DeleteSyncPlaybackItemWithResponse(ctx context.Context, id int, reqEditors ...RequestEditorFn) (*DeleteSyncPlaybackItemResponse, error) {
+	rsp, err := c.DeleteSyncPlaybackItem(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteSyncProgressDropMovieResponse(rsp)
+	return ParseDeleteSyncPlaybackItemResponse(rsp)
 }
 
 // GetSyncProgressWatchedWithResponse Get watched progress
@@ -54211,6 +55407,21 @@ func (c *ClientWithResponses) GetSyncProgressWatchedWithResponse(ctx context.Con
 		return nil, err
 	}
 	return ParseGetSyncProgressWatchedResponse(rsp)
+}
+
+// GetSyncRatingsAllWithResponse Get ratings
+//
+// Returns all ratings for the requested media type and rating value.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sync/ratings (the `GetSyncRatingsAll` operationId).
+func (c *ClientWithResponses) GetSyncRatingsAllWithResponse(ctx context.Context, params *GetSyncRatingsAllParams, reqEditors ...RequestEditorFn) (*GetSyncRatingsAllResponse, error) {
+	rsp, err := c.GetSyncRatingsAll(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSyncRatingsAllResponse(rsp)
 }
 
 // PostSyncRatingsAddWithBodyWithResponse Add new ratings
@@ -54325,6 +55536,21 @@ func (c *ClientWithResponses) PostSyncRatingsRemoveWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParsePostSyncRatingsRemoveResponse(rsp)
+}
+
+// GetSyncRatingsByTypeWithResponse Get ratings
+//
+// Returns all ratings for the requested media type and rating value.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /sync/ratings/{type} (the `GetSyncRatingsByType` operationId).
+func (c *ClientWithResponses) GetSyncRatingsByTypeWithResponse(ctx context.Context, pType string, params *GetSyncRatingsByTypeParams, reqEditors ...RequestEditorFn) (*GetSyncRatingsByTypeResponse, error) {
+	rsp, err := c.GetSyncRatingsByType(ctx, pType, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSyncRatingsByTypeResponse(rsp)
 }
 
 // GetSyncRatingsGetWithResponse Get ratings
@@ -60310,6 +61536,32 @@ func ParseGetSyncCollectionAllResponse(rsp *http.Response) (*GetSyncCollectionAl
 	return response, nil
 }
 
+// ParseGetSyncHistoryAllResponse parses an HTTP response from a GetSyncHistoryAllWithResponse call
+func ParseGetSyncHistoryAllResponse(rsp *http.Response) (*GetSyncHistoryAllResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSyncHistoryAllResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []GetSyncHistoryAll200JSONResponseBody_Item
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParsePostSyncHistoryAddResponse parses an HTTP response from a PostSyncHistoryAddWithResponse call
 func ParsePostSyncHistoryAddResponse(rsp *http.Response) (*PostSyncHistoryAddResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -60506,6 +61758,32 @@ func ParsePostSyncHistoryRemoveResponse(rsp *http.Response) (*PostSyncHistoryRem
 				} `json:"shows,omitempty"`
 			} `json:"not_found"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSyncHistoryByTypeResponse parses an HTTP response from a GetSyncHistoryByTypeWithResponse call
+func ParseGetSyncHistoryByTypeResponse(rsp *http.Response) (*GetSyncHistoryByTypeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSyncHistoryByTypeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []GetSyncHistoryByType200JSONResponseBody_Item
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -60931,15 +62209,15 @@ func ParseGetSyncProgressMoviesResponse(rsp *http.Response) (*GetSyncProgressMov
 	return response, nil
 }
 
-// ParseDeleteSyncProgressDropMovieResponse parses an HTTP response from a DeleteSyncProgressDropMovieWithResponse call
-func ParseDeleteSyncProgressDropMovieResponse(rsp *http.Response) (*DeleteSyncProgressDropMovieResponse, error) {
+// ParseDeleteSyncPlaybackItemResponse parses an HTTP response from a DeleteSyncPlaybackItemWithResponse call
+func ParseDeleteSyncPlaybackItemResponse(rsp *http.Response) (*DeleteSyncPlaybackItemResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteSyncProgressDropMovieResponse{
+	response := &DeleteSyncPlaybackItemResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -61050,6 +62328,32 @@ func ParseGetSyncProgressWatchedResponse(rsp *http.Response) (*GetSyncProgressWa
 				Year         *int    `json:"year,omitempty"`
 			} `json:"show"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSyncRatingsAllResponse parses an HTTP response from a GetSyncRatingsAllWithResponse call
+func ParseGetSyncRatingsAllResponse(rsp *http.Response) (*GetSyncRatingsAllResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSyncRatingsAllResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []GetSyncRatingsAll200JSONResponseBody_Item
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -61220,6 +62524,32 @@ func ParsePostSyncRatingsRemoveResponse(rsp *http.Response) (*PostSyncRatingsRem
 				} `json:"shows,omitempty"`
 			} `json:"not_found"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSyncRatingsByTypeResponse parses an HTTP response from a GetSyncRatingsByTypeWithResponse call
+func ParseGetSyncRatingsByTypeResponse(rsp *http.Response) (*GetSyncRatingsByTypeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSyncRatingsByTypeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []GetSyncRatingsByType200JSONResponseBody_Item
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

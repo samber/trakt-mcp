@@ -7,7 +7,8 @@
 //	go run ./internal/trakt/gen/filterspec -spec openapi.json \
 //	    -endpoints internal/trakt/endpoints.txt -out internal/trakt/openapi.filtered.json
 //
-// Transforms applied, in order (each covered by a test in main_test.go):
+// Transforms applied, in order (each covered by a test in main_test.go or
+// overlay_test.go):
 //
 //  1. Keep only the listed METHOD+path operations; a listed endpoint missing
 //     from the spec is an error. Path-level fields (parameters, summary) stay.
@@ -25,6 +26,11 @@
 //     {"nullable": true} and the search "type" as an untyped enum, which
 //     oapi-codegen turns into interface{} arguments; on the wire every path
 //     and query parameter is a string anyway.
+//  7. Apply traktOverlay (overlay.go): clone operations under shorter paths
+//     where the spec marks optional path segments as required, rename
+//     misleading operationIds, then check operationIds are unique. The
+//     filtered spec therefore holds the endpoints.txt operations plus the
+//     clone paths, which TestFilteredSpecMatchesEndpoints checks offline.
 package main
 
 import (
@@ -37,6 +43,7 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -73,8 +80,8 @@ const (
 
 // httpMethods lists the operation keys of an OpenAPI path item.
 var httpMethods = map[string]bool{
-	"GET": true, "PUT": true, "POST": true, "DELETE": true,
-	"OPTIONS": true, "HEAD": true, "PATCH": true, "TRACE": true,
+	http.MethodGet: true, http.MethodPut: true, http.MethodPost: true, http.MethodDelete: true,
+	http.MethodOptions: true, http.MethodHead: true, http.MethodPatch: true, http.MethodTrace: true,
 }
 
 // nameMapKeys are object keys whose value maps user-chosen names (property
@@ -123,6 +130,11 @@ func run(specPath, endpointsPath, outPath string) error {
 
 	out, err := filterSpec(spec, endpoints)
 	if err != nil {
+		return err
+	}
+
+	paths, _ := out["paths"].(map[string]any)
+	if err := applyOverlay(paths, traktOverlay); err != nil {
 		return err
 	}
 

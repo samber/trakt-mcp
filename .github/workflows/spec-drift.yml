@@ -1,0 +1,31 @@
+name: Trakt spec drift
+
+# Reruns the full generation pipeline against Trakt's live OpenAPI document
+# and fails when the committed filtered spec or client would change. Kept out
+# of pull request checks: an upstream edit or a network error must not block
+# unrelated changes.
+on:
+  schedule:
+    # Weekly, Monday 06:17 UTC: off the hour, when GitHub's scheduler is busiest.
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Regenerate from the live spec
+        run: make generate SPEC_IN="$RUNNER_TEMP/trakt-openapi.json"
+
+      - name: Fail on drift
+        run: git diff --stat --exit-code internal/trakt
