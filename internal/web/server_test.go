@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/oauth"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/oauth"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (
@@ -38,7 +38,7 @@ func testConfig(t *testing.T) config.Config {
 
 	return config.Config{
 		BaseURL:         u,
-		GoogleClientID:  "client-id",
+		TraktClientID:   "client-id",
 		EnableDCR:       true,
 		MetricsPath:     testMetricsPath,
 		MetricsUser:     testMetricsUser,

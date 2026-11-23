@@ -1,4 +1,4 @@
-module github.com/samber/google-contacts-mcp
+module github.com/samber/trakt-mcp
 
 go 1.26.0
 

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (

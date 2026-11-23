@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (

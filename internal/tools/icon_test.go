@@ -8,7 +8,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/samber/google-contacts-mcp/internal/limits"
+	"github.com/samber/trakt-mcp/internal/limits"
 )
 
 // siteFaviconPath is the website icon the MCP icon must match.

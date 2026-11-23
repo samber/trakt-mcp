@@ -1,5 +1,6 @@
-// Package config parses google-contacts-mcp settings from command-line flags
-// and GCMCP_* environment variables. A flag always wins over its env var.
+// Package config parses trakt-mcp settings from command-line flags and
+// environment variables. Each flag reads the env var of the same name,
+// uppercased with dashes as underscores; a flag always wins over its env var.
 package config
 
 import (
@@ -17,12 +18,10 @@ import (
 )
 
 const (
-	// envPrefix namespaces every env var so the server never picks up unrelated settings.
-	envPrefix = "GCMCP_"
-	// envGoogleClientSecret is env-only so the secret never shows in process listings.
-	envGoogleClientSecret = envPrefix + "GOOGLE_CLIENT_SECRET"
+	// envTraktClientSecret is env-only so the secret never shows in process listings.
+	envTraktClientSecret = "TRAKT_CLIENT_SECRET" //nolint:gosec // G101: env var name, not a credential
 	// envEncryptionKeys is env-only so key material never shows in process listings.
-	envEncryptionKeys = envPrefix + "ENCRYPTION_KEYS"
+	envEncryptionKeys = "ENCRYPTION_KEYS"
 	// envPort is the de-facto PaaS convention (Heroku, Cloud Run, Fly) for the port to bind.
 	envPort = "PORT"
 
@@ -31,15 +30,17 @@ const (
 	// portListenHost binds every interface when a PaaS hands us PORT: its router must reach us.
 	portListenHost = "0.0.0.0"
 	// defaultDBPath keeps the SQLite file under ./data, which .gitignore excludes.
-	defaultDBPath = "./data/google-contacts-mcp.db"
+	defaultDBPath = "./data/trakt-mcp.db"
 	// defaultLogLevel logs one line per tool call without personal data.
 	defaultLogLevel = "info"
 	// defaultMetricsPath is the Prometheus convention.
 	defaultMetricsPath = "/metrics"
 	// defaultRateLimitReads is per user per minute; generous for interactive agent use.
 	defaultRateLimitReads = 120
-	// defaultRateLimitWrites is per user per minute; lower than reads since writes cost more Google quota.
+	// defaultRateLimitWrites is per user per minute; lower than reads since writes cost more upstream quota.
 	defaultRateLimitWrites = 30
+	// defaultRateLimitGlobal is per minute across all users, so one instance stays under the upstream API's shared quota.
+	defaultRateLimitGlobal = 1200
 	// minMetricsPasswordLen resists online brute force on the basic-auth metrics endpoint.
 	minMetricsPasswordLen = 16
 
@@ -47,8 +48,6 @@ const (
 	schemeHTTPS = "https"
 	// schemeHTTP is accepted only for loopback hosts, for local development.
 	schemeHTTP = "http"
-	// allowedDomainsSep separates entries of --allowed-domains.
-	allowedDomainsSep = ","
 )
 
 // Flag names, also used to derive env var names and error messages.
@@ -56,8 +55,7 @@ const (
 	flagBaseURL             = "base-url"
 	flagListen              = "listen"
 	flagDBPath              = "db-path"
-	flagGoogleClientID      = "google-client-id"
-	flagAllowedDomains      = "allowed-domains"
+	flagTraktClientID       = "trakt-client-id"
 	flagEnableDCR           = "enable-dcr"
 	flagLogLevel            = "log-level"
 	flagMetrics             = "metrics"
@@ -68,6 +66,7 @@ const (
 	flagMetricsPasswordFile = "metrics-password-file"
 	flagRateLimitReads      = "rate-limit-reads"
 	flagRateLimitWrites     = "rate-limit-writes"
+	flagRateLimitGlobal     = "rate-limit-global"
 	flagSiteURL             = "site-url"
 	flagOpenAIAppsChallenge = "openai-apps-challenge"
 )
@@ -86,23 +85,24 @@ var logLevels = map[string]slog.Level{
 
 // Config is the validated server configuration.
 type Config struct {
-	BaseURL            *url.URL
-	Listen             string
-	DBPath             string
-	GoogleClientID     string
-	GoogleClientSecret string
-	EncryptionKeys     string
-	AllowedDomains     []string
-	EnableDCR          bool
-	LogLevel           slog.Level
-	Metrics            bool
-	MetricsPath        string
+	BaseURL           *url.URL
+	Listen            string
+	DBPath            string
+	TraktClientID     string
+	TraktClientSecret string
+	EncryptionKeys    string
+	EnableDCR         bool
+	LogLevel          slog.Level
+	Metrics           bool
+	MetricsPath       string
 	// MetricsListen is empty when metrics share the main listener.
 	MetricsListen   string
 	MetricsUser     string
 	MetricsPassword string
 	RateLimitReads  int
 	RateLimitWrites int
+	// RateLimitGlobal caps requests per minute across all users.
+	RateLimitGlobal int
 	// SiteURL is where GET / redirects; nil (nullable) when no website is configured.
 	SiteURL *url.URL
 	// OpenAIAppsChallenge is the domain-verification token served at
@@ -112,25 +112,25 @@ type Config struct {
 	Args []string
 }
 
-// EnvName returns the env var read for a flag: GCMCP_ plus the flag name in upper snake case.
+// EnvName returns the env var read for a flag: the flag name in upper snake case, no prefix.
 func EnvName(flagName string) string {
-	return envPrefix + strings.ToUpper(strings.ReplaceAll(flagName, "-", "_"))
+	return strings.ToUpper(strings.ReplaceAll(flagName, "-", "_"))
 }
 
 // raw holds flag values before validation.
 type raw struct {
-	baseURL, listen, dbPath, googleClientID, allowedDomains, logLevel string
-	metricsPath, metricsListen, metricsUser                           string
-	metricsPassword, metricsPasswordFile                              string
-	siteURL, openAIAppsChallenge                                      string
-	enableDCR, metrics                                                bool
-	rateLimitReads, rateLimitWrites                                   int
+	baseURL, listen, dbPath, traktClientID, logLevel string
+	metricsPath, metricsListen, metricsUser          string
+	metricsPassword, metricsPasswordFile             string
+	siteURL, openAIAppsChallenge                     string
+	enableDCR, metrics                               bool
+	rateLimitReads, rateLimitWrites, rateLimitGlobal int
 }
 
 // newFlagSet registers every flag with its default taken from the env var when
 // set, so flag.Parse lets an explicit flag override the env value.
 func newFlagSet(getenv func(string) string, r *raw) (*flag.FlagSet, error) {
-	fs := flag.NewFlagSet("google-contacts-mcp", flag.ContinueOnError)
+	fs := flag.NewFlagSet("trakt-mcp", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
 	str := func(p *string, name, def, usage string) {
@@ -176,8 +176,7 @@ func newFlagSet(getenv func(string) string, r *raw) (*flag.FlagSet, error) {
 	str(&r.baseURL, flagBaseURL, "", "public HTTPS URL, also the OAuth issuer (required)")
 	str(&r.listen, flagListen, listenDefault, "listen address")
 	str(&r.dbPath, flagDBPath, defaultDBPath, "SQLite file")
-	str(&r.googleClientID, flagGoogleClientID, "", "Google OAuth client id (required)")
-	str(&r.allowedDomains, flagAllowedDomains, "", "comma-separated account domains allowed to connect (empty: all)")
+	str(&r.traktClientID, flagTraktClientID, "", "Trakt application client id (required)")
 	boolean(&r.enableDCR, flagEnableDCR, true, "enable OAuth Dynamic Client Registration")
 	str(&r.logLevel, flagLogLevel, defaultLogLevel, "debug, info, warn or error")
 	boolean(&r.metrics, flagMetrics, false, "enable the Prometheus endpoint")
@@ -188,6 +187,7 @@ func newFlagSet(getenv func(string) string, r *raw) (*flag.FlagSet, error) {
 	str(&r.metricsPasswordFile, flagMetricsPasswordFile, "", "file holding the metrics basic-auth password")
 	integer(&r.rateLimitReads, flagRateLimitReads, defaultRateLimitReads, "per-user reads per minute")
 	integer(&r.rateLimitWrites, flagRateLimitWrites, defaultRateLimitWrites, "per-user writes per minute")
+	integer(&r.rateLimitGlobal, flagRateLimitGlobal, defaultRateLimitGlobal, "requests per minute across all users")
 	str(&r.siteURL, flagSiteURL, "", "website URL that GET / redirects to (empty: / answers 404)")
 	str(&r.openAIAppsChallenge, flagOpenAIAppsChallenge, "", "OpenAI domain-verification token served at /.well-known/openai-apps-challenge (empty: 404)")
 
@@ -205,8 +205,8 @@ func Usage(w io.Writer) {
 	fs.SetOutput(w)
 	fs.PrintDefaults()
 
-	_, _ = fmt.Fprintf(w, "\nEvery flag also reads %s<FLAG_UPPER_SNAKE>; the flag wins.\n", envPrefix)
-	_, _ = fmt.Fprintf(w, "Env only (required): %s, %s\n", envGoogleClientSecret, envEncryptionKeys)
+	_, _ = fmt.Fprintln(w, "\nEvery flag also reads the env var of the same name, uppercased with dashes as underscores (--db-path: DB_PATH); the flag wins.")
+	_, _ = fmt.Fprintf(w, "Env only (required): %s, %s\n", envTraktClientSecret, envEncryptionKeys)
 }
 
 // Subcommands that read configuration. genkey and version need none.
@@ -218,11 +218,11 @@ const (
 
 // Keys of the values a command may require; flags carry a "--" prefix in errors.
 const (
-	reqBaseURL            = "--" + flagBaseURL
-	reqDBPath             = "--" + flagDBPath
-	reqGoogleClientID     = "--" + flagGoogleClientID
-	reqGoogleClientSecret = envGoogleClientSecret
-	reqEncryptionKeys     = envEncryptionKeys
+	reqBaseURL           = "--" + flagBaseURL
+	reqDBPath            = "--" + flagDBPath
+	reqTraktClientID     = "--" + flagTraktClientID
+	reqTraktClientSecret = envTraktClientSecret
+	reqEncryptionKeys    = envEncryptionKeys
 )
 
 // commandSpec lists what each command needs, so offline maintenance commands
@@ -237,14 +237,14 @@ type commandSpec struct {
 
 var commandSpecs = map[string]commandSpec{
 	CmdServe: {required: []string{
-		reqBaseURL, reqDBPath, reqGoogleClientID, reqGoogleClientSecret,
+		reqBaseURL, reqDBPath, reqTraktClientID, reqTraktClientSecret,
 		reqEncryptionKeys,
 	}},
 	CmdRekey: {required: []string{reqDBPath, reqEncryptionKeys}},
 	CmdDisconnect: {
-		required:  []string{reqDBPath, reqEncryptionKeys, reqGoogleClientID, reqGoogleClientSecret},
+		required:  []string{reqDBPath, reqEncryptionKeys, reqTraktClientID, reqTraktClientSecret},
 		nargs:     1,
-		argsUsage: "<email|google-sub>",
+		argsUsage: "<trakt-slug>",
 	},
 }
 
@@ -280,19 +280,19 @@ func Load(cmd string, args []string, getenv func(string) string) (Config, error)
 	}
 
 	cfg := Config{
-		Listen:             r.listen,
-		DBPath:             r.dbPath,
-		GoogleClientID:     strings.TrimSpace(r.googleClientID),
-		GoogleClientSecret: getenv(envGoogleClientSecret),
-		EncryptionKeys:     getenv(envEncryptionKeys),
-		AllowedDomains:     parseDomains(r.allowedDomains),
-		EnableDCR:          r.enableDCR,
-		Metrics:            r.metrics,
-		MetricsPath:        r.metricsPath,
-		MetricsListen:      r.metricsListen,
-		MetricsUser:        r.metricsUser,
-		RateLimitReads:     r.rateLimitReads,
-		RateLimitWrites:    r.rateLimitWrites,
+		Listen:            r.listen,
+		DBPath:            r.dbPath,
+		TraktClientID:     strings.TrimSpace(r.traktClientID),
+		TraktClientSecret: getenv(envTraktClientSecret),
+		EncryptionKeys:    getenv(envEncryptionKeys),
+		EnableDCR:         r.enableDCR,
+		Metrics:           r.metrics,
+		MetricsPath:       r.metricsPath,
+		MetricsListen:     r.metricsListen,
+		MetricsUser:       r.metricsUser,
+		RateLimitReads:    r.rateLimitReads,
+		RateLimitWrites:   r.rateLimitWrites,
+		RateLimitGlobal:   r.rateLimitGlobal,
 		// Surrounding whitespace, such as a newline from a secret file, is cut.
 		OpenAIAppsChallenge: strings.TrimSpace(r.openAIAppsChallenge),
 		Args:                fs.Args(),
@@ -366,11 +366,11 @@ func validateArgs(cmd string, spec commandSpec, args []string) []error {
 // validateRequired reports every value the command requires but finds empty.
 func validateRequired(spec commandSpec, r *raw, cfg Config) []error {
 	values := map[string]string{
-		reqBaseURL:            r.baseURL,
-		reqDBPath:             cfg.DBPath,
-		reqGoogleClientID:     cfg.GoogleClientID,
-		reqGoogleClientSecret: cfg.GoogleClientSecret,
-		reqEncryptionKeys:     cfg.EncryptionKeys,
+		reqBaseURL:           r.baseURL,
+		reqDBPath:            cfg.DBPath,
+		reqTraktClientID:     cfg.TraktClientID,
+		reqTraktClientSecret: cfg.TraktClientSecret,
+		reqEncryptionKeys:    cfg.EncryptionKeys,
 	}
 
 	var errs []error
@@ -384,7 +384,7 @@ func validateRequired(spec commandSpec, r *raw, cfg Config) []error {
 	return errs
 }
 
-// validateRates requires both per-user rate limits to be positive.
+// validateRates requires every rate limit to be positive.
 func validateRates(cfg Config) []error {
 	var errs []error
 
@@ -394,6 +394,10 @@ func validateRates(cfg Config) []error {
 
 	if cfg.RateLimitWrites <= 0 {
 		errs = append(errs, fmt.Errorf("--%s must be positive, got %d", flagRateLimitWrites, cfg.RateLimitWrites))
+	}
+
+	if cfg.RateLimitGlobal <= 0 {
+		errs = append(errs, fmt.Errorf("--%s must be positive, got %d", flagRateLimitGlobal, cfg.RateLimitGlobal))
 	}
 
 	return errs
@@ -456,17 +460,4 @@ func validateMetricsAuth(user, password string) []error {
 	}
 
 	return errs
-}
-
-// parseDomains lowercases, trims and drops empty entries.
-func parseDomains(raw string) []string {
-	var out []string
-
-	for d := range strings.SplitSeq(raw, allowedDomainsSep) {
-		if d = strings.ToLower(strings.TrimSpace(d)); d != "" {
-			out = append(out, d)
-		}
-	}
-
-	return out
 }

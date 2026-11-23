@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/contacts"
 )
 
 // methodRecorder wraps the handler and records the JSON-RPC method of every

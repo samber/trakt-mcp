@@ -15,9 +15,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
-	"github.com/samber/google-contacts-mcp/internal/limits"
-	"github.com/samber/google-contacts-mcp/internal/obs"
+	"github.com/samber/trakt-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/limits"
+	"github.com/samber/trakt-mcp/internal/obs"
 )
 
 const (

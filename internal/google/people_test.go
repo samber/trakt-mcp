@@ -20,7 +20,7 @@ import (
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/people/v1"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/contacts"
 )
 
 func (e *testEnv) people(t *testing.T) contacts.People {

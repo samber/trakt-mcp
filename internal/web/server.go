@@ -9,8 +9,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/oauth"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/oauth"
 )
 
 const (

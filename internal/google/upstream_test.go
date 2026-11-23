@@ -18,8 +18,8 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 func TestAuthCodeURL(t *testing.T) {

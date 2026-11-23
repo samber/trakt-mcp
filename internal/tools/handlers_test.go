@@ -17,8 +17,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
-	"github.com/samber/google-contacts-mcp/internal/limits"
+	"github.com/samber/trakt-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/limits"
 )
 
 const (

@@ -29,7 +29,7 @@ const (
 	generatedIDBytes = 4
 	// hmacSecretSize matches the SHA-256 output used for fosite HMAC signing.
 	hmacSecretSize = 32
-	// entrySep separates keyring entries in GCMCP_ENCRYPTION_KEYS.
+	// entrySep separates keyring entries in ENCRYPTION_KEYS.
 	entrySep = ","
 	// idSep separates a key id from its base64 key inside one entry.
 	idSep = ":"

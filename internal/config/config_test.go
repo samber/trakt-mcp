@@ -5,7 +5,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -13,17 +12,26 @@ import (
 // requiredArgs holds the minimum flags Load accepts; tests append to it.
 var requiredArgs = []string{
 	"--base-url=https://contacts.example.com",
-	"--google-client-id=client-id",
+	"--trakt-client-id=client-id",
 }
 
 // testEncryptionKeys is a syntactically plausible keyring entry; Load only
 // checks that the value is non-empty.
 const testEncryptionKeys = "k1:AAAA"
 
+const (
+	// testFromEnv is a value that only an env var supplies, to tell it from flag values.
+	testFromEnv = "from-env"
+	// testEnvPort is the PaaS port variable name.
+	testEnvPort = "PORT"
+	// testListenFromEnv is a LISTEN env value distinct from every default.
+	testListenFromEnv = "127.0.0.1:6000"
+)
+
 // requiredEnv holds the env-only secrets Load requires.
 var requiredEnv = map[string]string{
-	envGoogleClientSecret: "client-secret",
-	envEncryptionKeys:     testEncryptionKeys,
+	envTraktClientSecret: "client-secret",
+	envEncryptionKeys:    testEncryptionKeys,
 }
 
 // envFunc builds an injected env lookup from requiredEnv plus extra, so tests
@@ -53,7 +61,7 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Errorf("Listen = %q", cfg.Listen)
 	}
 
-	if cfg.DBPath != "./data/google-contacts-mcp.db" {
+	if cfg.DBPath != "./data/trakt-mcp.db" {
 		t.Errorf("DBPath = %q", cfg.DBPath)
 	}
 
@@ -81,8 +89,8 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Errorf("RateLimitWrites = %d", cfg.RateLimitWrites)
 	}
 
-	if len(cfg.AllowedDomains) != 0 {
-		t.Errorf("AllowedDomains = %v, want empty", cfg.AllowedDomains)
+	if cfg.RateLimitGlobal != 1200 {
+		t.Errorf("RateLimitGlobal = %d, want 1200", cfg.RateLimitGlobal)
 	}
 }
 
@@ -100,8 +108,8 @@ func TestLoad_ProvidedValues(t *testing.T) {
 		t.Errorf("BaseURL = %v", cfg.BaseURL)
 	}
 
-	if cfg.GoogleClientSecret != "client-secret" || cfg.EncryptionKeys != testEncryptionKeys {
-		t.Errorf("secrets not read from env: %q %q", cfg.GoogleClientSecret, cfg.EncryptionKeys)
+	if cfg.TraktClientSecret != "client-secret" || cfg.EncryptionKeys != testEncryptionKeys {
+		t.Errorf("secrets not read from env: %q %q", cfg.TraktClientSecret, cfg.EncryptionKeys)
 	}
 
 	if cfg.SiteURL != nil {
@@ -151,7 +159,7 @@ func TestLoad_SiteURL(t *testing.T) {
 func TestLoad_SiteURLFromEnv(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"GCMCP_SITE_URL": "https://site.example.com"}))
+	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"SITE_URL": "https://site.example.com"}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -202,32 +210,32 @@ func TestLoad_OpenAIAppsChallenge(t *testing.T) {
 func TestLoad_OpenAIAppsChallengeFromEnv(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"GCMCP_OPENAI_APPS_CHALLENGE": "from-env"}))
+	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"OPENAI_APPS_CHALLENGE": testFromEnv}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.OpenAIAppsChallenge != "from-env" {
+	if cfg.OpenAIAppsChallenge != testFromEnv {
 		t.Errorf("OpenAIAppsChallenge = %q", cfg.OpenAIAppsChallenge)
 	}
 }
 
-// TestLoad_OperatorFlagsRemoved pins the removal of the flags that only fed
-// the server-rendered pages: passing one is an unknown-flag error.
-func TestLoad_OperatorFlagsRemoved(t *testing.T) {
+// TestRemovedFlagsRejected pins the removal of flags with no Trakt equivalent:
+// passing one is an unknown-flag error.
+func TestRemovedFlagsRejected(t *testing.T) {
 	t.Parallel()
 
-	for _, flag := range []string{"--operator-name=Jane Doe", "--operator-email=jane@example.com"} {
+	for _, flag := range []string{"--operator-name=Jane Doe", "--operator-email=jane@example.com", "--allowed-domains=acme.com", "--google-client-id=x"} {
 		if _, err := Load(CmdServe, withArgs(flag), envFunc(nil)); err == nil {
 			t.Errorf("%s: err = nil, want unknown-flag error", flag)
 		}
 	}
 }
 
-func TestLoad_PortEnv(t *testing.T) {
+func TestPortEnvDefaultsListen(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"PORT": "9000"}))
+	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{testEnvPort: "9000"}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -236,7 +244,7 @@ func TestLoad_PortEnv(t *testing.T) {
 		t.Errorf("Listen = %q, want 0.0.0.0:9000", cfg.Listen)
 	}
 
-	cfg, err = Load(CmdServe, withArgs("--listen=127.0.0.1:7000"), envFunc(map[string]string{"PORT": "9000"}))
+	cfg, err = Load(CmdServe, withArgs("--listen=127.0.0.1:7000"), envFunc(map[string]string{testEnvPort: "9000"}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -245,20 +253,20 @@ func TestLoad_PortEnv(t *testing.T) {
 		t.Errorf("Listen = %q, want flag value", cfg.Listen)
 	}
 
-	cfg, err = Load(CmdServe, withArgs(), envFunc(map[string]string{"PORT": "9000", "GCMCP_LISTEN": "127.0.0.1:6000"}))
+	cfg, err = Load(CmdServe, withArgs(), envFunc(map[string]string{testEnvPort: "9000", "LISTEN": testListenFromEnv}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.Listen != "127.0.0.1:6000" {
-		t.Errorf("Listen = %q, want GCMCP_LISTEN value", cfg.Listen)
+	if cfg.Listen != testListenFromEnv {
+		t.Errorf("Listen = %q, want LISTEN value", cfg.Listen)
 	}
 }
 
 func TestLoad_EnvAndFlagPrecedence(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := Load(CmdServe, withArgs("--db-path=/b"), envFunc(map[string]string{"GCMCP_DB_PATH": "/a"}))
+	cfg, err := Load(CmdServe, withArgs("--db-path=/b"), envFunc(map[string]string{"DB_PATH": "/a"}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -268,12 +276,12 @@ func TestLoad_EnvAndFlagPrecedence(t *testing.T) {
 	}
 
 	cfg, err = Load(CmdServe, withArgs(), envFunc(map[string]string{
-		"GCMCP_DB_PATH":           "/a",
-		"GCMCP_ENABLE_DCR":        "false",
-		"GCMCP_RATE_LIMIT_READS":  "10",
-		"GCMCP_LOG_LEVEL":         "debug",
-		"GCMCP_METRICS_PATH":      "/m",
-		"GCMCP_RATE_LIMIT_WRITES": "5",
+		"DB_PATH":           "/a",
+		"ENABLE_DCR":        "false",
+		"RATE_LIMIT_READS":  "10",
+		"LOG_LEVEL":         "debug",
+		"METRICS_PATH":      "/m",
+		"RATE_LIMIT_WRITES": "5",
 	}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
@@ -288,14 +296,14 @@ func TestLoad_EnvAndFlagPrecedence(t *testing.T) {
 func TestLoad_InvalidEnv(t *testing.T) {
 	t.Parallel()
 
-	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"GCMCP_RATE_LIMIT_READS": "abc"})); err == nil ||
-		!strings.Contains(err.Error(), "GCMCP_RATE_LIMIT_READS") {
-		t.Errorf("bad int env: err = %v, want error naming GCMCP_RATE_LIMIT_READS", err)
+	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"RATE_LIMIT_READS": "abc"})); err == nil ||
+		!strings.Contains(err.Error(), "RATE_LIMIT_READS") {
+		t.Errorf("bad int env: err = %v, want error naming RATE_LIMIT_READS", err)
 	}
 
-	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"GCMCP_ENABLE_DCR": "maybe"})); err == nil ||
-		!strings.Contains(err.Error(), "GCMCP_ENABLE_DCR") {
-		t.Errorf("bad bool env: err = %v, want error naming GCMCP_ENABLE_DCR", err)
+	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"ENABLE_DCR": "maybe"})); err == nil ||
+		!strings.Contains(err.Error(), "ENABLE_DCR") {
+		t.Errorf("bad bool env: err = %v, want error naming ENABLE_DCR", err)
 	}
 }
 
@@ -313,8 +321,8 @@ func TestLoad_Required(t *testing.T) {
 	t.Parallel()
 
 	flagCases := map[string]string{
-		"base-url":         "--base-url",
-		"google-client-id": "--google-client-id",
+		"base-url":        "--base-url",
+		"trakt-client-id": "--trakt-client-id",
 	}
 	for name, prefix := range flagCases {
 		t.Run(name, func(t *testing.T) {
@@ -335,7 +343,7 @@ func TestLoad_Required(t *testing.T) {
 		})
 	}
 
-	for _, key := range []string{"GCMCP_GOOGLE_CLIENT_SECRET", envEncryptionKeys} {
+	for _, key := range []string{"TRAKT_CLIENT_SECRET", envEncryptionKeys} {
 		t.Run(key, func(t *testing.T) {
 			t.Parallel()
 
@@ -370,7 +378,7 @@ func TestLoad_BaseURLMustBeHTTPS(t *testing.T) {
 
 			args := []string{
 				"--base-url=" + raw,
-				"--google-client-id=client-id",
+				"--trakt-client-id=client-id",
 			}
 
 			_, err := Load(CmdServe, args, envFunc(nil))
@@ -416,7 +424,7 @@ func TestLoad_Metrics(t *testing.T) {
 		t.Errorf("cfg = %+v", cfg)
 	}
 
-	cfg, err = Load(CmdServe, withArgs("--metrics", "--metrics-user=u"), envFunc(map[string]string{"GCMCP_METRICS_PASSWORD": pw16}))
+	cfg, err = Load(CmdServe, withArgs("--metrics", "--metrics-user=u"), envFunc(map[string]string{"METRICS_PASSWORD": pw16}))
 	if err != nil {
 		t.Fatalf("env password: %v", err)
 	}
@@ -466,29 +474,6 @@ func TestLoad_MetricsPasswordFile(t *testing.T) {
 	}
 }
 
-func TestLoad_AllowedDomains(t *testing.T) {
-	t.Parallel()
-
-	cfg, err := Load(CmdServe, withArgs("--allowed-domains= Acme.com, gmail.com "), envFunc(nil))
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-
-	want := []string{"acme.com", "gmail.com"}
-	if !reflect.DeepEqual(cfg.AllowedDomains, want) {
-		t.Errorf("AllowedDomains = %v, want %v", cfg.AllowedDomains, want)
-	}
-
-	cfg, err = Load(CmdServe, withArgs("--allowed-domains=,"), envFunc(nil))
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-
-	if len(cfg.AllowedDomains) != 0 {
-		t.Errorf("AllowedDomains = %v, want empty", cfg.AllowedDomains)
-	}
-}
-
 func TestLoad_InvalidValues(t *testing.T) {
 	t.Parallel()
 
@@ -496,6 +481,7 @@ func TestLoad_InvalidValues(t *testing.T) {
 		"log level":          withArgs("--log-level=verbose"),
 		"zero reads":         withArgs("--rate-limit-reads=0"),
 		"negative writes":    withArgs("--rate-limit-writes=-1"),
+		"zero global":        withArgs("--rate-limit-global=0"),
 		"metrics path slash": withArgs("--metrics-path=metrics"),
 	}
 	for name, args := range cases {
@@ -512,7 +498,7 @@ func TestLoad_InvalidValues(t *testing.T) {
 func TestLoad_ServeRejectsPositional(t *testing.T) {
 	t.Parallel()
 
-	_, err := Load(CmdServe, withArgs("stray", "--allowed-domains=acme.com"), envFunc(nil))
+	_, err := Load(CmdServe, withArgs("stray", "--enable-dcr=false"), envFunc(nil))
 	if err == nil || !strings.Contains(err.Error(), `"stray"`) {
 		t.Errorf("err = %v, want error naming the stray argument", err)
 	}
@@ -534,7 +520,7 @@ func TestLoad_RekeyMinimalRequirements(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.DBPath != "./data/google-contacts-mcp.db" || cfg.EncryptionKeys != testEncryptionKeys {
+	if cfg.DBPath != "./data/trakt-mcp.db" || cfg.EncryptionKeys != testEncryptionKeys {
 		t.Errorf("cfg = %+v", cfg)
 	}
 
@@ -557,11 +543,11 @@ func TestLoad_DisconnectRequiresOneArg(t *testing.T) {
 
 	env := func(key string) string {
 		return map[string]string{
-			envEncryptionKeys:            testEncryptionKeys,
-			"GCMCP_GOOGLE_CLIENT_SECRET": "secret",
+			envEncryptionKeys:     testEncryptionKeys,
+			"TRAKT_CLIENT_SECRET": "secret",
 		}[key]
 	}
-	flags := []string{"--db-path=/tmp/x.db", "--google-client-id=cid"}
+	flags := []string{"--db-path=/tmp/x.db", "--trakt-client-id=cid"}
 
 	if _, err := Load(CmdDisconnect, flags, env); err == nil {
 		t.Error("0 args: err = nil, want error")
@@ -581,7 +567,7 @@ func TestLoad_DisconnectRequiresOneArg(t *testing.T) {
 	}
 
 	if _, err := Load(CmdDisconnect, []string{"a@b.c"}, env); err == nil ||
-		!strings.Contains(err.Error(), "google-client-id") {
+		!strings.Contains(err.Error(), "trakt-client-id") {
 		t.Errorf("missing client id: err = %v", err)
 	}
 }
@@ -593,5 +579,91 @@ func TestLoad_UnknownCommand(t *testing.T) {
 		if _, err := Load(cmd, withArgs(), envFunc(nil)); err == nil {
 			t.Errorf("%q: err = nil, want error", cmd)
 		}
+	}
+}
+
+func TestEnvName(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"db-path":          "DB_PATH",
+		"base-url":         "BASE_URL",
+		"trakt-client-id":  "TRAKT_CLIENT_ID",
+		"rate-limit-reads": "RATE_LIMIT_READS",
+		"listen":           "LISTEN",
+		"":                 "",
+	}
+	for flagName, want := range cases {
+		if got := EnvName(flagName); got != want {
+			t.Errorf("EnvName(%q) = %q, want %q", flagName, got, want)
+		}
+	}
+}
+
+func TestFlagBeatsEnv(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := Load(CmdServe, withArgs("--trakt-client-id=from-flag"), envFunc(map[string]string{"TRAKT_CLIENT_ID": testFromEnv}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.TraktClientID != "from-flag" {
+		t.Errorf("TraktClientID = %q, want from-flag", cfg.TraktClientID)
+	}
+
+	cfg, err = Load(CmdServe, []string{"--base-url=https://trakt.example.com"}, envFunc(map[string]string{"TRAKT_CLIENT_ID": testFromEnv}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.TraktClientID != testFromEnv {
+		t.Errorf("TraktClientID = %q, want from-env", cfg.TraktClientID)
+	}
+}
+
+// TestTraktSecretOnlyFromEnv checks the secret is read from TRAKT_CLIENT_SECRET
+// and cannot be passed as a flag, so it never shows in process listings.
+func TestTraktSecretOnlyFromEnv(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := Load(CmdServe, withArgs(), envFunc(nil))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.TraktClientSecret != "client-secret" {
+		t.Errorf("TraktClientSecret = %q", cfg.TraktClientSecret)
+	}
+
+	if _, err := Load(CmdServe, withArgs("--trakt-client-secret=x"), envFunc(nil)); err == nil {
+		t.Error("--trakt-client-secret: err = nil, want unknown-flag error")
+	}
+
+	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"TRAKT_CLIENT_SECRET": ""})); err == nil ||
+		!strings.Contains(err.Error(), "TRAKT_CLIENT_SECRET") {
+		t.Errorf("missing secret: err = %v, want error naming TRAKT_CLIENT_SECRET", err)
+	}
+}
+
+func TestLoad_RateLimitGlobal(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := Load(CmdServe, withArgs("--rate-limit-global=5"), envFunc(nil))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.RateLimitGlobal != 5 {
+		t.Errorf("RateLimitGlobal = %d, want 5", cfg.RateLimitGlobal)
+	}
+
+	cfg, err = Load(CmdServe, withArgs(), envFunc(map[string]string{"RATE_LIMIT_GLOBAL": "7"}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.RateLimitGlobal != 7 {
+		t.Errorf("RateLimitGlobal = %d, want 7", cfg.RateLimitGlobal)
 	}
 }

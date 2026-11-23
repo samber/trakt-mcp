@@ -5,8 +5,8 @@ build:
 
 plugin-openai:
 	mkdir -p dist
-	rm -f dist/google-contacts-openai-plugin.zip
-	cd plugin/openai && zip -r -X ../../dist/google-contacts-openai-plugin.zip . -x '.DS_Store'
+	rm -f dist/trakt-openai-plugin.zip
+	cd plugin/openai && zip -r -X ../../dist/trakt-openai-plugin.zip . -x '.DS_Store'
 
 test:
 	go test -race -v ./...

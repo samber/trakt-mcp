@@ -16,16 +16,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/jobs"
-	"github.com/samber/google-contacts-mcp/internal/limits"
-	"github.com/samber/google-contacts-mcp/internal/oauth"
-	"github.com/samber/google-contacts-mcp/internal/obs"
-	"github.com/samber/google-contacts-mcp/internal/store"
-	"github.com/samber/google-contacts-mcp/internal/tools"
-	"github.com/samber/google-contacts-mcp/internal/web"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/jobs"
+	"github.com/samber/trakt-mcp/internal/limits"
+	"github.com/samber/trakt-mcp/internal/oauth"
+	"github.com/samber/trakt-mcp/internal/obs"
+	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/tools"
+	"github.com/samber/trakt-mcp/internal/web"
 )
 
 const (
@@ -73,8 +73,8 @@ func runServe(ctx context.Context, cfg config.Config, stdout io.Writer) (err err
 
 	base := strings.TrimSuffix(cfg.BaseURL.String(), "/")
 	up := google.NewUpstream(google.UpstreamConfig{
-		ClientID:     cfg.GoogleClientID,
-		ClientSecret: cfg.GoogleClientSecret,
+		ClientID:     cfg.TraktClientID,
+		ClientSecret: cfg.TraktClientSecret,
 		RedirectURL:  base + googleCallbackPath,
 		// Always wired, metrics or not: the hook also records the Google
 		// status that tool-call log lines report.

@@ -27,11 +27,11 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/time/rate"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/obs"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/obs"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (
@@ -218,9 +218,9 @@ func (e *env) newServer(base string, opts ...envOption) (*Server, *http.ServeMux
 	}
 
 	cfg := config.Config{
-		BaseURL:        baseURL,
-		GoogleClientID: testGoogleClientID,
-		EnableDCR:      true,
+		BaseURL:       baseURL,
+		TraktClientID: testGoogleClientID,
+		EnableDCR:     true,
 	}
 	for _, o := range opts {
 		o(&cfg)
@@ -919,7 +919,8 @@ func TestFlow_ContactsScopeNotGranted(t *testing.T) {
 func TestFlow_DomainRefused(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, func(c *config.Config) { c.AllowedDomains = []string{testAllowedDomain} })
+	e := newEnv(t)
+	e.srv.allowedDomains = []string{testAllowedDomain}
 	cp := e.authorize(authorizeParams(newPKCE()))
 	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "example.com", "not allowed")
 
@@ -1150,7 +1151,8 @@ func TestVerifier_ExpiredAccessToken(t *testing.T) {
 func TestFlow_DomainAllowedByHD(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, func(c *config.Config) { c.AllowedDomains = []string{"corp.example"} })
+	e := newEnv(t)
+	e.srv.allowedDomains = []string{"corp.example"}
 	e.google.set(func(f *fakeGoogle) {
 		f.hd = "Corp.Example"
 		f.email = "alice@corp.example"
@@ -1170,7 +1172,8 @@ func TestFlow_DomainAllowedByHD(t *testing.T) {
 func TestFlow_DomainEmailOnlyRefusedForNonGoogleDomain(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, func(c *config.Config) { c.AllowedDomains = []string{"corp.example"} })
+	e := newEnv(t)
+	e.srv.allowedDomains = []string{"corp.example"}
 	// A consumer account registered on a corporate address carries no hd.
 	e.google.set(func(f *fakeGoogle) { f.email = "alice@corp.example" })
 	cp := e.authorize(authorizeParams(newPKCE()))
@@ -1184,7 +1187,8 @@ func TestFlow_DomainEmailOnlyRefusedForNonGoogleDomain(t *testing.T) {
 func TestFlow_DomainGmailAllowed(t *testing.T) {
 	t.Parallel()
 
-	e := newEnv(t, func(c *config.Config) { c.AllowedDomains = []string{"gmail.com"} })
+	e := newEnv(t)
+	e.srv.allowedDomains = []string{"gmail.com"}
 	e.google.set(func(f *fakeGoogle) { f.email = "Alice@Gmail.com" })
 
 	cp := e.authorize(authorizeParams(newPKCE()))

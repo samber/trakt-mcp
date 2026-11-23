@@ -16,8 +16,8 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/api/people/v1"
 
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 // Shared test fixtures; each names a value reused across several test files.

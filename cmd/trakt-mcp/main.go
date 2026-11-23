@@ -1,4 +1,4 @@
-// Command google-contacts-mcp is a remote MCP server exposing Google Contacts.
+// Command trakt-mcp is a remote MCP server exposing Trakt.
 package main
 
 import (
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 // version is set at build time with -ldflags "-X main.version=<tag>".
@@ -161,8 +161,8 @@ func runDisconnect(ctx context.Context, cfg config.Config, stdout io.Writer) (er
 	defer func() { err = errors.Join(err, st.Close()) }()
 
 	up := google.NewUpstream(google.UpstreamConfig{
-		ClientID:     cfg.GoogleClientID,
-		ClientSecret: cfg.GoogleClientSecret,
+		ClientID:     cfg.TraktClientID,
+		ClientSecret: cfg.TraktClientSecret,
 	}, st, nil)
 
 	return disconnectUser(ctx, st, up, cfg.Args[0], stdout)

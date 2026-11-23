@@ -11,9 +11,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 func noEnv(string) string { return "" }
@@ -86,10 +86,10 @@ func storeEnv(t *testing.T) (getenv func(string) string, dbPath, keys string) {
 
 	dbPath = filepath.Join(t.TempDir(), "db.sqlite")
 	vars := map[string]string{
-		"GCMCP_ENCRYPTION_KEYS":      keys,
-		"GCMCP_DB_PATH":              dbPath,
-		"GCMCP_GOOGLE_CLIENT_ID":     "client-id",
-		"GCMCP_GOOGLE_CLIENT_SECRET": "client-secret",
+		"ENCRYPTION_KEYS":     keys,
+		"DB_PATH":             dbPath,
+		"TRAKT_CLIENT_ID":     "client-id",
+		"TRAKT_CLIENT_SECRET": "client-secret",
 	}
 
 	return func(key string) string { return vars[key] }, dbPath, keys
@@ -121,7 +121,7 @@ func TestRun_RekeyBadKeys(t *testing.T) {
 	t.Parallel()
 
 	env := func(key string) string {
-		return map[string]string{"GCMCP_ENCRYPTION_KEYS": "k1:AAAA", "GCMCP_DB_PATH": filepath.Join(t.TempDir(), "db")}[key]
+		return map[string]string{"ENCRYPTION_KEYS": "k1:AAAA", "DB_PATH": filepath.Join(t.TempDir(), "db")}[key]
 	}
 
 	var out, errOut bytes.Buffer

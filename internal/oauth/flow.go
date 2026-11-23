@@ -20,8 +20,8 @@ import (
 	"github.com/ory/fosite"
 	"golang.org/x/oauth2"
 
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/contacts"
 )
 
 func TestUpsert_Created(t *testing.T) {

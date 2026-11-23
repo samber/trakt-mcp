@@ -19,11 +19,11 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/google"
-	"github.com/samber/google-contacts-mcp/internal/obs"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/google"
+	"github.com/samber/trakt-mcp/internal/obs"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (
@@ -124,19 +124,18 @@ func New(cfg config.Config, deps Deps) (*Server, error) {
 	}
 
 	s := &Server{
-		st:             deps.Store,
-		clients:        deps.Clients,
-		up:             deps.Upstream,
-		idTokens:       deps.IDTokenVerifier,
-		log:            deps.Logger,
-		metrics:        deps.Metrics,
-		now:            deps.Now,
-		templates:      tmpl,
-		pendingLimit:   newBucket(pendingRate, pendingBurst),
-		issuer:         issuer,
-		resource:       issuer + mcpPath,
-		enableDCR:      cfg.EnableDCR,
-		allowedDomains: cfg.AllowedDomains,
+		st:           deps.Store,
+		clients:      deps.Clients,
+		up:           deps.Upstream,
+		idTokens:     deps.IDTokenVerifier,
+		log:          deps.Logger,
+		metrics:      deps.Metrics,
+		now:          deps.Now,
+		templates:    tmpl,
+		pendingLimit: newBucket(pendingRate, pendingBurst),
+		issuer:       issuer,
+		resource:     issuer + mcpPath,
+		enableDCR:    cfg.EnableDCR,
 	}
 	if s.log == nil {
 		s.log = slog.Default()
@@ -149,7 +148,7 @@ func New(cfg config.Config, deps Deps) (*Server, error) {
 	if s.idTokens == nil {
 		ctx := oidc.ClientContext(context.Background(), &http.Client{Timeout: jwksFetchTimeout})
 		s.idTokens = oidc.NewVerifier(googleIssuer, oidc.NewRemoteKeySet(ctx, googleJWKSURL),
-			&oidc.Config{ClientID: cfg.GoogleClientID})
+			&oidc.Config{ClientID: cfg.TraktClientID})
 	}
 
 	secret, rotated := deps.Keyring.HMACSecrets(hmacLabel)

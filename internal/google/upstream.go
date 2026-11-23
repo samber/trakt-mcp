@@ -21,8 +21,8 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/api/people/v1"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (

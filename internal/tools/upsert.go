@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/samber/google-contacts-mcp/internal/contacts"
+	"github.com/samber/trakt-mcp/internal/contacts"
 )
 
 // Upsert outcomes (spec §8.1).

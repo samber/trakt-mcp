@@ -19,8 +19,8 @@ import (
 	"github.com/ory/fosite"
 	"golang.org/x/time/rate"
 
-	"github.com/samber/google-contacts-mcp/internal/crypto"
-	"github.com/samber/google-contacts-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/store"
 )
 
 const (

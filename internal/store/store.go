@@ -19,7 +19,7 @@ import (
 	// Registers the pure-Go "sqlite" driver, so builds stay CGO_ENABLED=0.
 	_ "modernc.org/sqlite"
 
-	"github.com/samber/google-contacts-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/crypto"
 )
 
 const (

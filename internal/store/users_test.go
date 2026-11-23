@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/google-contacts-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/crypto"
 )
 
 // Fixed test keys: 32 bytes each, base64-encoded.

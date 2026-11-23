@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samber/google-contacts-mcp/internal/config"
-	"github.com/samber/google-contacts-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/config"
+	"github.com/samber/trakt-mcp/internal/crypto"
 )
 
 // serveWait bounds startup and shutdown in the serve test.
@@ -29,15 +29,15 @@ func serveConfig(t *testing.T, extra ...string) config.Config {
 	}
 
 	vars := map[string]string{
-		"GCMCP_ENCRYPTION_KEYS":      keys,
-		"GCMCP_GOOGLE_CLIENT_SECRET": "client-secret",
+		"ENCRYPTION_KEYS":     keys,
+		"TRAKT_CLIENT_SECRET": "client-secret",
 	}
 
 	args := append([]string{
 		"--base-url=http://localhost:8080",
 		"--listen=127.0.0.1:0",
 		"--db-path=" + filepath.Join(t.TempDir(), "db.sqlite"),
-		"--google-client-id=client-id",
+		"--trakt-client-id=client-id",
 	}, extra...)
 
 	cfg, err := config.Load(config.CmdServe, args, func(k string) string { return vars[k] })
