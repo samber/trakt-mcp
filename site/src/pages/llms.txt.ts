@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import {
   FAQ,
   MCP_URL,
+  NOT_AFFILIATED,
   OPERATOR_NAME,
   NEVER_STORED,
   REPO_URL,
@@ -13,6 +14,7 @@ import {
   STORED,
   TOOLS,
   TOOL_GROUPS,
+  TRAKT_CONNECTED_APPS_URL,
 } from '../data/site';
 
 // Built from src/data/site.ts, the list the gate compares with internal/tools, so the
@@ -27,9 +29,9 @@ const toolSection = TOOL_GROUPS.flatMap(({ group, title }) => [
 const lines = [
   `# ${SITE_NAME}`,
   '',
-  `> ${SITE_SUMMARY} Every call goes to Google directly; contacts are never stored. Open source, written in Go.`,
+  `> ${SITE_SUMMARY} Every call goes to Trakt directly; viewing data is never stored. Open source, written in Go. ${NOT_AFFILIATED}`,
   '',
-  `${SITE_NAME} is a hosted remote MCP server for Google Contacts: paste one URL into Claude or ChatGPT, with no stdio, npx or local install. It is free, MIT licensed, and operated by ${OPERATOR_NAME}.`,
+  `${SITE_NAME} is a hosted remote MCP server for Trakt: paste one URL into Claude or ChatGPT, with no stdio, npx or local install. It is free, MIT licensed, and operated by ${OPERATOR_NAME}.`,
   '',
   '## How to connect',
   '',
@@ -37,7 +39,7 @@ const lines = [
   '',
   '1. Claude: Settings, Connectors, Add custom connector. ChatGPT: turn on developer mode, then Create app.',
   '2. Paste the connector URL.',
-  '3. Sign in with Google and approve access to your contacts. Access can be revoked at any time from the Google account.',
+  `3. Sign in with Trakt and approve access to your Trakt account. Access can be revoked at any time in Trakt, under Settings, Connected Apps (${TRAKT_CONNECTED_APPS_URL}).`,
   '',
   '## Tools',
   '',
@@ -63,7 +65,7 @@ const lines = [
   '',
   `- [Source code and documentation](${REPO_URL}): the Go server and the list of tools.`,
   `- [Self-hosting guide](${SELF_HOSTING_URL}): run your own copy.`,
-  `- [Security notes](${SECURITY_URL}): how OAuth, tokens and Google credentials are handled.`,
+  `- [Security notes](${SECURITY_URL}): how OAuth, tokens and Trakt credentials are handled.`,
   '',
 ];
 

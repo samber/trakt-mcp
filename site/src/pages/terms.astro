@@ -1,14 +1,18 @@
 ---
 import Legal from '../layouts/Legal.astro';
-import { LEGAL_UPDATED, OPERATOR_EMAIL, OPERATOR_NAME } from '../data/site';
+import {
+  INACTIVITY_DAYS,
+  LEGAL_UPDATED,
+  NOT_AFFILIATED,
+  OPERATOR_EMAIL,
+  OPERATOR_NAME,
+  TRAKT_CONNECTED_APPS_URL,
+} from '../data/site';
 
-const GOOGLE_PERMISSIONS_URL = 'https://myaccount.google.com/permissions';
-// Limits of the hosted instance, set by the owner. They differ from the server defaults
-// (120 and 30), so the deployment must set GCMCP_RATE_LIMIT_READS=50 and GCMCP_RATE_LIMIT_WRITES=20.
-const READS_PER_MINUTE = 50;
-const WRITES_PER_MINUTE = 20;
-// Matches the 180-day purge in the server (internal/jobs).
-const INACTIVITY_DAYS = 180;
+// Limits of the hosted instance. They must equal RATE_LIMIT_READS and RATE_LIMIT_WRITES on the
+// deployed server; these are the server defaults.
+const READS_PER_MINUTE = 120;
+const WRITES_PER_MINUTE = 30;
 // Owner: these terms are a plain-language draft written from how the service behaves.
 // They are not legal advice. Have a lawyer read them if you want certainty.
 // (A JS comment: an HTML comment would be published in the page.)
@@ -16,27 +20,31 @@ const INACTIVITY_DAYS = 180;
 
 <Legal
   title="Terms of service"
-  description="Terms of service of the hosted Google Contacts MCP service: who can use it, what you authorize, acceptable use, liability, and the governing law."
+  description="Terms of service of the hosted Trakt MCP service: who can use it, what you authorize, acceptable use, liability, and the governing law."
   path="/terms"
   updated={LEGAL_UPDATED}
 >
   <h2>Who provides the service</h2>
   <p>
     The service is provided by {OPERATOR_NAME}, an individual (the operator). It connects an AI assistant you choose, such
-    as Claude or ChatGPT, to your Google Contacts. Contact: <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a>.
+    as Claude or ChatGPT, to your Trakt account. Contact: <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a>.
   </p>
+  <p>{NOT_AFFILIATED}</p>
 
   <h2>Who can use it</h2>
   <p>
-    Anyone with a Google account can connect. The operator can restrict the service to some e-mail domains, and can
-    refuse an account that breaks these terms.
+    Anyone with a Trakt account can connect. Some Trakt features need Trakt VIP, and Trakt applies its own limits to lists,
+    watchlists and collections; this service passes them on and does not work around them. The operator can refuse an
+    account that breaks these terms.
   </p>
 
   <h2>What you authorize</h2>
   <p>
-    When you connect an assistant, you let it act on your Google Contacts through the Google People API: search, read,
-    create, change, delete, and organize contacts in labels. You stay responsible for what you ask it to do. A deleted
-    contact is deleted at Google and cannot be restored by this service, so keep your own export of your contacts.
+    When you connect an assistant, you let it act on your Trakt account through the Trakt API: browse the catalog, read
+    your watchlist, history, collection and ratings, and change them, check in to what you are watching, and manage
+    recommendations. Trakt offers no narrower permission, so the access covers your whole Trakt account. You stay
+    responsible for what you ask it to do. A history entry, rating or list item removed through the service is removed at
+    Trakt and cannot be restored by this service, so keep your own export of your Trakt data.
   </p>
 
   <h2>Acceptable use</h2>
@@ -45,22 +53,22 @@ const INACTIVITY_DAYS = 180;
       Stay within the limits: {READS_PER_MINUTE} reading calls and {WRITES_PER_MINUTE} writing calls per user per minute.
     </li>
     <li>Do not try to reach another person's data, or to disrupt the service.</li>
-    <li>Follow Google's terms for its APIs and the terms of your assistant's provider.</li>
-    <li>Follow the law, including for the personal data of the people in your contacts.</li>
+    <li>Follow Trakt's terms and API use policy, and the terms of your assistant's provider.</li>
+    <li>Follow the law.</li>
   </ul>
 
   <h2>The service is provided as is</h2>
   <p>
     The service is free and comes with no promise of availability, of speed, or of backups. It can change, be interrupted
-    or be shut down. If it is shut down, a notice appears on this website. Contacts changed by an assistant can be lost or
+    or be shut down. If it is shut down, a notice appears on this website. Data changed by an assistant can be lost or
     overwritten by mistake.
   </p>
 
   <h2>Ending your use</h2>
   <ul>
     <li>
-      You can stop at any time: revoke access at <a href={GOOGLE_PERMISSIONS_URL}>myaccount.google.com/permissions</a>, or
-      ask the operator to disconnect you.
+      You can stop at any time: disconnect the connector in your assistant, revoke the application in Trakt under
+      Settings, <a href={TRAKT_CONNECTED_APPS_URL}>Connected Apps</a>, or ask the operator to disconnect you.
     </li>
     <li>The operator can suspend an account that breaks these terms or harms the service.</li>
     <li>An account unused for {INACTIVITY_DAYS} days is purged automatically.</li>
@@ -69,9 +77,9 @@ const INACTIVITY_DAYS = 180;
 
   <h2>Liability</h2>
   <p>
-    As far as the law allows, the operator is not liable for indirect damage, or for the loss of data or of contacts, that
-    results from using the service. Nothing here limits rights that the law does not allow to be limited, such as the
-    rights of consumers.
+    As far as the law allows, the operator is not liable for indirect damage, or for the loss of data or of viewing
+    history, ratings or lists, that results from using the service. Nothing here limits rights that the law does not allow
+    to be limited, such as the rights of consumers.
   </p>
 
   <h2>Changes to these terms</h2>

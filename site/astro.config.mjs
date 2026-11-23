@@ -1,9 +1,9 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-import { LEGAL_UPDATED } from './src/data/site.ts';
+import { LEGAL_UPDATED, SITE_URL } from './src/data/site.ts';
 
 // SITE is the public origin; Astro builds canonical URLs and the sitemap from it.
-const SITE = 'https://google-contacts-mcp.samber.dev';
+const SITE = SITE_URL;
 
 export default defineConfig({
   site: SITE,

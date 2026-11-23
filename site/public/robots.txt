@@ -21,4 +21,4 @@ User-agent: MistralAI-User
 User-agent: Amazonbot
 Allow: /
 
-Sitemap: https://google-contacts-mcp.samber.dev/sitemap-index.xml
+Sitemap: https://trakt-mcp.samber.dev/sitemap-index.xml

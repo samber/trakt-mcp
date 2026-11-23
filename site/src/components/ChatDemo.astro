@@ -1,24 +1,24 @@
 ---
 // A conversation rendered as plain HTML: what using the connector looks like.
-// The steps describe the real tools (search_contacts, update_contact) in plain words, so visitors
-// who never heard of MCP can follow; the person and company are fictional.
+// The steps describe the real tools (add_to_history, add_ratings) in plain words, so visitors
+// who never heard of MCP can follow; the titles are public catalog entries, no personal data.
 ---
 
 <figure class="chat" aria-label="Example conversation with an assistant using the connector">
   <div class="thread">
-    <p class="msg user">Who do I know at Halvard Robotics? Camille just became their CTO, update her card.</p>
+    <p class="msg user">I just finished season 2 of Severance. Mark it as watched and give it a 9.</p>
     <ul class="calls" aria-label="What the assistant did">
-      <li>Searched your contacts for "Halvard"<b class="done" aria-hidden="true">✓</b></li>
-      <li>Updated Camille's job title<b class="done" aria-hidden="true">✓</b></li>
+      <li>Marked Severance, season 2, as watched<b class="done" aria-hidden="true">✓</b></li>
+      <li>Rated the season 9 out of 10<b class="done" aria-hidden="true">✓</b></li>
     </ul>
     <div class="msg assistant">
       <p class="dots" aria-hidden="true"><i></i><i></i><i></i></p>
-      <p>You have one contact there. Her card is updated:</p>
+      <p>Done. Your Trakt account is up to date:</p>
       <dl class="contact">
-        <div><dt>Name</dt><dd>Camille Durand</dd></div>
-        <div><dt>Company</dt><dd>Halvard Robotics</dd></div>
-        <div class="changed"><dt>Title</dt><dd>CTO</dd></div>
-        <div><dt>E-mail</dt><dd class="mono">camille@halvard.example</dd></div>
+        <div><dt>Show</dt><dd>Severance</dd></div>
+        <div><dt>Season</dt><dd>2</dd></div>
+        <div class="changed"><dt>Status</dt><dd>Watched</dd></div>
+        <div class="changed"><dt>Rating</dt><dd>9 / 10</dd></div>
       </dl>
     </div>
   </div>

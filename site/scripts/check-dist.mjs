@@ -40,8 +40,8 @@ const ALLOWED_HOSTS = new Set([
   'github.com',
   // The operator's LinkedIn profile, linked from the footer (outbound link only).
   'www.linkedin.com',
-  'developers.google.com',
-  'myaccount.google.com',
+  // Trakt's connected-apps page, linked from the privacy policy so users can revoke the app.
+  'trakt.tv',
   'modelcontextprotocol.io',
   // The French data protection authority, named in the privacy policy.
   'www.cnil.fr',
@@ -53,10 +53,15 @@ const ALLOWED_HOSTS = new Set([
   'analytics.ahrefs.com',
 ]);
 
-// Google requires this exact sentence in the privacy policy of apps that use its APIs.
-const LIMITED_USE_SENTENCE =
-  "This service's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.";
-const GOOGLE_POLICY_URL = 'https://developers.google.com/terms/api-services-user-data-policy';
+// The site is rewritten from the Google Contacts version: these strings must never come back
+// in visible text, titles or the discovery files.
+const FORBIDDEN_LEGACY = /google|contacts/i;
+const PRODUCT_NAME = 'Trakt MCP';
+// Branding rule (spec section 11): the name Trakt is descriptive only, never an endorsement claim.
+const NOT_AFFILIATED_SENTENCE = 'not affiliated with or endorsed by Trakt';
+// Spec section 11: deletion after a revoke at Trakt is not immediate.
+const DELETION_DELAY_SENTENCE = 'deletion can take up to 180 days';
+const TRAKT_CONNECTED_APPS_URL = 'https://trakt.tv/oauth/authorized_applications';
 
 // Spec: the page script (copy button and card reveal) stays under 1 KB gzipped. The inline
 // Google Tag Manager and PostHog loaders add about 0.3 KB more, so the cap is 1.5 KB.
@@ -220,8 +225,8 @@ for (const [file, other] of [
 }
 if (existsSync(`${DIST}privacy.html`)) {
   const html = read('privacy.html');
-  if (!visibleText(html).includes(LIMITED_USE_SENTENCE)) fail('privacy.html: the Google Limited Use sentence is missing or altered');
-  if (!html.includes(`href="${GOOGLE_POLICY_URL}"`)) fail('privacy.html: link to the Google API Services User Data Policy is missing');
+  if (!visibleText(html).includes(DELETION_DELAY_SENTENCE)) fail(`privacy.html: the sentence "${DELETION_DELAY_SENTENCE}" is missing`);
+  if (!html.includes(`href="${TRAKT_CONNECTED_APPS_URL}"`)) fail('privacy.html: link to the Trakt connected apps page is missing');
   if (!visibleText(html).includes('This website sets no cookies and runs no analytics.')) {
     fail('privacy.html: the no-cookies, no-analytics statement is missing');
   }
@@ -239,9 +244,42 @@ if (existsSync(`${DIST}privacy.html`)) {
     'hosting provider',
     'outside the European Union',
     'portable',
+    'data source and processor',
+    'Connected Apps',
+    'watch history',
+    NOT_AFFILIATED_SENTENCE,
   ]) {
     if (!privacy.includes(phrase)) fail(`privacy.html: missing the statement "${phrase}"`);
   }
+}
+
+// Branding and legacy-string rules, over every built page and discovery file.
+for (const { file } of PAGES) {
+  if (!existsSync(`${DIST}${file}`)) continue;
+  const html = read(file);
+  const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+  if (!file.startsWith('404') && !title.includes('Trakt')) fail(`${file}: <title> does not name Trakt`);
+  const legacy = visibleText(html).match(FORBIDDEN_LEGACY)?.[0];
+  if (legacy) fail(`${file}: visible text still contains the legacy word "${legacy}"`);
+  const meta = [...html.matchAll(/<meta[^>]+content="([^"]*)"/g)].map((m) => m[1]).join(' ');
+  const metaLegacy = meta.match(FORBIDDEN_LEGACY)?.[0];
+  if (metaLegacy) fail(`${file}: meta tags still contain the legacy word "${metaLegacy}"`);
+}
+if (existsSync(`${DIST}index.html`)) {
+  const home = read('index.html');
+  if (!/<title>[^<]*Trakt MCP/.test(home)) fail(`index.html: <title> must contain "${PRODUCT_NAME}"`);
+  if (!visibleText(home).includes(NOT_AFFILIATED_SENTENCE)) fail(`index.html: the sentence "${NOT_AFFILIATED_SENTENCE}" is missing`);
+  if (/trakt[^"]*\.(svg|png)/i.test(home.replace(/og\.png/g, ''))) fail('index.html: references an image named after Trakt (the logo must not be used)');
+}
+// robots.txt is not checked: it names the Google-Extended crawler.
+if (existsSync(`${DIST}llms.txt`)) {
+  const legacy = read('llms.txt').match(FORBIDDEN_LEGACY)?.[0];
+  if (legacy) fail(`llms.txt: still contains the legacy word "${legacy}"`);
+}
+if (existsSync(`${DIST}manifest.json`)) {
+  const legacy = read('manifest.json').match(FORBIDDEN_LEGACY)?.[0];
+  if (legacy) fail(`manifest.json: still contains the legacy word "${legacy}"`);
+  if (!read('manifest.json').includes('Trakt')) fail('manifest.json: does not name Trakt');
 }
 
 // Example data must be obviously fictional: a LinkedIn handle that could be a real person is not allowed.

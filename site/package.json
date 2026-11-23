@@ -1,8 +1,8 @@
 {
-  "name": "google-contacts-mcp-site",
+  "name": "trakt-mcp-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Landing page, privacy policy and terms of service of the hosted google-contacts-mcp.",
+  "description": "Landing page, privacy policy and terms of service of the hosted trakt-mcp.",
   "license": "MIT",
   "type": "module",
   "engines": {

@@ -1,53 +1,40 @@
 ---
-import { siGmail } from 'simple-icons';
 import { TOOLS, TOOL_GROUPS } from '../data/site';
 
-// Fictional people and companies; 01 99 00 xx xx is the numbering range reserved for fiction in France.
-const SIGNATURE = [
-  'Camille Durand',
-  'CTO, Halvard Robotics',
-  '+33 1 99 00 12 34',
-  'camille@halvard.example',
-  'linkedin.com/in/c-example',
-];
-// `filled`: empty before, written by the assistant. The others were already there and stay untouched.
+// Public catalog titles; the numbers are example ratings, not anyone's account.
+const MESSAGE_LINES = ['Dune: Part Two, 9', 'Poor Things, 7', 'Shōgun, season 1, 10'];
+// `filled`: written by the assistant. Every row starts empty, so each one is highlighted.
 const FIELDS = [
-  { label: 'Name', value: 'Camille Durand', filled: false },
-  { label: 'E-mail', value: 'camille@halvard.example', filled: false, mono: true },
-  { label: 'Company', value: 'Halvard Robotics', filled: true },
-  { label: 'Title', value: 'CTO', filled: true },
-  { label: 'Phone', value: '+33 1 99 00 12 34', filled: true, mono: true },
-  { label: 'LinkedIn', value: 'linkedin.com/in/c-example', filled: true, mono: true },
+  { label: 'Dune: Part Two', value: '9 / 10', filled: true },
+  { label: 'Poor Things', value: '7 / 10', filled: true },
+  { label: 'Shōgun, season 1', value: '10 / 10', filled: true },
 ];
-// Labels anyone might use: the page speaks to every visitor, not to one user's address book.
-const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
+// Places a title can go: the page speaks to every visitor, not to one user's account.
+const LABELS = ['Watchlist', 'Trending', 'Anticipated', 'Recommended'];
 ---
 
 <section class="features wrap" aria-labelledby="features-title">
   <h2 id="features-title" class="reveal">
-    10 tools, all on your Google Contacts.{' '}
+    {TOOLS.length} tools, all on your Trakt account.{' '}
     <span class="soft">Your assistant picks the right one from what you ask.</span>
   </h2>
 
   <div class="grid">
     <article class="tile wide signature reveal" aria-labelledby="sig-title">
       <div class="tile-text">
-        <h3 id="sig-title">Add a contact from an e-mail signature</h3>
+        <h3 id="sig-title">Rate what you watched in one message</h3>
         <p class="muted">
-          Ask Claude or ChatGPT to add the sender to Google Contacts. It fills the empty fields from the signature and
-          never overwrites yours. Reading the e-mail needs your assistant's own e-mail connector.
+          Tell Claude or ChatGPT what you saw and how you liked it. It finds each title on Trakt and rates it, season by
+          season if you want. Your ratings stay on Trakt, never on this server.
         </p>
       </div>
       <div class="flow">
         <figure class="mail">
-          <svg class="gmail" role="img" aria-label="Gmail" viewBox="0 0 24 24" fill={`#${siGmail.hex}`}>
-            <path d={siGmail.path} />
-          </svg>
-          <p>Thanks for the call today, I'll send the deck by Friday.</p>
-          <p class="sig">{SIGNATURE.map((line) => <span>{line}</span>)}</p>
-          <figcaption class="visually-hidden">The e-mail you received</figcaption>
+          <p>Rate what I watched this weekend:</p>
+          <p class="sig">{MESSAGE_LINES.map((line) => <span>{line}</span>)}</p>
+          <figcaption class="visually-hidden">What you tell your assistant</figcaption>
         </figure>
-        <!-- Decorative arrow from the e-mail to the contact; pathLength="1" lets CSS draw it without measuring. -->
+        <!-- Decorative arrow from the message to the ratings; pathLength="1" lets CSS draw it without measuring. -->
         <svg class="arrow" viewBox="0 0 56 24" aria-hidden="true">
           <path d="M3 14 C 16 2, 32 24, 50 12" pathLength="1"></path>
           <path d="M43 6 L 51 12 L 43 18" pathLength="1"></path>
@@ -58,27 +45,27 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
               FIELDS.map((field) => (
                 <div class:list={{ filled: field.filled }}>
                   <dt>{field.label}</dt>
-                  <dd class:list={{ mono: field.mono }}>{field.value}</dd>
+                  <dd>{field.value}</dd>
                 </div>
               ))
             }
           </dl>
-          <figcaption class="legend muted">Highlighted: filled in by your assistant</figcaption>
+          <figcaption class="legend muted">Highlighted: rated by your assistant</figcaption>
         </figure>
       </div>
     </article>
 
     <article class="tile labels reveal" aria-labelledby="labels-title">
       <div class="tile-text">
-        <h3 id="labels-title">Organize with labels</h3>
-        <p class="muted">Create labels and file people in them, in one sentence.</p>
+        <h3 id="labels-title">Plan what to watch next</h3>
+        <p class="muted">Browse what is trending, then add a title to your watchlist in one sentence.</p>
       </div>
       <div class="ui" aria-hidden="true">
         <ul class="chips">
           {LABELS.map((label, index) => <li style={`--i:${index}`}>{label}</li>)}
         </ul>
         <div class="added">
-          <p><span class="avatar">C</span> Camille Durand added to <strong>Clients</strong></p>
+          <p><span class="avatar">D</span> Dune: Part Two added to your <strong>Watchlist</strong></p>
         </div>
       </div>
     </article>
@@ -87,19 +74,17 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
       <h3 id="tools-title" class="visually-hidden">All tools</h3>
       <div class="groups">
         {
-          TOOL_GROUPS.map(({ group, title }) => (
+          TOOL_GROUPS.map(({ group, title, description }) => (
             <section class="group" aria-label={title}>
               <h4>{title}</h4>
-              <dl>
+              <p class="muted">{description}</p>
+              <ul class="names">
                 {TOOLS.filter((tool) => tool.group === group).map((tool) => (
-                  <div>
-                    <dt>
-                      <code>{tool.name}</code>
-                    </dt>
-                    <dd class="muted">{tool.summary}</dd>
-                  </div>
+                  <li>
+                    <code>{tool.name}</code>
+                  </li>
                 ))}
-              </dl>
+              </ul>
             </section>
           ))
         }
@@ -236,22 +221,12 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
     font-size: var(--step--1);
   }
 
-  .gmail {
-    width: 1.6rem;
-    height: 1.6rem;
-  }
-
   .sig {
     display: grid;
     padding-top: var(--space-3);
     border-top: 1px solid var(--line);
     color: var(--muted);
     line-height: 1.55;
-  }
-
-  .sig span:first-child {
-    color: var(--ink);
-    font-weight: 600;
   }
 
   .card {
@@ -270,7 +245,8 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
 
   .contact div {
     display: grid;
-    grid-template-columns: 5.5rem 1fr;
+    /* Wide enough for "Shōgun, season 1" on one line. */
+    grid-template-columns: 9rem 1fr;
     gap: var(--space-2);
     padding: 0.55rem var(--space-3);
   }
@@ -401,16 +377,25 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
     font-weight: 600;
   }
 
-  .group dl {
-    display: grid;
-    gap: var(--space-3);
-    margin: 0;
-  }
-
-  .group dd {
-    margin: 0.1rem 0 0;
+  .group > p {
     font-size: var(--step--1);
     line-height: 1.5;
+  }
+
+  /* Tool names wrap as chips: 80 names with one-line summaries would bury the page. */
+  .names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .names li {
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    overflow-wrap: anywhere;
   }
 
   /* Scroll-linked motion: each tile's demo plays as it scrolls into view.
@@ -423,20 +408,16 @@ const LABELS = ['Clients', 'Colleagues', 'Family', 'Friends'];
         animation-timeline: view();
       }
 
-      .contact .filled:nth-child(3) {
+      .contact .filled:nth-child(1) {
         animation-range: entry 60% cover 30%;
       }
 
-      .contact .filled:nth-child(4) {
+      .contact .filled:nth-child(2) {
         animation-range: entry 80% cover 34%;
       }
 
-      .contact .filled:nth-child(5) {
+      .contact .filled:nth-child(3) {
         animation-range: entry 100% cover 38%;
-      }
-
-      .contact .filled:nth-child(6) {
-        animation-range: cover 22% cover 42%;
       }
 
       /* Hyperframes "split-tilt-cards": the e-mail and the contact arrive tilted apart

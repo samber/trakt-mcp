@@ -1,7 +1,7 @@
 {
-  "name": "Google Contacts MCP",
-  "short_name": "Contacts MCP",
-  "description": "Free, open source Google Contacts MCP server for Claude and ChatGPT.",
+  "name": "Trakt MCP",
+  "short_name": "Trakt MCP",
+  "description": "Free, open source Trakt MCP server for Claude and ChatGPT.",
   "start_url": "/",
   "display": "browser",
   "theme_color": "#ffffff",

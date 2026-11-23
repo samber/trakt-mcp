@@ -1,17 +1,21 @@
 ---
 import Legal from '../layouts/Legal.astro';
-import { LEGAL_UPDATED, OPERATOR_EMAIL, OPERATOR_NAME } from '../data/site';
+import {
+  INACTIVITY_DAYS,
+  LEGAL_UPDATED,
+  NOT_AFFILIATED,
+  OPERATOR_EMAIL,
+  OPERATOR_NAME,
+  TRAKT_CONNECTED_APPS_URL,
+  TRAKT_PRIVACY_URL,
+} from '../data/site';
 
-const GOOGLE_POLICY_URL = 'https://developers.google.com/terms/api-services-user-data-policy';
-const GOOGLE_PERMISSIONS_URL = 'https://myaccount.google.com/permissions';
 const CNIL_URL = 'https://www.cnil.fr/';
-// Matches the 180-day purge in the server (internal/jobs).
-const INACTIVITY_DAYS = 180;
 ---
 
 <Legal
   title="Privacy policy"
-  description="Privacy policy of the hosted Google Contacts MCP service: what it stores about you, what it never stores (your contacts), and how to erase your data."
+  description="Privacy policy of the hosted Trakt MCP service: what it stores about you, what it never stores (your viewing data), and how to erase your data."
   path="/privacy"
   updated={LEGAL_UPDATED}
 >
@@ -20,54 +24,58 @@ const INACTIVITY_DAYS = 180;
     This service is operated by {OPERATOR_NAME}, an individual, who is responsible for your data. Contact:{' '}
     <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a>.
   </p>
+  <p>{NOT_AFFILIATED}</p>
 
   <h2>What the service does</h2>
   <p>
-    It lets an AI assistant you connect, such as Claude or ChatGPT, read and update your Google Contacts. Every tool call
-    reads or writes Google directly; nothing about your contacts is kept.
+    It lets an AI assistant you connect, such as Claude or ChatGPT, browse the Trakt catalog and read and update your
+    Trakt account: watchlist, watch history, collection, ratings, check-ins and recommendations. Every tool call reads or
+    writes Trakt directly; nothing about your viewing data is kept.
   </p>
 
   <h2>What is stored</h2>
   <ul>
     <li>
-      Your Google account id and your e-mail address, with the dates your account was created and last used. The e-mail
-      address is stored in clear, so the operator can find your account when you ask to be disconnected.
+      Your Trakt user id and your Trakt username slug, with the dates your account was created and last used. The slug
+      lets the operator find your account when you ask to be disconnected.
     </li>
-    <li>Your Google refresh and access tokens, encrypted.</li>
+    <li>Your Trakt access and refresh tokens, encrypted, with the expiry of the access token.</li>
     <li>Hashes of the tokens this server issues to your assistant, with their expiry. Never the tokens themselves.</li>
-    <li>The assistants (OAuth clients) registered with this server.</li>
+    <li>The assistants (OAuth clients) registered with this server, or described by their own metadata document.</li>
     <li>Sign-ins in progress: they expire after 10 minutes and are deleted within the hour.</li>
   </ul>
 
   <h2>What is never stored</h2>
   <ul>
-    <li>Your contacts: names, e-mail addresses, phone numbers, notes or any other field.</li>
-    <li>The tool inputs and outputs exchanged with your assistant.</li>
+    <li>Your watch history, watchlist, ratings and collection.</li>
+    <li>Comments, and the tool inputs and outputs exchanged with your assistant.</li>
     <li>Any token in clear.</li>
-    <li>Contact data, tool arguments or results in logs at the default log level.</li>
+    <li>Watch history, ratings, tool arguments or results in logs at the default log level.</li>
   </ul>
   <p>
-    At the default log level, each tool call writes one log line: the tool name, an internal user id, the duration and
-    the status. At that level, arguments and results are not logged, and tokens never are.
+    At the default log level, each tool call writes one log line: the tool name, an internal user id, the duration, the
+    status, the Trakt HTTP status and the number of results. At that level, arguments and results are not logged, and
+    tokens never are.
   </p>
 
-  <h2>Use of Google data</h2>
+  <h2>Use of Trakt data</h2>
   <p>
-    Google data is used only to perform the actions your assistant requests. The results of those actions are returned to
-    the assistant you connected, and handled by its provider under its own privacy policy. This service does not share
-    them with anyone else, sell them, or use them for advertising or to train models.
+    Trakt is the data source and processor of your viewing data: your history, ratings, watchlist and collection live at
+    Trakt, under <a href={TRAKT_PRIVACY_URL}>Trakt's own privacy policy</a>. This service reads and writes them on your
+    behalf, only to perform the actions your assistant requests.
   </p>
   <p>
-    This service's use and transfer of information received from Google APIs adheres to the <a href={GOOGLE_POLICY_URL}
-      >Google API Services User Data Policy</a
-    >, including the Limited Use requirements.
+    The results of those actions are returned to the assistant you connected, and handled by its provider under its own
+    privacy policy. This service does not share them with anyone else, sell them, or use them for advertising or to
+    train models.
   </p>
 
   <h2>How long data is kept</h2>
   <ul>
-    <li>The tokens issued to your assistant expire after 1 hour (access) and 180 days (refresh).</li>
+    <li>The tokens issued to your assistant expire after 1 hour (access) and 180 days without use (refresh).</li>
     <li>
-      An account unused for {INACTIVITY_DAYS} days is purged automatically, and its Google grant is revoked.
+      An account unused for {INACTIVITY_DAYS} days is purged automatically: its rows are deleted, then its Trakt grant is
+      revoked.
     </li>
     <li>
       An assistant registered with the server is deleted when it has not been used for {INACTIVITY_DAYS} days, or 24 hours
@@ -78,36 +86,45 @@ const INACTIVITY_DAYS = 180;
   <h2>How to erase everything</h2>
   <ul>
     <li>
-      Ask the operator at <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a> to disconnect you: your Google grant is
-      revoked and every row about you is deleted from the live database.
+      Disconnect the connector in your assistant. This revokes the tokens that assistant holds, so it can no longer act
+      on your account. It does not delete your account row and does not revoke the application at Trakt.
     </li>
     <li>
-      Revoke access yourself at <a href={GOOGLE_PERMISSIONS_URL}>myaccount.google.com/permissions</a>. Your data is deleted
-      the next time you use the connector after revoking access at Google; if you never use it again, the automatic purge
-      above removes it.
+      Revoke the application at Trakt, under Settings, <a href={TRAKT_CONNECTED_APPS_URL}>Connected Apps</a>. The data
+      stored about you is deleted the next time your assistant calls a tool and Trakt refuses the call; if that never
+      happens, the automatic purge removes it.
+    </li>
+    <li>
+      Ask the operator at <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a> to disconnect you: your Trakt grant
+      is revoked and every row about you is deleted from the live database at once.
     </li>
     <li>Stop using it: accounts unused for {INACTIVITY_DAYS} days are purged.</li>
   </ul>
   <p>
+    After a revoke at Trakt, our rows stay until your next call fails or the {INACTIVITY_DAYS}-day purge runs, so deletion
+    can take up to {INACTIVITY_DAYS} days. Only the operator's disconnection and the purge delete at once.
+  </p>
+  <p>
     The database lives on a persistent storage volume. Deleted data can remain in backups of that volume, if the operator
-    or the hosting provider keeps any, until they expire under the backup retention; Google tokens stay encrypted there
+    or the hosting provider keeps any, until they expire under the backup retention; Trakt tokens stay encrypted there
     too.
   </p>
 
   <h2>Legal basis and recipients</h2>
   <p>
-    Your data is processed only to provide the service you asked for: connecting your assistant to your Google Contacts.
+    Your data is processed only to provide the service you asked for: connecting your assistant to your Trakt account.
   </p>
   <p>
-    It is handled by Google, which hosts your contacts and may process data outside the European Union; by the assistant
+    It is handled by Trakt, which holds your viewing data and may process it outside the European Union; by the assistant
     you connect; and by the hosting provider that stores this service's database.
   </p>
 
   <h2>Your rights</h2>
   <p>
-    You can ask for a copy of the data stored about you, in a portable format, or for its correction, restriction or deletion, and you can object to its processing, by e-mail. If you think your
-    data is mishandled, you can complain to the CNIL, the French data protection authority, at{' '}
-    <a href={CNIL_URL}>cnil.fr</a>.
+    You can ask for a copy of the data stored about you, in a portable format, or for its correction, restriction or
+    deletion, and you can object to its processing, by e-mail. Your viewing data itself is held by Trakt: use Trakt's own
+    tools for it. If you think your data is mishandled, you can complain to the CNIL, the French data protection
+    authority, at <a href={CNIL_URL}>cnil.fr</a>.
   </p>
 
   <h2>This website</h2>

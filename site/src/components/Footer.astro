@@ -1,5 +1,13 @@
 ---
-import { OPERATOR_EMAIL, OPERATOR_LINKEDIN, OPERATOR_NAME, REPO_URL, SECURITY_URL, SELF_HOSTING_URL } from '../data/site';
+import {
+  NOT_AFFILIATED,
+  OPERATOR_EMAIL,
+  OPERATOR_LINKEDIN,
+  OPERATOR_NAME,
+  REPO_URL,
+  SECURITY_URL,
+  SELF_HOSTING_URL,
+} from '../data/site';
 ---
 
 <footer class="site-footer">
@@ -7,6 +15,8 @@ import { OPERATOR_EMAIL, OPERATOR_LINKEDIN, OPERATOR_NAME, REPO_URL, SECURITY_UR
     <p class="muted">
       Operated by <a href={OPERATOR_LINKEDIN}>{OPERATOR_NAME}</a>.{' '}
       <a href={`mailto:${OPERATOR_EMAIL}`}>{OPERATOR_EMAIL}</a>
+      <br />
+      {NOT_AFFILIATED}
     </p>
     <ul>
       <li><a href="/privacy">Privacy policy</a></li>

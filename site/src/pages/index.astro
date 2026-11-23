@@ -21,7 +21,7 @@ import {
 
 // One @graph, linked by @id: the site, the software, its operator and the FAQ. The FAQ comes
 // from the same array as the visible section, so the markup cannot drift from the page.
-// BusinessApplication: the closest schema.org category for a tool that manages contacts for work.
+// MultimediaApplication: the closest schema.org category for a tool that manages a movie and series watchlist.
 const PERSON_ID = `${SITE_URL}/#operator`;
 const structuredData = {
   '@context': 'https://schema.org',
@@ -39,9 +39,9 @@ const structuredData = {
       '@type': 'SoftwareApplication',
       '@id': `${SITE_URL}/#software`,
       name: SITE_NAME,
-      alternateName: 'Google Contacts MCP server',
+      alternateName: 'Trakt MCP server',
       description: SITE_SUMMARY,
-      applicationCategory: 'BusinessApplication',
+      applicationCategory: 'MultimediaApplication',
       operatingSystem: 'Web',
       url: SITE_URL,
       image: `${SITE_URL}/og.png`,
@@ -76,13 +76,13 @@ const structuredData = {
 
 // The headline's first sentence, one span per word for the waterfall entrance.
 // The last HIGHLIGHT_WORDS words get the gradient sweep.
-const HEADLINE = 'Your assistant keeps your Google Contacts up to date.'.split(' ');
+const HEADLINE = 'Your assistant knows what you watch.'.split(' ');
 const HIGHLIGHT_WORDS = 3;
 ---
 
 <Base
-  title="Google Contacts MCP server for Claude and ChatGPT"
-  description="Free, open source Google Contacts MCP server for Claude and ChatGPT. Search, create and enrich contacts in plain language. No contact data stored."
+  title="Trakt MCP server for Claude and ChatGPT"
+  description="Free, open source Trakt MCP server for Claude and ChatGPT. Manage your watchlist, watch history and ratings in plain language. No viewing data stored."
   path="/"
 >
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(structuredData)} />
@@ -106,9 +106,9 @@ const HIGHLIGHT_WORDS = 3;
               ))
             }
           </span>
-          <span class="soft">Claude and ChatGPT search, create and enrich them.</span>
+          <span class="soft">Claude and ChatGPT manage your Trakt watchlist, history and ratings.</span>
         </h1>
-        <p class="free">A free, open source MCP server. No install.</p>
+        <p class="free">A free, open source MCP server for Trakt. No install.</p>
         <ConnectorUrl id="hero-url" />
       </div>
       <div class="demo">
@@ -214,8 +214,8 @@ const HIGHLIGHT_WORDS = 3;
   }
 
   /* Load-in, in reading order (hyperframes "waterfall-entry"): the headline's words
-     whip up one after another, each starting before the previous settles (9 words x
-     55 ms keeps the wave under 0.6 s), then the grey line, the URL box and the demo. */
+     whip up one after another, each starting before the previous settles (6 words x
+     55 ms keeps the wave short), then the grey line, the URL box and the demo. */
   @media (prefers-reduced-motion: no-preference) {
     .w {
       animation: word-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -239,7 +239,7 @@ const HIGHLIGHT_WORDS = 3;
     }
 
     /* Hyperframes "gradient-text-sweep": the logo's colours travel through
-       "up to date.", word to word, then the words rest in plain ink. The sweep
+       "what you watch.", word to word, then the words rest in plain ink. The sweep
        replays every 5 s (owner's choice): 1.3 s of travel, then a hold. */
     .w.hl {
       background: linear-gradient(90deg, var(--ink) 0 35%, var(--g1) 42%, var(--g3) 50%, var(--g4) 58%, var(--ink) 65% 100%)
