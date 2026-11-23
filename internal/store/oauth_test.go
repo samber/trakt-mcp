@@ -29,7 +29,7 @@ func setupOAuth(t *testing.T) (*Store, User) {
 	s := openTemp(t)
 	s.now = func() time.Time { return testNow }
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -754,7 +754,7 @@ func TestDeleteUser_RemovesTokens(t *testing.T) {
 	ctx := context.Background()
 	s, u := setupOAuth(t)
 
-	keep, err := s.UpsertUser(ctx, "sub-2", "b@example.com")
+	keep, err := s.UpsertUser(ctx, "1002", "bob")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -812,13 +812,13 @@ func TestOpen_SecondStoreCanWrite(t *testing.T) {
 	s1 := openAt(t, path, testKeyA)
 	s2 := openAt(t, path, testKeyA)
 
-	u, err := s1.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s1.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := s1.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r", AccessToken: "a"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s1.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r", AccessToken: "a"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 	// Rekey and DeleteUser open write transactions from the second handle.
 	if _, err := s2.Rekey(ctx); err != nil {
@@ -829,7 +829,7 @@ func TestOpen_SecondStoreCanWrite(t *testing.T) {
 		t.Fatalf("DeleteUser on second store: %v", err)
 	}
 
-	if _, err := s1.UserBySubOrEmail(ctx, "sub-1"); !errors.Is(err, ErrNotFound) {
+	if _, err := s1.UserBySlugOrTraktID(ctx, "1001"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("first store still sees user: %v", err)
 	}
 }

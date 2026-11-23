@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -64,7 +65,7 @@ func TestOpen_MigratesTwiceIdempotent(t *testing.T) {
 		t.Fatalf("first Open: %v", err)
 	}
 
-	if _, err := s1.UpsertUser(ctx, "sub-1", "a@example.com"); err != nil {
+	if _, err := s1.UpsertUser(ctx, "1001", "alice"); err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
@@ -83,7 +84,7 @@ func TestOpen_MigratesTwiceIdempotent(t *testing.T) {
 		t.Errorf("schema_migrations rows = %d, want 1", n)
 	}
 
-	if _, err := s2.UserBySubOrEmail(ctx, "sub-1"); err != nil {
+	if _, err := s2.UserBySlugOrTraktID(ctx, "1001"); err != nil {
 		t.Errorf("user lost after reopen: %v", err)
 	}
 
@@ -115,13 +116,13 @@ func TestOpen_RejectsQueryInPath(t *testing.T) {
 	}
 }
 
-func TestUpsertUser_SameSubUpdatesEmail(t *testing.T) {
+func TestUpsertUserSameTraktIDChangedSlug(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u1, err := s.UpsertUser(ctx, "sub-1", "Old@Example.com")
+	u1, err := s.UpsertUser(ctx, " 1001 ", "Old-Slug")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -130,11 +131,16 @@ func TestUpsertUser_SameSubUpdatesEmail(t *testing.T) {
 		t.Errorf("ID = %q, want %d hex chars", u1.ID, 2*userIDBytes)
 	}
 
-	if u1.Email != "old@example.com" {
-		t.Errorf("Email = %q, want lowercased", u1.Email)
+	if u1.TraktID != "1001" {
+		t.Errorf("TraktID = %q, want trimmed 1001", u1.TraktID)
 	}
 
-	u2, err := s.UpsertUser(ctx, "sub-1", "new@example.com")
+	if u1.TraktSlug != "old-slug" {
+		t.Errorf("TraktSlug = %q, want lowercased", u1.TraktSlug)
+	}
+
+	// The user renamed their Trakt account: same Trakt id, new slug.
+	u2, err := s.UpsertUser(ctx, "1001", "new-slug")
 	if err != nil {
 		t.Fatalf("UpsertUser again: %v", err)
 	}
@@ -143,135 +149,164 @@ func TestUpsertUser_SameSubUpdatesEmail(t *testing.T) {
 		t.Errorf("ID changed: %q -> %q", u1.ID, u2.ID)
 	}
 
-	if u2.Email != "new@example.com" {
-		t.Errorf("Email = %q, want new@example.com", u2.Email)
+	if u2.TraktSlug != "new-slug" {
+		t.Errorf("TraktSlug = %q, want new-slug", u2.TraktSlug)
 	}
 
 	if !u2.CreatedAt.Equal(u1.CreatedAt) {
 		t.Errorf("CreatedAt changed: %v -> %v", u1.CreatedAt, u2.CreatedAt)
 	}
 
-	other, err := s.UpsertUser(ctx, "sub-2", "x@example.com")
+	assertSlugRenamed(t, s, u1)
+}
+
+// assertSlugRenamed checks that after u's rename to "new-slug" only the new
+// slug resolves, and that another Trakt id gets its own user id.
+func assertSlugRenamed(t *testing.T, s *Store, u User) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	if _, err := s.UserBySlugOrTraktID(ctx, "old-slug"); !errors.Is(err, ErrNotFound) {
+		t.Errorf("old slug still resolves: %v", err)
+	}
+
+	if got, err := s.UserBySlugOrTraktID(ctx, "new-slug"); err != nil || got.ID != u.ID {
+		t.Errorf("new slug: %+v, %v; want user %q", got, err, u.ID)
+	}
+
+	other, err := s.UpsertUser(ctx, "1002", "x")
 	if err != nil {
 		t.Fatalf("UpsertUser other: %v", err)
 	}
 
-	if other.ID == u1.ID {
-		t.Error("two subs share one ID")
+	if other.ID == u.ID {
+		t.Error("two Trakt ids share one ID")
 	}
 }
 
-func TestUpsertUser_RejectsEmptySub(t *testing.T) {
+func TestUpsertUser_RejectsEmptyTraktIDOrSlug(t *testing.T) {
 	t.Parallel()
 
-	if _, err := openTemp(t).UpsertUser(context.Background(), "", "a@example.com"); err == nil {
-		t.Fatal("UpsertUser accepted an empty sub")
+	s := openTemp(t)
+
+	for _, tc := range []struct{ traktID, slug string }{
+		{"", "alice"},
+		{"  ", "alice"},
+		{"1001", ""},
+		{"1001", "  "},
+	} {
+		if _, err := s.UpsertUser(context.Background(), tc.traktID, tc.slug); err == nil {
+			t.Errorf("UpsertUser(%q, %q) accepted an empty value", tc.traktID, tc.slug)
+		}
 	}
 }
 
-func TestUserBySubOrEmail(t *testing.T) {
+func TestUserBySlugOrTraktID(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	for _, q := range []string{"sub-1", "a@example.com", "A@Example.COM", " a@example.com "} {
-		got, err := s.UserBySubOrEmail(ctx, q)
+	for _, q := range []string{"1001", " 1001 ", "alice", "ALICE", " alice "} {
+		got, err := s.UserBySlugOrTraktID(ctx, q)
 		if err != nil {
-			t.Errorf("UserBySubOrEmail(%q): %v", q, err)
+			t.Errorf("UserBySlugOrTraktID(%q): %v", q, err)
 			continue
 		}
 
 		if got.ID != u.ID {
-			t.Errorf("UserBySubOrEmail(%q).ID = %q, want %q", q, got.ID, u.ID)
+			t.Errorf("UserBySlugOrTraktID(%q).ID = %q, want %q", q, got.ID, u.ID)
 		}
 	}
 
-	for _, q := range []string{"nobody@example.com", "SUB-1", ""} {
-		if _, err := s.UserBySubOrEmail(ctx, q); !errors.Is(err, ErrNotFound) {
-			t.Errorf("UserBySubOrEmail(%q) err = %v, want ErrNotFound", q, err)
+	for _, q := range []string{"nobody", "1002", "10010", "", "   "} {
+		if _, err := s.UserBySlugOrTraktID(ctx, q); !errors.Is(err, ErrNotFound) {
+			t.Errorf("UserBySlugOrTraktID(%q) err = %v, want ErrNotFound", q, err)
 		}
 	}
 }
 
-func TestUserBySubOrEmail_SubWinsOverEmail(t *testing.T) {
+func TestUserBySlugOrTraktID_TraktIDWinsOverSlug(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	s := openTemp(t)
-	// A sub that looks like another user's e-mail must still resolve by sub.
-	bySub, err := s.UpsertUser(ctx, "b@example.com", "x@example.com")
+	// A numeric slug equal to another user's Trakt id must not shadow that id.
+	byID, err := s.UpsertUser(ctx, "1001", "x")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if _, err := s.UpsertUser(ctx, "sub-2", "b@example.com"); err != nil {
+	if _, err := s.UpsertUser(ctx, "1002", "1001"); err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	got, err := s.UserBySubOrEmail(ctx, "b@example.com")
+	got, err := s.UserBySlugOrTraktID(ctx, "1001")
 	if err != nil {
-		t.Fatalf("UserBySubOrEmail: %v", err)
+		t.Fatalf("UserBySlugOrTraktID: %v", err)
 	}
 
-	if got.ID != bySub.ID {
-		t.Errorf("got user %q, want the sub match %q", got.ID, bySub.ID)
+	if got.ID != byID.ID {
+		t.Errorf("got user %q, want the Trakt id match %q", got.ID, byID.ID)
 	}
 }
 
-func TestUserBySubOrEmail_AmbiguousEmail(t *testing.T) {
+func TestUserBySlugOrTraktID_AmbiguousSlug(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
+	// Slugs change on Trakt and are only refreshed on reconnect, so a stale
+	// slug can match a second user who took it since.
 	s := openTemp(t)
-	for _, sub := range []string{"sub-1", "sub-2"} {
-		if _, err := s.UpsertUser(ctx, sub, "shared@example.com"); err != nil {
+	for _, traktID := range []string{"1001", "1002"} {
+		if _, err := s.UpsertUser(ctx, traktID, "shared"); err != nil {
 			t.Fatalf("UpsertUser: %v", err)
 		}
 	}
 
-	if _, err := s.UserBySubOrEmail(ctx, "shared@example.com"); !errors.Is(err, ErrAmbiguous) {
+	if _, err := s.UserBySlugOrTraktID(ctx, "shared"); !errors.Is(err, ErrAmbiguous) {
 		t.Errorf("err = %v, want ErrAmbiguous", err)
 	}
 }
 
-func TestGoogleToken_RoundTripAndCiphertextOnDisk(t *testing.T) {
+func TestTraktToken_RoundTripAndCiphertextOnDisk(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if _, err := s.GoogleToken(ctx, u.ID); !errors.Is(err, ErrNotFound) {
-		t.Errorf("GoogleToken before save err = %v, want ErrNotFound", err)
+	if _, err := s.TraktToken(ctx, u.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("TraktToken before save err = %v, want ErrNotFound", err)
 	}
 
-	want := GoogleToken{
-		RefreshToken: "1//refresh-plaintext-secret",
-		AccessToken:  "ya29.access-plaintext-secret",
+	want := TraktToken{
+		RefreshToken: "refresh-plaintext-secret",
+		AccessToken:  "access-plaintext-secret",
 		Expiry:       time.Unix(1_900_000_000, 0),
 	}
-	if err := s.SaveGoogleToken(ctx, u.ID, want); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s.SaveTraktToken(ctx, u.ID, want); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
-	got, err := s.GoogleToken(ctx, u.ID)
+	got, err := s.TraktToken(ctx, u.ID)
 	if err != nil {
-		t.Fatalf("GoogleToken: %v", err)
+		t.Fatalf("TraktToken: %v", err)
 	}
 
 	if got.RefreshToken != want.RefreshToken || got.AccessToken != want.AccessToken || !got.Expiry.Equal(want.Expiry) {
-		t.Errorf("GoogleToken = %+v, want %+v", got, want)
+		t.Errorf("TraktToken = %+v, want %+v", got, want)
 	}
 
 	var (
@@ -280,7 +315,7 @@ func TestGoogleToken_RoundTripAndCiphertextOnDisk(t *testing.T) {
 	)
 
 	err = s.db.QueryRowContext(ctx,
-		`SELECT refresh_ct, access_ct, key_id FROM google_tokens WHERE user_id = ?`, u.ID).
+		`SELECT refresh_ct, access_ct, key_id FROM trakt_tokens WHERE user_id = ?`, u.ID).
 		Scan(&refreshCT, &accessCT, &keyID)
 	if err != nil {
 		t.Fatalf("raw select: %v", err)
@@ -303,44 +338,44 @@ func TestGoogleToken_RoundTripAndCiphertextOnDisk(t *testing.T) {
 
 // assertCiphertextBoundToUser checks that ciphertext copied to another user
 // fails to decrypt and that saving again replaces the row.
-func assertCiphertextBoundToUser(t *testing.T, s *Store, u User, want GoogleToken, refreshCT, accessCT []byte) {
+func assertCiphertextBoundToUser(t *testing.T, s *Store, u User, want TraktToken, refreshCT, accessCT []byte) {
 	t.Helper()
 
 	ctx := context.Background()
 
 	// Ciphertext is bound to its user: moving it to another user must fail to decrypt.
-	other, err := s.UpsertUser(ctx, "sub-2", "b@example.com")
+	other, err := s.UpsertUser(ctx, "1002", "bob")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
 	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO google_tokens (user_id, refresh_ct, access_ct, expiry, key_id) VALUES (?, ?, ?, 0, 'A')`,
+		`INSERT INTO trakt_tokens (user_id, refresh_ct, access_ct, expiry, key_id) VALUES (?, ?, ?, 0, 'A')`,
 		other.ID, refreshCT, accessCT); err != nil {
 		t.Fatalf("copy row: %v", err)
 	}
 
-	if _, err := s.GoogleToken(ctx, other.ID); err == nil {
-		t.Error("GoogleToken decrypted a ciphertext copied from another user")
+	if _, err := s.TraktToken(ctx, other.ID); err == nil {
+		t.Error("TraktToken decrypted a ciphertext copied from another user")
 	}
 
 	// Saving again replaces the row.
-	want.AccessToken = "ya29.second"
-	if err := s.SaveGoogleToken(ctx, u.ID, want); err != nil {
-		t.Fatalf("SaveGoogleToken again: %v", err)
+	want.AccessToken = "access-second"
+	if err := s.SaveTraktToken(ctx, u.ID, want); err != nil {
+		t.Fatalf("SaveTraktToken again: %v", err)
 	}
 
-	if got, err := s.GoogleToken(ctx, u.ID); err != nil || got.AccessToken != "ya29.second" {
+	if got, err := s.TraktToken(ctx, u.ID); err != nil || got.AccessToken != "access-second" {
 		t.Errorf("after resave: %+v, %v", got, err)
 	}
 }
 
-func TestSaveGoogleToken_UnknownUser(t *testing.T) {
+func TestSaveTraktToken_UnknownUser(t *testing.T) {
 	t.Parallel()
 
-	err := openTemp(t).SaveGoogleToken(context.Background(), "no-such-user", GoogleToken{RefreshToken: "r"})
+	err := openTemp(t).SaveTraktToken(context.Background(), "no-such-user", TraktToken{RefreshToken: "r"})
 	if err == nil {
-		t.Fatal("SaveGoogleToken accepted an unknown user")
+		t.Fatal("SaveTraktToken accepted an unknown user")
 	}
 }
 
@@ -350,19 +385,19 @@ func TestDeleteUser_Cascades(t *testing.T) {
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	keep, err := s.UpsertUser(ctx, "sub-2", "b@example.com")
+	keep, err := s.UpsertUser(ctx, "1002", "bob")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
 	for _, id := range []string{u.ID, keep.ID} {
-		if err := s.SaveGoogleToken(ctx, id, GoogleToken{RefreshToken: "r", AccessToken: "a"}); err != nil {
-			t.Fatalf("SaveGoogleToken: %v", err)
+		if err := s.SaveTraktToken(ctx, id, TraktToken{RefreshToken: "r", AccessToken: "a"}); err != nil {
+			t.Fatalf("SaveTraktToken: %v", err)
 		}
 
 		if _, err := s.db.ExecContext(ctx,
@@ -386,8 +421,8 @@ func TestDeleteUser_Cascades(t *testing.T) {
 
 		return n
 	}
-	if n := count(`SELECT count(*) FROM google_tokens WHERE user_id = ?`, u.ID); n != 0 {
-		t.Errorf("google_tokens rows left = %d", n)
+	if n := count(`SELECT count(*) FROM trakt_tokens WHERE user_id = ?`, u.ID); n != 0 {
+		t.Errorf("trakt_tokens rows left = %d", n)
 	}
 
 	if n := count(`SELECT count(*) FROM oauth_tokens WHERE user_id = ?`, u.ID); n != 0 {
@@ -398,7 +433,7 @@ func TestDeleteUser_Cascades(t *testing.T) {
 		t.Errorf("other user's oauth_tokens rows = %d, want 1", n)
 	}
 
-	if _, err := s.UserBySubOrEmail(ctx, "sub-1"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.UserBySlugOrTraktID(ctx, "1001"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("user still found: %v", err)
 	}
 
@@ -412,20 +447,20 @@ func TestRekey(t *testing.T) {
 
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "db.sqlite")
-	want := GoogleToken{RefreshToken: "refresh", AccessToken: "access", Expiry: time.Unix(1_900_000_000, 0)}
+	want := TraktToken{RefreshToken: "refresh", AccessToken: "access", Expiry: time.Unix(1_900_000_000, 0)}
 
 	sA, err := Open(ctx, path, mustKeyring(t, testKeyA))
 	if err != nil {
 		t.Fatalf("Open A: %v", err)
 	}
 
-	u, err := sA.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := sA.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := sA.SaveGoogleToken(ctx, u.ID, want); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := sA.SaveTraktToken(ctx, u.ID, want); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
 	if err := sA.Close(); err != nil {
@@ -459,24 +494,24 @@ func TestRekey(t *testing.T) {
 
 // assertRekeyedUnderB reopens the database with key B only and checks the
 // token for userID decrypts to want under key id B.
-func assertRekeyedUnderB(t *testing.T, path, userID string, want GoogleToken) {
+func assertRekeyedUnderB(t *testing.T, path, userID string, want TraktToken) {
 	t.Helper()
 
 	ctx := context.Background()
 
 	sB := openAt(t, path, testKeyB)
 
-	got, err := sB.GoogleToken(ctx, userID)
+	got, err := sB.TraktToken(ctx, userID)
 	if err != nil {
-		t.Fatalf("GoogleToken under B only: %v", err)
+		t.Fatalf("TraktToken under B only: %v", err)
 	}
 
 	if got != want {
-		t.Errorf("GoogleToken = %+v, want %+v", got, want)
+		t.Errorf("TraktToken = %+v, want %+v", got, want)
 	}
 
 	var keyID string
-	if err := sB.db.QueryRowContext(ctx, `SELECT key_id FROM google_tokens`).Scan(&keyID); err != nil {
+	if err := sB.db.QueryRowContext(ctx, `SELECT key_id FROM trakt_tokens`).Scan(&keyID); err != nil {
 		t.Fatalf("select key_id: %v", err)
 	}
 
@@ -496,13 +531,13 @@ func TestRekey_MissingOldKeyFails(t *testing.T) {
 		t.Fatalf("Open A: %v", err)
 	}
 
-	u, err := sA.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := sA.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := sA.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := sA.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
 	if err := sA.Close(); err != nil {
@@ -523,18 +558,18 @@ func TestInactiveUsers(t *testing.T) {
 
 	s.now = func() time.Time { return base }
 
-	old, err := s.UpsertUser(ctx, "old", "old@example.com")
+	old, err := s.UpsertUser(ctx, "2001", "old")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	touched, err := s.UpsertUser(ctx, "touched", "touched@example.com")
+	touched, err := s.UpsertUser(ctx, "2002", "touched")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
 	s.now = func() time.Time { return base.Add(2 * time.Hour) }
-	if _, err := s.UpsertUser(ctx, "fresh", "fresh@example.com"); err != nil {
+	if _, err := s.UpsertUser(ctx, "2003", "fresh"); err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
@@ -555,7 +590,7 @@ func TestInactiveUsers(t *testing.T) {
 		t.Fatalf("InactiveUsers = %+v, want only %q", got, old.ID)
 	}
 
-	if !got[0].LastSeenAt.Equal(base) || got[0].Email != "old@example.com" {
+	if !got[0].LastSeenAt.Equal(base) || got[0].TraktSlug != "old" {
 		t.Errorf("InactiveUsers[0] = %+v", got[0])
 	}
 	// The cutoff is exclusive: a user seen exactly at `before` is still active.
@@ -585,12 +620,12 @@ func (f *touchFixture) at(d time.Duration) {
 	f.s.now = func() time.Time { return f.now }
 }
 
-func (f *touchFixture) lastSeen(t *testing.T, sub string) time.Time {
+func (f *touchFixture) lastSeen(t *testing.T, traktID string) time.Time {
 	t.Helper()
 
-	got, err := f.s.UserBySubOrEmail(context.Background(), sub)
+	got, err := f.s.UserBySlugOrTraktID(context.Background(), traktID)
 	if err != nil {
-		t.Fatalf("UserBySubOrEmail: %v", err)
+		t.Fatalf("UserBySlugOrTraktID: %v", err)
 	}
 
 	return got.LastSeenAt
@@ -602,7 +637,7 @@ func TestTouchUser_WritesOnlyOnFlush(t *testing.T) {
 	ctx := context.Background()
 	f := newTouchFixture(t)
 
-	u, err := f.s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := f.s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -616,7 +651,7 @@ func TestTouchUser_WritesOnlyOnFlush(t *testing.T) {
 		}
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base) {
 		t.Errorf("before flush: last_seen_at = %v, want unchanged %v", got, f.base)
 	}
 
@@ -624,7 +659,7 @@ func TestTouchUser_WritesOnlyOnFlush(t *testing.T) {
 		t.Fatalf("FlushTouches: %v", err)
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base.Add(70 * time.Second)) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base.Add(70 * time.Second)) {
 		t.Errorf("after flush: last_seen_at = %v, want base+70s", got)
 	}
 
@@ -639,7 +674,7 @@ func TestTouchUser_WritesOnlyOnFlush(t *testing.T) {
 		t.Fatalf("second FlushTouches: %v", err)
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base.Add(5 * time.Second)) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base.Add(5 * time.Second)) {
 		t.Errorf("empty flush wrote: last_seen_at = %v, want base+5s", got)
 	}
 }
@@ -651,7 +686,7 @@ func TestFlushTouches_NeverMovesLastSeenBackwards(t *testing.T) {
 	f := newTouchFixture(t)
 	f.at(10 * time.Second)
 
-	u, err := f.s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := f.s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -666,7 +701,7 @@ func TestFlushTouches_NeverMovesLastSeenBackwards(t *testing.T) {
 		t.Fatalf("FlushTouches: %v", err)
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base.Add(10 * time.Second)) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base.Add(10 * time.Second)) {
 		t.Errorf("last_seen_at = %v, want base+10s", got)
 	}
 }
@@ -677,7 +712,7 @@ func TestFlushTouches_FailureKeepsTouchesPending(t *testing.T) {
 	ctx := context.Background()
 	f := newTouchFixture(t)
 
-	u, err := f.s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := f.s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -695,7 +730,7 @@ func TestFlushTouches_FailureKeepsTouchesPending(t *testing.T) {
 		t.Fatal("FlushTouches with a cancelled context succeeded")
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base) {
 		t.Fatalf("failed flush wrote: last_seen_at = %v", got)
 	}
 
@@ -704,7 +739,7 @@ func TestFlushTouches_FailureKeepsTouchesPending(t *testing.T) {
 		t.Fatalf("retry FlushTouches: %v", err)
 	}
 
-	if got := f.lastSeen(t, "sub-1"); !got.Equal(f.base.Add(10 * time.Second)) {
+	if got := f.lastSeen(t, "1001"); !got.Equal(f.base.Add(10 * time.Second)) {
 		t.Errorf("after retry: last_seen_at = %v, want base+10s", got)
 	}
 }
@@ -735,7 +770,7 @@ func TestDeleteUser_DropsPendingTouch(t *testing.T) {
 	ctx := context.Background()
 	f := newTouchFixture(t)
 
-	u, err := f.s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := f.s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -763,12 +798,12 @@ func TestDeleteUserIfInactive_PendingTouchKeepsUser(t *testing.T) {
 	ctx := context.Background()
 	f := newTouchFixture(t)
 
-	idle, err := f.s.UpsertUser(ctx, "idle", "idle@example.com")
+	idle, err := f.s.UpsertUser(ctx, "3001", "idle")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	active, err := f.s.UpsertUser(ctx, "active", "active@example.com")
+	active, err := f.s.UpsertUser(ctx, "3002", "active")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -813,7 +848,7 @@ func TestClose_FlushesPendingTouches(t *testing.T) {
 	base := time.Unix(1_800_000_000, 0)
 	s.now = func() time.Time { return base }
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -827,9 +862,9 @@ func TestClose_FlushesPendingTouches(t *testing.T) {
 		t.Fatalf("Close: %v", err)
 	}
 
-	got, err := openAt(t, path, testKeyA).UserBySubOrEmail(ctx, "sub-1")
+	got, err := openAt(t, path, testKeyA).UserBySlugOrTraktID(ctx, "1001")
 	if err != nil {
-		t.Fatalf("UserBySubOrEmail: %v", err)
+		t.Fatalf("UserBySlugOrTraktID: %v", err)
 	}
 
 	if !got.LastSeenAt.Equal(base.Add(10 * time.Second)) {
@@ -847,6 +882,8 @@ func TestTouchUser_ConcurrentWithFlush(t *testing.T) {
 		touchesEach   = 200
 		flushes       = 20
 		distinctUsers = 4
+		// firstTraktID offsets the fake Trakt ids away from 0 so none is empty-looking.
+		firstTraktID = 4000
 	)
 
 	ctx := context.Background()
@@ -855,7 +892,7 @@ func TestTouchUser_ConcurrentWithFlush(t *testing.T) {
 
 	ids := make([]string, distinctUsers)
 	for i := range ids {
-		u, err := s.UpsertUser(ctx, fmt.Sprintf("sub-%d", i), fmt.Sprintf("u%d@example.com", i))
+		u, err := s.UpsertUser(ctx, strconv.Itoa(firstTraktID+i), fmt.Sprintf("user-%d", i))
 		if err != nil {
 			t.Fatalf("UpsertUser: %v", err)
 		}
@@ -894,9 +931,9 @@ func TestTouchUser_ConcurrentWithFlush(t *testing.T) {
 	}
 
 	for i := range ids {
-		got, err := s.UserBySubOrEmail(ctx, fmt.Sprintf("sub-%d", i))
+		got, err := s.UserBySlugOrTraktID(ctx, strconv.Itoa(firstTraktID+i))
 		if err != nil {
-			t.Fatalf("UserBySubOrEmail: %v", err)
+			t.Fatalf("UserBySlugOrTraktID: %v", err)
 		}
 
 		if got.LastSeenAt.Unix() < start.Unix() {
@@ -905,55 +942,55 @@ func TestTouchUser_ConcurrentWithFlush(t *testing.T) {
 	}
 }
 
-func TestSaveGoogleTokenIf(t *testing.T) {
+func TestSaveTraktTokenIf(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if ok, err := s.SaveGoogleTokenIf(ctx, u.ID, "", GoogleToken{RefreshToken: "x"}); err != nil || ok {
+	if ok, err := s.SaveTraktTokenIf(ctx, u.ID, "", TraktToken{RefreshToken: "x"}); err != nil || ok {
 		t.Errorf("no row: saved %v, err %v; want false, nil", ok, err)
 	}
 
-	if err := s.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r1", AccessToken: "a1"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r1", AccessToken: "a1"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
 	// A new consent replaced r1 with r2: the stale refresh must not win.
-	if err := s.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r2", AccessToken: "a2"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r2", AccessToken: "a2"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
-	ok, err := s.SaveGoogleTokenIf(ctx, u.ID, "r1", GoogleToken{RefreshToken: "r1", AccessToken: "stale"})
+	ok, err := s.SaveTraktTokenIf(ctx, u.ID, "r1", TraktToken{RefreshToken: "r1", AccessToken: "stale"})
 	if err != nil || ok {
 		t.Fatalf("mismatch: saved %v, err %v; want false, nil", ok, err)
 	}
 
-	if got, err := s.GoogleToken(ctx, u.ID); err != nil || got.RefreshToken != "r2" || got.AccessToken != "a2" {
+	if got, err := s.TraktToken(ctx, u.ID); err != nil || got.RefreshToken != "r2" || got.AccessToken != "a2" {
 		t.Errorf("after mismatch: %+v, %v; want r2/a2 kept", got, err)
 	}
 
 	assertSaveIfMatches(t, s, u)
 }
 
-// assertSaveIfMatches checks that SaveGoogleTokenIf writes when the stored
+// assertSaveIfMatches checks that SaveTraktTokenIf writes when the stored
 // refresh token still equals the expected one.
 func assertSaveIfMatches(t *testing.T, s *Store, u User) {
 	t.Helper()
 
 	ctx := context.Background()
 
-	ok, err := s.SaveGoogleTokenIf(ctx, u.ID, "r2", GoogleToken{RefreshToken: "r2", AccessToken: "a3", Expiry: time.Unix(1_900_000_000, 0)})
+	ok, err := s.SaveTraktTokenIf(ctx, u.ID, "r2", TraktToken{RefreshToken: "r2", AccessToken: "a3", Expiry: time.Unix(1_900_000_000, 0)})
 	if err != nil || !ok {
 		t.Fatalf("match: saved %v, err %v; want true, nil", ok, err)
 	}
 
-	if got, err := s.GoogleToken(ctx, u.ID); err != nil || got.AccessToken != "a3" || got.Expiry.Unix() != 1_900_000_000 {
+	if got, err := s.TraktToken(ctx, u.ID); err != nil || got.AccessToken != "a3" || got.Expiry.Unix() != 1_900_000_000 {
 		t.Errorf("after match: %+v, %v", got, err)
 	}
 }
@@ -964,13 +1001,13 @@ func TestDeleteUserIfRefresh(t *testing.T) {
 	ctx := context.Background()
 	s := openTemp(t)
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := s.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r2", AccessToken: "a2"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r2", AccessToken: "a2"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
 	if _, err := s.db.ExecContext(ctx,
@@ -983,7 +1020,7 @@ func TestDeleteUserIfRefresh(t *testing.T) {
 		t.Fatalf("mismatch: deleted %v, err %v; want false, nil", ok, err)
 	}
 
-	if _, err := s.UserBySubOrEmail(ctx, "sub-1"); err != nil {
+	if _, err := s.UserBySlugOrTraktID(ctx, "1001"); err != nil {
 		t.Fatalf("user gone after mismatch: %v", err)
 	}
 
@@ -1001,7 +1038,7 @@ func assertDeleteIfRefreshMatches(t *testing.T, s *Store, u User) {
 		t.Fatalf("match: deleted %v, err %v; want true, nil", ok, err)
 	}
 
-	if _, err := s.UserBySubOrEmail(ctx, "sub-1"); !errors.Is(err, ErrNotFound) {
+	if _, err := s.UserBySlugOrTraktID(ctx, "1001"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("user still found: %v", err)
 	}
 
@@ -1023,13 +1060,13 @@ func TestDeleteUserIfInactive(t *testing.T) {
 	base := time.Unix(1_800_000_000, 0)
 	s.now = func() time.Time { return base }
 
-	u, err := s.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := s.UpsertUser(ctx, "1001", "alice")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := s.SaveGoogleToken(ctx, u.ID, GoogleToken{RefreshToken: "r1", AccessToken: "a1"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := s.SaveTraktToken(ctx, u.ID, TraktToken{RefreshToken: "r1", AccessToken: "a1"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
 	ptr := func(v string) *string { return &v }
@@ -1048,7 +1085,7 @@ func TestDeleteUserIfInactive(t *testing.T) {
 		t.Fatalf("token appeared: deleted %v, err %v; want false, nil", ok, err)
 	}
 
-	if _, err := s.UserBySubOrEmail(ctx, "sub-1"); err != nil {
+	if _, err := s.UserBySlugOrTraktID(ctx, "1001"); err != nil {
 		t.Fatalf("user gone after refused deletes: %v", err)
 	}
 
@@ -1067,8 +1104,8 @@ func assertDeleteIfInactiveDeletes(t *testing.T, s *Store, u User, cutoff time.T
 		t.Fatalf("still inactive: deleted %v, err %v; want true, nil", ok, err)
 	}
 
-	if _, err := s.GoogleToken(ctx, u.ID); !errors.Is(err, ErrNotFound) {
-		t.Errorf("google token kept: %v", err)
+	if _, err := s.TraktToken(ctx, u.ID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("trakt token kept: %v", err)
 	}
 
 	if ok, err := s.DeleteUserIfInactive(ctx, u.ID, cutoff, nil); err != nil || ok {
@@ -1076,7 +1113,7 @@ func assertDeleteIfInactiveDeletes(t *testing.T, s *Store, u User, cutoff time.T
 	}
 
 	// No token, nil guard: last_seen_at alone decides.
-	v, err := s.UpsertUser(ctx, "sub-2", "b@example.com")
+	v, err := s.UpsertUser(ctx, "1002", "bob")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}

@@ -4,20 +4,22 @@
 
 CREATE TABLE users (
     id           TEXT    PRIMARY KEY,
-    google_sub   TEXT    NOT NULL UNIQUE,
-    email        TEXT    NOT NULL,
+    trakt_id     TEXT    NOT NULL UNIQUE,
+    -- Not unique: a slug is refreshed only on reconnect, so a stale slug can
+    -- equal the current slug of another user who took it since.
+    trakt_slug   TEXT    NOT NULL,
     created_at   INTEGER NOT NULL,
     last_seen_at INTEGER NOT NULL
 ) STRICT;
 
-CREATE INDEX users_email ON users (email);
+CREATE INDEX users_trakt_slug ON users (trakt_slug);
 CREATE INDEX users_last_seen_at ON users (last_seen_at);
 
-CREATE TABLE google_tokens (
+CREATE TABLE trakt_tokens (
     user_id    TEXT    PRIMARY KEY REFERENCES users (id),
     refresh_ct BLOB    NOT NULL,
     access_ct  BLOB    NOT NULL,
-    -- 0 when Google gave no expiry.
+    -- 0 when Trakt gave no expiry.
     expiry     INTEGER NOT NULL,
     -- Active key id at write time; rekey reads the ciphertext header, not this column.
     key_id     TEXT    NOT NULL,

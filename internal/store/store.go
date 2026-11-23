@@ -1,4 +1,4 @@
-// Package store persists users, encrypted Google tokens and OAuth state in a
+// Package store persists users, encrypted Trakt tokens and OAuth state in a
 // single SQLite file.
 package store
 
@@ -60,8 +60,8 @@ var migrationsFS embed.FS
 var (
 	// ErrNotFound reports a missing user or token.
 	ErrNotFound = errors.New("store: not found")
-	// ErrAmbiguous reports an e-mail shared by several users; look them up by sub.
-	ErrAmbiguous = errors.New("store: e-mail matches several users")
+	// ErrAmbiguous reports a Trakt slug held by several users; look them up by Trakt id.
+	ErrAmbiguous = errors.New("store: trakt slug matches several users")
 )
 
 // Store is the SQLite-backed persistence layer.

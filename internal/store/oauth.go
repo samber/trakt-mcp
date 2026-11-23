@@ -609,7 +609,7 @@ func (s *Store) DeletePKCERequestSession(ctx context.Context, signature string) 
 }
 
 // SavePending stores an in-flight authorization (between our /authorize and
-// Google's callback) under id for ttl.
+// the Trakt callback) under id for ttl.
 func (s *Store) SavePending(ctx context.Context, id string, data []byte, ttl time.Duration) error {
 	if _, err := s.db.ExecContext(ctx,
 		`INSERT INTO pending_authorizations (id, data, expires_at) VALUES (?, ?, ?)`,

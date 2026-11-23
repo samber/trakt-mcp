@@ -13,24 +13,25 @@ import (
 )
 
 const (
-	// userIDBytes random bytes give a 32-hex-char user id, unguessable and stable across e-mail changes.
+	// userIDBytes random bytes give a 32-hex-char user id, unguessable and stable across slug changes.
 	userIDBytes = 16
-	// maxEmailMatches is how many rows UserBySubOrEmail fetches by e-mail: two
+	// maxSlugMatches is how many rows UserBySlugOrTraktID fetches by slug: two
 	// are enough to tell a unique match from an ambiguous one.
-	maxEmailMatches = 2
+	maxSlugMatches = 2
 )
 
 // userColumns is the column list scanned by scanUser, in order.
-const userColumns = `id, google_sub, email, created_at, last_seen_at`
+const userColumns = `id, trakt_id, trakt_slug, created_at, last_seen_at`
 
-// User is a person who connected their Google account.
+// User is a person who connected their Trakt account. ID is our own id; it
+// keys every per-user row and never changes, while TraktSlug follows renames.
 type User struct {
-	ID, GoogleSub, Email  string
-	CreatedAt, LastSeenAt time.Time
+	ID, TraktID, TraktSlug string
+	CreatedAt, LastSeenAt  time.Time
 }
 
-// GoogleToken holds a user's Google OAuth tokens in clear, in memory only.
-type GoogleToken struct {
+// TraktToken holds a user's Trakt OAuth tokens in clear, in memory only.
+type TraktToken struct {
 	RefreshToken, AccessToken string
 	// Expiry is the access token expiry; zero when unknown.
 	Expiry time.Time
@@ -45,7 +46,7 @@ func scanUser(row rowScanner) (User, error) {
 		u                 User
 		created, lastSeen int64
 	)
-	if err := row.Scan(&u.ID, &u.GoogleSub, &u.Email, &created, &lastSeen); err != nil {
+	if err := row.Scan(&u.ID, &u.TraktID, &u.TraktSlug, &created, &lastSeen); err != nil {
 		return User{}, err
 	}
 
@@ -55,8 +56,10 @@ func scanUser(row rowScanner) (User, error) {
 	return u, nil
 }
 
-func normalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+// normalizeSlug trims and lowercases a slug: Trakt slugs are lowercase, so an
+// operator typing "Alice" still finds "alice".
+func normalizeSlug(slug string) string {
+	return strings.ToLower(strings.TrimSpace(slug))
 }
 
 func newUserID() (string, error) {
@@ -68,11 +71,17 @@ func newUserID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// UpsertUser creates the user for a Google sub, or updates its e-mail if it
-// exists. Both cases mark the user as seen now.
-func (s *Store) UpsertUser(ctx context.Context, sub, email string) (User, error) {
-	if sub == "" {
-		return User{}, errors.New("store: empty google sub")
+// UpsertUser creates the user for a Trakt user id, or updates its slug if it
+// exists, keeping our user id. Both cases mark the user as seen now.
+func (s *Store) UpsertUser(ctx context.Context, traktID, traktSlug string) (User, error) {
+	traktID = strings.TrimSpace(traktID)
+	if traktID == "" {
+		return User{}, errors.New("store: empty trakt id")
+	}
+
+	traktSlug = normalizeSlug(traktSlug)
+	if traktSlug == "" {
+		return User{}, errors.New("store: empty trakt slug")
 	}
 
 	id, err := newUserID()
@@ -83,11 +92,11 @@ func (s *Store) UpsertUser(ctx context.Context, sub, email string) (User, error)
 	now := s.now().Unix()
 
 	u, err := scanUser(s.db.QueryRowContext(ctx, `
-		INSERT INTO users (id, google_sub, email, created_at, last_seen_at)
+		INSERT INTO users (id, trakt_id, trakt_slug, created_at, last_seen_at)
 		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT (google_sub) DO UPDATE SET email = excluded.email, last_seen_at = excluded.last_seen_at
+		ON CONFLICT (trakt_id) DO UPDATE SET trakt_slug = excluded.trakt_slug, last_seen_at = excluded.last_seen_at
 		RETURNING `+userColumns,
-		id, sub, normalizeEmail(email), now, now))
+		id, traktID, traktSlug, now, now))
 	if err != nil {
 		return User{}, fmt.Errorf("store: upsert user: %w", err)
 	}
@@ -95,33 +104,34 @@ func (s *Store) UpsertUser(ctx context.Context, sub, email string) (User, error)
 	return u, nil
 }
 
-// UserBySubOrEmail finds a user by exact Google sub, else by case-insensitive
-// e-mail. A sub match wins; an e-mail held by several users is ErrAmbiguous.
-func (s *Store) UserBySubOrEmail(ctx context.Context, q string) (User, error) {
+// UserBySlugOrTraktID finds a user by exact Trakt user id, else by
+// case-insensitive Trakt slug. An id match wins; a slug held by several users
+// is ErrAmbiguous.
+func (s *Store) UserBySlugOrTraktID(ctx context.Context, q string) (User, error) {
 	q = strings.TrimSpace(q)
 	if q == "" {
 		return User{}, ErrNotFound
 	}
 
 	u, err := scanUser(s.db.QueryRowContext(ctx,
-		`SELECT `+userColumns+` FROM users WHERE google_sub = ?`, q))
+		`SELECT `+userColumns+` FROM users WHERE trakt_id = ?`, q))
 	if err == nil {
 		return u, nil
 	}
 
 	if !errors.Is(err, sql.ErrNoRows) {
-		return User{}, fmt.Errorf("store: user by sub: %w", err)
+		return User{}, fmt.Errorf("store: user by trakt id: %w", err)
 	}
 
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT `+userColumns+` FROM users WHERE email = ? LIMIT ?`, normalizeEmail(q), maxEmailMatches)
+		`SELECT `+userColumns+` FROM users WHERE trakt_slug = ? LIMIT ?`, normalizeSlug(q), maxSlugMatches)
 	if err != nil {
-		return User{}, fmt.Errorf("store: user by email: %w", err)
+		return User{}, fmt.Errorf("store: user by trakt slug: %w", err)
 	}
 
 	users, err := collectUsers(rows)
 	if err != nil {
-		return User{}, fmt.Errorf("store: user by email: %w", err)
+		return User{}, fmt.Errorf("store: user by trakt slug: %w", err)
 	}
 
 	switch len(users) {
@@ -255,9 +265,9 @@ func (s *Store) forgetTouch(id string) {
 	s.touchMu.Unlock()
 }
 
-// SaveGoogleToken stores both tokens encrypted under the active key, bound to
+// SaveTraktToken stores both tokens encrypted under the active key, bound to
 // userID through the AEAD additional data, replacing any previous row.
-func (s *Store) SaveGoogleToken(ctx context.Context, userID string, t GoogleToken) error {
+func (s *Store) SaveTraktToken(ctx context.Context, userID string, t TraktToken) error {
 	aad := []byte(userID)
 
 	refreshCT, err := s.kr.Encrypt([]byte(t.RefreshToken), aad)
@@ -271,24 +281,24 @@ func (s *Store) SaveGoogleToken(ctx context.Context, userID string, t GoogleToke
 	}
 
 	if _, err := s.db.ExecContext(ctx, `
-		INSERT INTO google_tokens (user_id, refresh_ct, access_ct, expiry, key_id)
+		INSERT INTO trakt_tokens (user_id, refresh_ct, access_ct, expiry, key_id)
 		VALUES (?, ?, ?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE SET
 			refresh_ct = excluded.refresh_ct, access_ct = excluded.access_ct,
 			expiry = excluded.expiry, key_id = excluded.key_id`,
 		userID, refreshCT, accessCT, unixOrZero(t.Expiry), s.kr.ActiveID()); err != nil {
-		return fmt.Errorf("store: save google token: %w", err)
+		return fmt.Errorf("store: save trakt token: %w", err)
 	}
 
 	return nil
 }
 
-// SaveGoogleTokenIf stores t only if the user's stored refresh token still
+// SaveTraktTokenIf stores t only if the user's stored refresh token still
 // equals expectedRefresh, and reports whether it did. A refresh that started
 // before a new consent must not overwrite the newer grant. The read, compare
 // and write run in one immediate transaction. A user with no stored token
 // reports false.
-func (s *Store) SaveGoogleTokenIf(ctx context.Context, userID, expectedRefresh string, t GoogleToken) (saved bool, err error) {
+func (s *Store) SaveTraktTokenIf(ctx context.Context, userID, expectedRefresh string, t TraktToken) (saved bool, err error) {
 	aad := []byte(userID)
 
 	refreshCT, err := s.kr.Encrypt([]byte(t.RefreshToken), aad)
@@ -303,7 +313,7 @@ func (s *Store) SaveGoogleTokenIf(ctx context.Context, userID, expectedRefresh s
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return false, fmt.Errorf("store: save google token if: begin: %w", err)
+		return false, fmt.Errorf("store: save trakt token if: begin: %w", err)
 	}
 	defer func() {
 		if err != nil || !saved {
@@ -317,14 +327,14 @@ func (s *Store) SaveGoogleTokenIf(ctx context.Context, userID, expectedRefresh s
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE google_tokens SET refresh_ct = ?, access_ct = ?, expiry = ?, key_id = ?
+		UPDATE trakt_tokens SET refresh_ct = ?, access_ct = ?, expiry = ?, key_id = ?
 		WHERE user_id = ?`,
 		refreshCT, accessCT, unixOrZero(t.Expiry), s.kr.ActiveID(), userID); err != nil {
-		return false, fmt.Errorf("store: save google token if: %w", err)
+		return false, fmt.Errorf("store: save trakt token if: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("store: save google token if: commit: %w", err)
+		return false, fmt.Errorf("store: save trakt token if: commit: %w", err)
 	}
 
 	return true, nil
@@ -375,13 +385,13 @@ func (s *Store) refreshMatches(ctx context.Context, tx *sql.Tx, userID, expected
 	var refreshCT []byte
 
 	err := tx.QueryRowContext(ctx,
-		`SELECT refresh_ct FROM google_tokens WHERE user_id = ?`, userID).Scan(&refreshCT)
+		`SELECT refresh_ct FROM trakt_tokens WHERE user_id = ?`, userID).Scan(&refreshCT)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
 
 	if err != nil {
-		return false, fmt.Errorf("store: load google token: %w", err)
+		return false, fmt.Errorf("store: load trakt token: %w", err)
 	}
 
 	current, err := s.kr.Decrypt(refreshCT, []byte(userID))
@@ -392,37 +402,37 @@ func (s *Store) refreshMatches(ctx context.Context, tx *sql.Tx, userID, expected
 	return subtle.ConstantTimeCompare(current, []byte(expected)) == 1, nil
 }
 
-// GoogleToken returns the decrypted tokens of a user, or ErrNotFound.
-func (s *Store) GoogleToken(ctx context.Context, userID string) (GoogleToken, error) {
+// TraktToken returns the decrypted tokens of a user, or ErrNotFound.
+func (s *Store) TraktToken(ctx context.Context, userID string) (TraktToken, error) {
 	var (
 		refreshCT, accessCT []byte
 		expiry              int64
 	)
 
 	err := s.db.QueryRowContext(ctx,
-		`SELECT refresh_ct, access_ct, expiry FROM google_tokens WHERE user_id = ?`, userID).
+		`SELECT refresh_ct, access_ct, expiry FROM trakt_tokens WHERE user_id = ?`, userID).
 		Scan(&refreshCT, &accessCT, &expiry)
 	if errors.Is(err, sql.ErrNoRows) {
-		return GoogleToken{}, ErrNotFound
+		return TraktToken{}, ErrNotFound
 	}
 
 	if err != nil {
-		return GoogleToken{}, fmt.Errorf("store: load google token: %w", err)
+		return TraktToken{}, fmt.Errorf("store: load trakt token: %w", err)
 	}
 
 	aad := []byte(userID)
 
 	refresh, err := s.kr.Decrypt(refreshCT, aad)
 	if err != nil {
-		return GoogleToken{}, fmt.Errorf("store: decrypt refresh token: %w", err)
+		return TraktToken{}, fmt.Errorf("store: decrypt refresh token: %w", err)
 	}
 
 	access, err := s.kr.Decrypt(accessCT, aad)
 	if err != nil {
-		return GoogleToken{}, fmt.Errorf("store: decrypt access token: %w", err)
+		return TraktToken{}, fmt.Errorf("store: decrypt access token: %w", err)
 	}
 
-	t := GoogleToken{RefreshToken: string(refresh), AccessToken: string(access)}
+	t := TraktToken{RefreshToken: string(refresh), AccessToken: string(access)}
 	if expiry != 0 {
 		t.Expiry = time.Unix(expiry, 0)
 	}
@@ -441,11 +451,11 @@ func unixOrZero(t time.Time) int64 {
 // deleteUserChildren removes every row owned by a user, run before the user
 // row itself so the foreign keys never see an orphan.
 var deleteUserChildren = []string{
-	`DELETE FROM google_tokens WHERE user_id = ?`,
+	`DELETE FROM trakt_tokens WHERE user_id = ?`,
 	`DELETE FROM oauth_tokens WHERE user_id = ?`,
 }
 
-// DeleteUser removes a user with their Google tokens and every fosite row
+// DeleteUser removes a user with their Trakt tokens and every fosite row
 // bound to them, in one transaction. It returns ErrNotFound for an unknown id.
 func (s *Store) DeleteUser(ctx context.Context, userID string) (err error) {
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -543,7 +553,7 @@ func (s *Store) DeleteUserIfInactive(ctx context.Context, userID string, cutoff 
 	return true, nil
 }
 
-// tokenGuardMatches reports whether the stored Google token still matches
+// tokenGuardMatches reports whether the stored Trakt token still matches
 // expectedRefresh: nil skips the check, "" requires no stored token, any other
 // value must equal the stored refresh token.
 func (s *Store) tokenGuardMatches(ctx context.Context, tx *sql.Tx, userID string, expectedRefresh *string) (bool, error) {
@@ -551,7 +561,7 @@ func (s *Store) tokenGuardMatches(ctx context.Context, tx *sql.Tx, userID string
 	case expectedRefresh == nil:
 		return true, nil
 	case *expectedRefresh == "":
-		return s.hasNoGoogleToken(ctx, tx, userID)
+		return s.hasNoTraktToken(ctx, tx, userID)
 	default:
 		return s.refreshMatches(ctx, tx, userID, *expectedRefresh)
 	}
@@ -568,12 +578,12 @@ func deleteChildRows(ctx context.Context, tx *sql.Tx, userID string) error {
 	return nil
 }
 
-// hasNoGoogleToken reports whether userID has no stored Google token row.
-func (s *Store) hasNoGoogleToken(ctx context.Context, tx *sql.Tx, userID string) (bool, error) {
+// hasNoTraktToken reports whether userID has no stored Trakt token row.
+func (s *Store) hasNoTraktToken(ctx context.Context, tx *sql.Tx, userID string) (bool, error) {
 	var n int
 	if err := tx.QueryRowContext(ctx,
-		`SELECT count(*) FROM google_tokens WHERE user_id = ?`, userID).Scan(&n); err != nil {
-		return false, fmt.Errorf("store: count google tokens: %w", err)
+		`SELECT count(*) FROM trakt_tokens WHERE user_id = ?`, userID).Scan(&n); err != nil {
+		return false, fmt.Errorf("store: count trakt tokens: %w", err)
 	}
 
 	return n == 0, nil
@@ -583,7 +593,7 @@ func (s *Store) hasNoGoogleToken(ctx context.Context, tx *sql.Tx, userID string)
 func (s *Store) InactiveUsers(ctx context.Context, before time.Time) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx,
 		// Literal column list (same order as userColumns): no string concatenation in SQL.
-		`SELECT id, google_sub, email, created_at, last_seen_at FROM users WHERE last_seen_at < ? ORDER BY last_seen_at`, before.Unix())
+		`SELECT id, trakt_id, trakt_slug, created_at, last_seen_at FROM users WHERE last_seen_at < ? ORDER BY last_seen_at`, before.Unix())
 	if err != nil {
 		return nil, fmt.Errorf("store: inactive users: %w", err)
 	}
@@ -601,7 +611,7 @@ type sealedToken struct {
 	refreshCT, accessCT []byte
 }
 
-// Rekey re-encrypts under the active key every Google token row holding a
+// Rekey re-encrypts under the active key every Trakt token row holding a
 // ciphertext sealed by another key, and returns how many rows it rewrote.
 // It runs in one transaction: a row sealed by a key missing from the keyring
 // aborts the whole run.
@@ -616,7 +626,7 @@ func (s *Store) Rekey(ctx context.Context) (n int, err error) {
 		}
 	}()
 
-	rows, err := tx.QueryContext(ctx, `SELECT user_id, refresh_ct, access_ct FROM google_tokens`)
+	rows, err := tx.QueryContext(ctx, `SELECT user_id, refresh_ct, access_ct FROM trakt_tokens`)
 	if err != nil {
 		return 0, fmt.Errorf("store: rekey: list: %w", err)
 	}
@@ -642,7 +652,7 @@ func (s *Store) Rekey(ctx context.Context) (n int, err error) {
 		}
 
 		if _, err := tx.ExecContext(ctx,
-			`UPDATE google_tokens SET refresh_ct = ?, access_ct = ?, key_id = ? WHERE user_id = ?`,
+			`UPDATE trakt_tokens SET refresh_ct = ?, access_ct = ?, key_id = ? WHERE user_id = ?`,
 			refreshCT, accessCT, active, row.userID); err != nil {
 			return 0, fmt.Errorf("store: rekey user %s: %w", row.userID, err)
 		}
