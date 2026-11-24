@@ -252,7 +252,7 @@ Environment variables carry **no prefix**: each flag reads the env var of the sa
 | `--listen` / `LISTEN` | `127.0.0.1:8080` (`0.0.0.0:$PORT` when `PORT` is set) | Listen address |
 | `--db-path` / `DB_PATH` | `./data/trakt-mcp.db` | SQLite file |
 | `--trakt-client-id` / `TRAKT_CLIENT_ID` | required | Trakt application client id (also sent as `trakt-api-key`) |
-| `TRAKT_CLIENT_SECRET` (env only) | required | Trakt application client secret |
+| `TRAKT_CLIENT_SECRET` (env only) | optional | Trakt application client secret; deprecated by Trakt, omitted from requests when unset |
 | `ENCRYPTION_KEYS` (env only) | required | `keyid:base64` list, first active |
 | `--enable-dcr` / `ENABLE_DCR` | `true` | Keep Dynamic Client Registration |
 | `--log-level` / `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |

@@ -324,6 +324,17 @@ func NewCodeVerifier() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
+// withSecret adds the client secret to a request body when one is configured.
+// Trakt deprecated the secret in favor of PKCE and accepts requests without
+// it, so an empty secret is omitted rather than sent as an empty string.
+func (u *Upstream) withSecret(body map[string]string) map[string]string {
+	if u.clientSecret != "" {
+		body[paramClientSecret] = u.clientSecret
+	}
+
+	return body
+}
+
 func orDefault(v, def string) string {
 	if v == "" {
 		return def
@@ -354,14 +365,13 @@ func (u *Upstream) AuthCodeURL(state, codeVerifier string) string {
 // Exchange trades an authorization code for Trakt tokens. codeVerifier is
 // the one passed to AuthCodeURL; see there for its required form.
 func (u *Upstream) Exchange(ctx context.Context, code, codeVerifier string) (store.TraktToken, error) {
-	tok, err := u.tokenRequest(ctx, map[string]string{
+	tok, err := u.tokenRequest(ctx, u.withSecret(map[string]string{
 		paramGrantType:    grantAuthorizationCode,
 		paramCode:         code,
 		paramCodeVerifier: codeVerifier,
 		paramClientID:     u.clientID,
-		paramClientSecret: u.clientSecret,
 		paramRedirectURI:  u.redirectURL,
-	})
+	}))
 	if err != nil {
 		return store.TraktToken{}, fmt.Errorf("trakt code exchange: %w", err)
 	}
@@ -375,11 +385,10 @@ func (u *Upstream) Exchange(ctx context.Context, code, codeVerifier string) (sto
 
 // Revoke revokes a Trakt token, which ends the whole grant.
 func (u *Upstream) Revoke(ctx context.Context, token string) error {
-	status, _, err := u.postJSON(ctx, u.revokeURL, map[string]string{
-		paramToken:        token,
-		paramClientID:     u.clientID,
-		paramClientSecret: u.clientSecret,
-	})
+	status, _, err := u.postJSON(ctx, u.revokeURL, u.withSecret(map[string]string{
+		paramToken:    token,
+		paramClientID: u.clientID,
+	}))
 	if err != nil {
 		return fmt.Errorf("trakt revoke: %w", err)
 	}
@@ -501,13 +510,12 @@ func (u *Upstream) refreshOnce(ctx context.Context, userID, rejected string) (to
 		return stored, true, nil
 	}
 
-	fresh, err := u.tokenRequest(ctx, map[string]string{
+	fresh, err := u.tokenRequest(ctx, u.withSecret(map[string]string{
 		paramGrantType:    grantRefreshToken,
 		paramRefreshToken: stored.RefreshToken,
 		paramClientID:     u.clientID,
-		paramClientSecret: u.clientSecret,
 		paramRedirectURI:  u.redirectURL,
-	})
+	}))
 	if err != nil {
 		if te, ok := errors.AsType[*tokenError](err); !ok || te.code != oauthErrInvalidGrant {
 			return store.TraktToken{}, true, fmt.Errorf("trakt token refresh: %w", refreshError(err))

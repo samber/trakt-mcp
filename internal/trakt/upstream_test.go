@@ -24,6 +24,9 @@ import (
 	"github.com/samber/trakt-mcp/internal/store"
 )
 
+// upTokenPath is the path of the fake token endpoint.
+const upTokenPath = "/oauth/token" //nolint:gosec // G101: an endpoint path, not a credential
+
 const (
 	upClientID       = "up-client-id"
 	upClientSecret   = "up-client-secret-value"
@@ -90,7 +93,7 @@ func (f *fakeTrakt) serve(w http.ResponseWriter, r *http.Request) {
 	f.mu.Unlock()
 
 	switch r.URL.Path {
-	case "/oauth/token":
+	case upTokenPath:
 		f.tokenCalls.Add(1)
 
 		if token == nil {
@@ -266,7 +269,7 @@ func newUpEnv(t *testing.T, expired bool) *upEnv {
 		ClientSecret: upClientSecret,
 		RedirectURL:  upRedirect,
 		AuthURL:      f.srv.URL + "/oauth/authorize",
-		TokenURL:     f.srv.URL + "/oauth/token",
+		TokenURL:     f.srv.URL + upTokenPath,
 		RevokeURL:    f.srv.URL + "/oauth/revoke",
 		APIBaseURL:   f.srv.URL,
 		UserAgent:    upUserAgent,
@@ -360,7 +363,7 @@ func TestRefreshRotatesAndSavesBothTokens(t *testing.T) {
 		t.Errorf("token = %q", tok)
 	}
 
-	body := env.fake.lastBody("/oauth/token")
+	body := env.fake.lastBody(upTokenPath)
 	want := map[string]string{
 		"grant_type": "refresh_token", "refresh_token": upOldRefresh,
 		"client_id": upClientID, "client_secret": upClientSecret, "redirect_uri": upRedirect,
@@ -372,7 +375,7 @@ func TestRefreshRotatesAndSavesBothTokens(t *testing.T) {
 		}
 	}
 
-	if ct := env.fake.lastHeader("/oauth/token").Get("Content-Type"); ct != jsonContentType {
+	if ct := env.fake.lastHeader(upTokenPath).Get("Content-Type"); ct != jsonContentType {
 		t.Errorf("Content-Type = %q", ct)
 	}
 
@@ -684,7 +687,7 @@ func TestExchangeUsesPKCEVerifier(t *testing.T) {
 		t.Errorf("token = %+v", tok)
 	}
 
-	body := env.fake.lastBody("/oauth/token")
+	body := env.fake.lastBody(upTokenPath)
 	want := map[string]string{
 		"grant_type": "authorization_code", "code": "code-1", "code_verifier": "verifier-1",
 		"client_id": upClientID, "client_secret": upClientSecret, "redirect_uri": upRedirect,
@@ -693,6 +696,55 @@ func TestExchangeUsesPKCEVerifier(t *testing.T) {
 	for k, v := range want {
 		if body[k] != v {
 			t.Errorf("body[%s] = %q, want %q", k, body[k], v)
+		}
+	}
+}
+
+// TestEmptySecretIsOmitted checks that with no client secret configured, no
+// request carries a client_secret key, not even an empty one: Trakt deprecated
+// the secret in favor of PKCE.
+func TestEmptySecretIsOmitted(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	exchangeEnv := newUpEnv(t, false)
+	exchangeEnv.up.clientSecret = ""
+
+	if _, err := exchangeEnv.up.Exchange(ctx, "code-1", "verifier-1"); err != nil {
+		t.Fatalf("Exchange: %v", err)
+	}
+
+	refreshEnv := newUpEnv(t, true)
+	refreshEnv.up.clientSecret = ""
+
+	if _, err := refreshEnv.source(t).AccessToken(ctx); err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+
+	revokeEnv := newUpEnv(t, false)
+	revokeEnv.up.clientSecret = ""
+
+	if err := revokeEnv.up.Revoke(ctx, "token-to-revoke"); err != nil {
+		t.Fatalf("Revoke: %v", err)
+	}
+
+	for name, call := range map[string]struct {
+		env  *upEnv
+		path string
+	}{
+		"exchange": {exchangeEnv, upTokenPath},
+		"refresh":  {refreshEnv, upTokenPath},
+		"revoke":   {revokeEnv, "/oauth/revoke"},
+	} {
+		body := call.env.fake.lastBody(call.path)
+
+		if _, ok := body["client_secret"]; ok {
+			t.Errorf("%s body has client_secret: %v", name, body)
+		}
+
+		if body["client_id"] != upClientID {
+			t.Errorf("%s body[client_id] = %q, want %q", name, body["client_id"], upClientID)
 		}
 	}
 }
@@ -923,7 +975,7 @@ func TestUserAgentSentOnEveryCall(t *testing.T) {
 		t.Fatalf("Profile: %v", err)
 	}
 
-	for _, path := range []string{"/oauth/token", "/oauth/revoke", "/users/settings"} {
+	for _, path := range []string{upTokenPath, "/oauth/revoke", "/users/settings"} {
 		if ua := env.fake.lastHeader(path).Get(headerUserAgent); ua != upUserAgent {
 			t.Errorf("%s User-Agent = %q, want %q", path, ua, upUserAgent)
 		}

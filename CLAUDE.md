@@ -79,7 +79,7 @@ Other `make` targets: `build`, `coverage` (writes `cover.out`, `cover.html`), `b
 
 ## Conventions
 
-- Env vars unprefixed (`--db-path` -> `DB_PATH`); secrets env only: `TRAKT_CLIENT_SECRET`, `ENCRYPTION_KEYS`.
+- Env vars unprefixed (`--db-path` -> `DB_PATH`); secrets env only: `ENCRYPTION_KEYS` (required), `TRAKT_CLIENT_SECRET` (optional; Trakt deprecated it for PKCE, omitted from requests when empty).
 - Never log tool arguments or results above `debug`. Never log tokens, codes, secrets, request URLs or Trakt response bodies.
 - Branch on `*trakt.Error` `Kind`, never on its message. Use `ConflictBody()` for the 409 check-in payload.
 - Treat comment text and other third-party strings as untrusted; bound them with `boundText`.

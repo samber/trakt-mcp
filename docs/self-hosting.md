@@ -11,7 +11,6 @@ go install github.com/samber/trakt-mcp/cmd/trakt-mcp@latest
 
 # Generate an encryption key for the Trakt tokens stored in the database.
 export ENCRYPTION_KEYS="$(trakt-mcp genkey)"
-export TRAKT_CLIENT_SECRET="<your Trakt client secret>"
 
 trakt-mcp serve \
   --base-url http://localhost:8080 \
@@ -53,7 +52,7 @@ Every flag can also be set with an environment variable of the same name, upperc
 | `--listen`                | `LISTEN`                | `127.0.0.1:8080`, or `0.0.0.0:$PORT` when `PORT` is set | Listen address.                                                                                                                                                                          |
 | `--db-path`               | `DB_PATH`               | `./data/trakt-mcp.db`                                   | SQLite file. One server instance only; `rekey` and `disconnect` may run beside it. Rollback journal: a network volume works.                                                             |
 | `--trakt-client-id`       | `TRAKT_CLIENT_ID`       | required                                                | Trakt application client id, also sent as the `trakt-api-key` header.                                                                                                                    |
-| (environment only)        | `TRAKT_CLIENT_SECRET`   | required                                                | Trakt application client secret.                                                                                                                                                         |
+| (environment only)        | `TRAKT_CLIENT_SECRET`   | optional                                                | Trakt application client secret. Trakt deprecated it in favor of PKCE, which the server always uses. When unset, no `client_secret` is sent.                                              |
 | (environment only)        | `ENCRYPTION_KEYS`       | required                                                | Comma-separated `keyid:base64` keys from `genkey`. The first one encrypts new data; the others still decrypt.                                                                            |
 | `--enable-dcr`            | `ENABLE_DCR`            | `true`                                                  | Keep OAuth Dynamic Client Registration for clients that do not support Client ID Metadata Documents.                                                                                     |
 | `--log-level`             | `LOG_LEVEL`             | `info`                                                  | `debug`, `info`, `warn` or `error`. `debug` writes tool arguments and results, which contain personal data, to the logs.                                                                 |
@@ -68,7 +67,7 @@ Every flag can also be set with an environment variable of the same name, upperc
 | `--rate-limit-global`     | `RATE_LIMIT_GLOBAL`     | `1200`                                                  | Trakt requests per minute across all users, so the instance stays inside the application's Trakt budget.                                                                                 |
 | `--openai-apps-challenge` | `OPENAI_APPS_CHALLENGE` | none                                                    | OpenAI domain-verification token, served as plain text at `/.well-known/openai-apps-challenge`. Without it, that path answers 404. See [directory submissions](directory-submission.md). |
 
-`serve` requires `--base-url`, `--site-url`, `--db-path`, `--trakt-client-id`, `TRAKT_CLIENT_SECRET` and `ENCRYPTION_KEYS`. `rekey` needs only `--db-path` and `ENCRYPTION_KEYS`. `disconnect` also needs the Trakt client id and secret, to revoke the grant at Trakt.
+`serve` requires `--base-url`, `--site-url`, `--db-path`, `--trakt-client-id` and `ENCRYPTION_KEYS`. `rekey` needs only `--db-path` and `ENCRYPTION_KEYS`. `disconnect` also needs the Trakt client id, to revoke the grant at Trakt. `TRAKT_CLIENT_SECRET` is optional for all three.
 
 **Name collisions.** The unprefixed names can clash with variables your host or shell already sets. Check these before you deploy: `BASE_URL`, `SITE_URL`, `LISTEN`, `DB_PATH`, `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET`, `ENCRYPTION_KEYS`, `ENABLE_DCR`, `LOG_LEVEL`, `METRICS`, `METRICS_PATH`, `METRICS_LISTEN`, `METRICS_USER`, `METRICS_PASSWORD`, `METRICS_PASSWORD_FILE`, `RATE_LIMIT_READS`, `RATE_LIMIT_WRITES`, `RATE_LIMIT_GLOBAL`, `OPENAI_APPS_CHALLENGE`, plus `PORT`.
 
@@ -76,11 +75,11 @@ Every flag can also be set with an environment variable of the same name, upperc
 
 1. Sign in to Trakt and open [trakt.tv/oauth/applications](https://trakt.tv/oauth/applications). Create a new application.
 2. Fill the name and description. Add the redirect URI `https://<host>/oauth/trakt/callback`, where `<host>` is the host of `--base-url`.
-3. Save, then copy the client id into `--trakt-client-id` and the client secret into `TRAKT_CLIENT_SECRET`.
+3. Save, then copy the client id into `--trakt-client-id`. The client secret is optional: Trakt deprecated it in favor of PKCE, which the server always uses. Set `TRAKT_CLIENT_SECRET` only if you still want to send it.
 
 Trakt sends no granular scopes: a connected user grants full access to their account. Read Trakt's API use policy before you open an instance to the public.
 
-**Rotating the Trakt client secret.** Regenerate the secret on the application page, set it in `TRAKT_CLIENT_SECRET`, and restart. Trakt's behavior with two live secrets is not documented; verify before rotating. Assume refreshes fail between the two steps, so do it during a quiet period.
+**Rotating the Trakt client secret.** Skip this when you run without a secret. Otherwise, regenerate the secret on the application page, set it in `TRAKT_CLIENT_SECRET`, and restart. Trakt's behavior with two live secrets is not documented; verify before rotating. Assume refreshes fail between the two steps, so do it during a quiet period.
 
 **Rotating the encryption key.**
 

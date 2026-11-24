@@ -206,7 +206,8 @@ func Usage(w io.Writer) {
 	fs.PrintDefaults()
 
 	_, _ = fmt.Fprintln(w, "\nEvery flag also reads the env var of the same name, uppercased with dashes as underscores (--db-path: DB_PATH); the flag wins.")
-	_, _ = fmt.Fprintf(w, "Env only (required): %s, %s\n", envTraktClientSecret, envEncryptionKeys)
+	_, _ = fmt.Fprintf(w, "Env only (required): %s\n", envEncryptionKeys)
+	_, _ = fmt.Fprintf(w, "Env only (optional, deprecated by Trakt in favor of PKCE): %s\n", envTraktClientSecret)
 }
 
 // Subcommands that read configuration. genkey and version need none.
@@ -218,12 +219,11 @@ const (
 
 // Keys of the values a command may require; flags carry a "--" prefix in errors.
 const (
-	reqBaseURL           = "--" + flagBaseURL
-	reqSiteURL           = "--" + flagSiteURL
-	reqDBPath            = "--" + flagDBPath
-	reqTraktClientID     = "--" + flagTraktClientID
-	reqTraktClientSecret = envTraktClientSecret
-	reqEncryptionKeys    = envEncryptionKeys
+	reqBaseURL        = "--" + flagBaseURL
+	reqSiteURL        = "--" + flagSiteURL
+	reqDBPath         = "--" + flagDBPath
+	reqTraktClientID  = "--" + flagTraktClientID
+	reqEncryptionKeys = envEncryptionKeys
 )
 
 // commandSpec lists what each command needs, so offline maintenance commands
@@ -238,12 +238,12 @@ type commandSpec struct {
 
 var commandSpecs = map[string]commandSpec{
 	CmdServe: {required: []string{
-		reqBaseURL, reqSiteURL, reqDBPath, reqTraktClientID, reqTraktClientSecret,
+		reqBaseURL, reqSiteURL, reqDBPath, reqTraktClientID,
 		reqEncryptionKeys,
 	}},
 	CmdRekey: {required: []string{reqDBPath, reqEncryptionKeys}},
 	CmdDisconnect: {
-		required:  []string{reqDBPath, reqEncryptionKeys, reqTraktClientID, reqTraktClientSecret},
+		required:  []string{reqDBPath, reqEncryptionKeys, reqTraktClientID},
 		nargs:     1,
 		argsUsage: "<trakt-slug-or-id>",
 	},
@@ -367,12 +367,11 @@ func validateArgs(cmd string, spec commandSpec, args []string) []error {
 // validateRequired reports every value the command requires but finds empty.
 func validateRequired(spec commandSpec, r *raw, cfg Config) []error {
 	values := map[string]string{
-		reqBaseURL:           r.baseURL,
-		reqSiteURL:           strings.TrimSpace(r.siteURL),
-		reqDBPath:            cfg.DBPath,
-		reqTraktClientID:     cfg.TraktClientID,
-		reqTraktClientSecret: cfg.TraktClientSecret,
-		reqEncryptionKeys:    cfg.EncryptionKeys,
+		reqBaseURL:        r.baseURL,
+		reqSiteURL:        strings.TrimSpace(r.siteURL),
+		reqDBPath:         cfg.DBPath,
+		reqTraktClientID:  cfg.TraktClientID,
+		reqEncryptionKeys: cfg.EncryptionKeys,
 	}
 
 	var errs []error

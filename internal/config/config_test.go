@@ -345,15 +345,9 @@ func TestLoad_Required(t *testing.T) {
 		})
 	}
 
-	for _, key := range []string{"TRAKT_CLIENT_SECRET", envEncryptionKeys} {
-		t.Run(key, func(t *testing.T) {
-			t.Parallel()
-
-			_, err := Load(CmdServe, withArgs(), envFunc(map[string]string{key: ""}))
-			if err == nil || !strings.Contains(err.Error(), key) {
-				t.Errorf("err = %v, want error naming %s", err, key)
-			}
-		})
+	_, err := Load(CmdServe, withArgs(), envFunc(map[string]string{envEncryptionKeys: ""}))
+	if err == nil || !strings.Contains(err.Error(), envEncryptionKeys) {
+		t.Errorf("err = %v, want error naming %s", err, envEncryptionKeys)
 	}
 }
 
@@ -643,10 +637,28 @@ func TestTraktSecretOnlyFromEnv(t *testing.T) {
 	if _, err := Load(CmdServe, withArgs("--trakt-client-secret=x"), envFunc(nil)); err == nil {
 		t.Error("--trakt-client-secret: err = nil, want unknown-flag error")
 	}
+}
 
-	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"TRAKT_CLIENT_SECRET": ""})); err == nil ||
-		!strings.Contains(err.Error(), "TRAKT_CLIENT_SECRET") {
-		t.Errorf("missing secret: err = %v, want error naming TRAKT_CLIENT_SECRET", err)
+// TestTraktSecretOptional checks that serve and disconnect load without
+// TRAKT_CLIENT_SECRET: Trakt deprecated the secret in favor of PKCE, so an
+// unset secret is a valid public-client setup.
+func TestTraktSecretOptional(t *testing.T) {
+	t.Parallel()
+
+	noSecret := envFunc(map[string]string{envTraktClientSecret: ""})
+
+	cfg, err := Load(CmdServe, withArgs(), noSecret)
+	if err != nil {
+		t.Fatalf("serve without secret: %v", err)
+	}
+
+	if cfg.TraktClientSecret != "" {
+		t.Errorf("TraktClientSecret = %q, want empty", cfg.TraktClientSecret)
+	}
+
+	args := []string{"--db-path=" + cfg.DBPath, "--trakt-client-id=client-id", "slug"}
+	if _, err := Load(CmdDisconnect, args, noSecret); err != nil {
+		t.Errorf("disconnect without secret: %v", err)
 	}
 }
 
@@ -711,7 +723,12 @@ func TestLoad_TraktCredentialsTrimmed(t *testing.T) {
 		t.Errorf("TraktClientSecret = %q, want trimmed", cfg.TraktClientSecret)
 	}
 
-	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{envTraktClientSecret: " \n"})); err == nil {
-		t.Error("whitespace-only secret: err = nil, want missing-secret error")
+	cfg, err = Load(CmdServe, withArgs(), envFunc(map[string]string{envTraktClientSecret: " \n"}))
+	if err != nil {
+		t.Fatalf("whitespace-only secret: %v", err)
+	}
+
+	if cfg.TraktClientSecret != "" {
+		t.Errorf("whitespace-only secret = %q, want empty", cfg.TraktClientSecret)
 	}
 }
