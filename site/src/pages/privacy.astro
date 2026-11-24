@@ -86,8 +86,9 @@ const CNIL_URL = 'https://www.cnil.fr/';
   <h2>How to erase everything</h2>
   <ul>
     <li>
-      Disconnect the connector in your assistant. This revokes the tokens that assistant holds, so it can no longer act
-      on your account. It does not delete your account row and does not revoke the application at Trakt.
+      Disconnect the connector in your assistant. A client that calls the revoke endpoint has its tokens revoked, so it
+      can no longer act on your account. This does not delete your account row and does not revoke the application at
+      Trakt.
     </li>
     <li>
       Revoke the application at Trakt, under Settings, <a href={TRAKT_CONNECTED_APPS_URL}>Connected Apps</a>. The data

@@ -63,7 +63,7 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_playback_progress', summary: 'See what you paused halfway.', group: 'history' },
   { name: 'remove_playback_item', summary: 'Clear a paused playback entry.', group: 'history' },
 
-  // Watchlist, collection, ratings.
+  // Watchlist, collection, ratings, smart lists.
   { name: 'fetch_watchlist', summary: 'Read your watchlist, filtered by type and sorted as you like.', group: 'library' },
   { name: 'add_to_watchlist', summary: 'Add items to your watchlist, with a note if you have Trakt VIP.', group: 'library' },
   { name: 'remove_from_watchlist', summary: 'Remove items from your watchlist.', group: 'library' },
@@ -73,6 +73,8 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_ratings', summary: 'Read the ratings you gave.', group: 'library' },
   { name: 'add_ratings', summary: 'Rate movies, shows, seasons or episodes from 1 to 10.', group: 'library' },
   { name: 'remove_ratings', summary: 'Remove ratings you gave.', group: 'library' },
+  { name: 'fetch_smart_lists', summary: 'Read your smart lists and the filters behind each.', group: 'library' },
+  { name: 'fetch_smart_list_items', summary: 'See the movies and shows a smart list holds right now.', group: 'library' },
 
   // Check-ins and recommendations.
   { name: 'checkin_to_show', summary: 'Check in to the episode you are watching now.', group: 'checkin' },
@@ -151,7 +153,7 @@ export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; descriptio
   {
     group: 'library',
     title: 'Your lists and ratings',
-    description: 'Watchlist, collection and ratings: read them, add to them, remove from them.',
+    description: 'Watchlist, collection, ratings and smart lists: read them, add to them, remove from them.',
   },
   {
     group: 'checkin',
