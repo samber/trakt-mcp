@@ -27,9 +27,10 @@ const (
 	// Trakt (the filtered spec states no limit); this reuses the title bound so a mistaken call stays small.
 	maxListNameRunes = maxTitleRunes
 	// maxListDescriptionRunes bounds a list description. UNVERIFIED: not
-	// documented by Trakt (the filtered spec states no limit); a generous bound that keeps a mistaken
-	// call small without cutting a realistic description.
-	maxListDescriptionRunes = 1000
+	// documented by Trakt (the filtered spec states no limit). It is a safety
+	// ceiling of this server, not a Trakt limit, far above any realistic
+	// description so it never rejects legitimate input.
+	maxListDescriptionRunes = 10000
 )
 
 // listPrivacies are the visibility values of a custom list; link means anyone with the share link.
@@ -43,7 +44,7 @@ var listSortBys = listItemSorts
 // CreateListArgs are the arguments of create_list.
 type CreateListArgs struct {
 	Name           string `json:"name"                      jsonschema:"list name, at most 200 characters"`
-	Description    string `json:"description,omitempty"     jsonschema:"list description, at most 1000 characters"`
+	Description    string `json:"description,omitempty"     jsonschema:"list description, at most 10000 characters"`
 	Privacy        string `json:"privacy,omitempty"         jsonschema:"private, link, friends or public (Trakt's default is private)"`
 	DisplayNumbers *bool  `json:"display_numbers,omitempty" jsonschema:"show the rank of each item"`
 	AllowComments  *bool  `json:"allow_comments,omitempty"  jsonschema:"let people comment on the list"`
@@ -56,7 +57,7 @@ type CreateListArgs struct {
 type UpdateListArgs struct {
 	ListID         string  `json:"list_id"                   jsonschema:"slug or numeric Trakt id of one of the user's own lists"`
 	Name           *string `json:"name,omitempty"            jsonschema:"new name, at most 200 characters"`
-	Description    *string `json:"description,omitempty"     jsonschema:"new description, at most 1000 characters; empty clears it"`
+	Description    *string `json:"description,omitempty"     jsonschema:"new description, at most 10000 characters; empty clears it"`
 	Privacy        string  `json:"privacy,omitempty"         jsonschema:"private, link, friends or public"`
 	DisplayNumbers *bool   `json:"display_numbers,omitempty" jsonschema:"show the rank of each item"`
 	AllowComments  *bool   `json:"allow_comments,omitempty"  jsonschema:"let people comment on the list"`

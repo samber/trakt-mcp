@@ -20,9 +20,10 @@ const (
 )
 
 // maxReorderIDs bounds the ids of one reorder call. UNVERIFIED: not documented by
-// Trakt, the filtered spec states no limit; this keeps a mistaken call small while exceeding
-// any watchlist size Trakt is known to allow.
-const maxReorderIDs = 1000
+// Trakt, the filtered spec states no limit. It is a safety ceiling of this
+// server, not a Trakt limit, set far above any realistic list (a body of this
+// size is about 80 KB) so it never rejects legitimate input.
+const maxReorderIDs = 10000
 
 // vipNotesNote tells the assistant that notes are a paid Trakt feature.
 const vipNotesNote = "Watchlist notes need Trakt VIP."
