@@ -51,6 +51,8 @@ const WRITES_PER_MINUTE = 30;
   <ul>
     <li>
       Stay within the limits: {READS_PER_MINUTE} reading calls and {WRITES_PER_MINUTE} writing calls per user per minute.
+      Trakt documents about one write per second per user, so a large batch of changes can be slowed down or refused by
+      Trakt for a moment; the assistant is then told to retry later.
     </li>
     <li>Do not try to reach another person's data, or to disrupt the service.</li>
     <li>Follow Trakt's terms and API use policy, and the terms of your assistant's provider.</li>
