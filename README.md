@@ -196,18 +196,18 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 
 ### Custom lists (10)
 
-| Tool                   | What it does                                           |
-| ---------------------- | ------------------------------------------------------ |
-| `fetch_user_lists`     | Your custom lists, or another user's public ones.      |
-| `fetch_list`           | One list: name, privacy, item count, likes.            |
-| `fetch_list_items`     | Items on a list.                                       |
-| `fetch_trending_lists` | Lists people are liking now.                           |
-| `fetch_popular_lists`  | Most popular lists.                                    |
-| `create_list`          | Creates a list on your account.                        |
-| `update_list`          | Renames a list or changes its description and privacy. |
-| `add_list_items`       | Adds up to 50 items to one of your lists.              |
-| `remove_list_items`    | Removes items from one of your lists.                  |
-| `delete_list`          | Deletes one of your lists.                             |
+| Tool                   | What it does                                                                              |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| `fetch_user_lists`     | Your custom lists, or another user's public ones.                                         |
+| `fetch_list`           | One list: name, privacy, item count, likes.                                               |
+| `fetch_list_items`     | Items on a list.                                                                          |
+| `fetch_trending_lists` | Lists people are liking now.                                                              |
+| `fetch_popular_lists`  | Most popular lists.                                                                       |
+| `create_list`          | Creates a list (`privacy`: private, link, friends or public).                             |
+| `update_list`          | Renames a list or changes its description and privacy (private, link, friends or public). |
+| `add_list_items`       | Adds up to 50 items to one of your lists.                                                 |
+| `remove_list_items`    | Removes items from one of your lists.                                                     |
+| `delete_list`          | Deletes one of your lists.                                                                |
 
 ### Watchlist edits, notes and favorites (12)
 
