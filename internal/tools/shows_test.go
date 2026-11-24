@@ -25,6 +25,10 @@ const (
 )
 
 const (
+	keyTitle                  = "title"
+	keyOverview               = "overview"
+	keyImages                 = "images"
+	pathPageCount             = "page.page_count"
 	traversalID               = "../x"
 	personIMDb                = "nm0186505"
 	testFirstAired            = "2008-01-20T02:00:00.000Z"
@@ -184,7 +188,7 @@ var showCases = []catalogCase{
 			"items.0.show.ids.tmdb": 1396, "items.0.show.ids.tvdb": 81189, "items.0.show.rating": 9.3, "items.0.show.votes": 100000,
 			"items.0.show.genres": []any{"drama", "crime"}, "items.0.show.network": "AMC", "items.0.show.status": "ended",
 			"items.1.watchers": 3, pathSecondShowGenres: []any{}, "items.1.show.ids.slug": "better-call-saul",
-			"page.page_count": 3, "page.item_count": 6,
+			pathPageCount: 3, "page.item_count": 6,
 		},
 	},
 	{
@@ -230,7 +234,7 @@ var showCases = []catalogCase{
 		tool: toolFetchShowSummary, args: showShow(testShowSlug), route: "GET /shows/breaking-bad", fixture: "show_summary", object: true,
 		wantQuery: map[string]string{queryExtended: extendedFull},
 		want: map[string]any{
-			"title": testShowTitle, "year": 2008, "ids.trakt": 1388, "ids.imdb": testShowIMDb, "overview": "A chemistry teacher turns to crime.",
+			keyTitle: testShowTitle, "year": 2008, "ids.trakt": 1388, "ids.imdb": testShowIMDb, keyOverview: "A chemistry teacher turns to crime.",
 			"runtime": 45, "certification": "TV-MA", "network": "AMC", "status": "ended", "genres": []any{"drama", "crime"}, "aired_episodes": 62,
 		},
 	},
@@ -246,7 +250,7 @@ var showCases = []catalogCase{
 	{
 		tool: toolFetchRelatedShows, args: merge(showShow(testShowSlug), pagedArgs), route: "GET /shows/breaking-bad/related", fixture: "show_related", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
-		want:      map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, pathSecondTitle: testShowTitle, "page.page_count": 3},
+		want:      map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, pathSecondTitle: testShowTitle, pathPageCount: 3},
 	},
 	{
 		tool: toolFetchShowSeasons, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/seasons", fixture: "show_seasons",

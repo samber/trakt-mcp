@@ -81,10 +81,10 @@ var seasonCases = []catalogCase{
 		tool: toolSeasonInfo, args: seasonRef(nil), route: seasonRoute("/info"), fixture: "season_info", object: true,
 		wantQuery: map[string]string{queryExtended: extendedFull},
 		want: map[string]any{
-			"number": 1, "title": "Season 1", "overview": "The first season.", keyRating: 8.9, keyVotes: 500, "episode_count": 7,
+			"number": 1, keyTitle: "Season 1", keyOverview: "The first season.", keyRating: 8.9, keyVotes: 500, "episode_count": 7,
 			"aired_episodes": 7, "first_aired": testFirstAired, "ids.trakt": 3961, "ids.tvdb": 30272, "ids.tmdb": 3572,
 		},
-		absent: []string{"images"},
+		absent: []string{keyImages},
 	},
 	{
 		tool: toolSeasonEpisodes, args: seasonRef(nil), route: seasonRoute(""), fixture: "season_episodes",
@@ -112,7 +112,7 @@ var seasonCases = []catalogCase{
 	{
 		tool: toolSeasonLists, args: merge(seasonRef(nil), pagedArgs), route: seasonRoute(testSeasonPathTail), fixture: "season_lists", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
-		want:      merge(sharedListsWant, map[string]any{"page.page_count": 3}),
+		want:      merge(sharedListsWant, map[string]any{pathPageCount: 3}),
 	},
 }
 
