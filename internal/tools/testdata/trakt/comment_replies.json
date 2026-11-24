@@ -1,0 +1,60 @@
+[
+  {
+    "id": 301,
+    "parent_id": 201,
+    "created_at": "2024-01-01T10:00:00.000Z",
+    "updated_at": "2024-01-02T10:00:00.000Z",
+    "comment": "I agree.",
+    "spoiler": false,
+    "review": false,
+    "replies": 2,
+    "likes": 7,
+    "user_stats": {
+      "rating": 8,
+      "play_count": 3,
+      "completed_count": 1
+    },
+    "user": {
+      "username": "sean",
+      "private": false,
+      "name": "sean",
+      "vip": true,
+      "vip_ep": false,
+      "ids": {
+        "slug": "sean"
+      },
+      "avatar": {
+        "full": "https://dropped.example/a.png"
+      }
+    }
+  },
+  {
+    "id": 302,
+    "parent_id": 201,
+    "created_at": "2024-01-01T10:00:00.000Z",
+    "updated_at": "2024-01-02T10:00:00.000Z",
+    "comment": "Spoiler reply.",
+    "spoiler": true,
+    "review": false,
+    "replies": 2,
+    "likes": 7,
+    "user_stats": {
+      "rating": 8,
+      "play_count": 3,
+      "completed_count": 1
+    },
+    "user": {
+      "username": "sean",
+      "private": false,
+      "name": "sean",
+      "vip": true,
+      "vip_ep": false,
+      "ids": {
+        "slug": "sean"
+      },
+      "avatar": {
+        "full": "https://dropped.example/a.png"
+      }
+    }
+  }
+]

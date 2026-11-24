@@ -1,0 +1,89 @@
+[
+  {
+    "id": 101,
+    "parent_id": 0,
+    "created_at": "2024-01-01T10:00:00.000Z",
+    "updated_at": "2024-01-02T10:00:00.000Z",
+    "comment": "Great one.",
+    "spoiler": false,
+    "review": false,
+    "replies": 2,
+    "likes": 7,
+    "user_stats": {
+      "rating": 8,
+      "play_count": 3,
+      "completed_count": 1
+    },
+    "user": {
+      "username": "sean",
+      "private": false,
+      "name": "sean",
+      "vip": true,
+      "vip_ep": false,
+      "ids": {
+        "slug": "sean"
+      },
+      "avatar": {
+        "full": "https://dropped.example/a.png"
+      }
+    }
+  },
+  {
+    "id": 102,
+    "parent_id": 0,
+    "created_at": "2024-01-01T10:00:00.000Z",
+    "updated_at": "2024-01-02T10:00:00.000Z",
+    "comment": "He dies at the end.",
+    "spoiler": true,
+    "review": false,
+    "replies": 2,
+    "likes": 7,
+    "user_stats": {
+      "rating": 8,
+      "play_count": 3,
+      "completed_count": 1
+    },
+    "user": {
+      "username": "sean",
+      "private": false,
+      "name": "sean",
+      "vip": true,
+      "vip_ep": false,
+      "ids": {
+        "slug": "sean"
+      },
+      "avatar": {
+        "full": "https://dropped.example/a.png"
+      }
+    }
+  },
+  {
+    "id": 103,
+    "parent_id": 0,
+    "created_at": "2024-01-01T10:00:00.000Z",
+    "updated_at": "2024-01-02T10:00:00.000Z",
+    "comment": "A long review.",
+    "spoiler": false,
+    "review": true,
+    "replies": 2,
+    "likes": 7,
+    "user_stats": {
+      "rating": 9,
+      "play_count": 3,
+      "completed_count": 1
+    },
+    "user": {
+      "username": "sean",
+      "private": false,
+      "name": "sean",
+      "vip": true,
+      "vip_ep": false,
+      "ids": {
+        "slug": "sean"
+      },
+      "avatar": {
+        "full": "https://dropped.example/a.png"
+      }
+    }
+  }
+]

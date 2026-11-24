@@ -26,7 +26,13 @@ const (
 	// user-written Trakt text must hold.
 	thirdPartyNote = "third-party"
 
-	deptDirecting     = "directing"
+	deptDirecting = "directing"
+	keyIDs        = "ids"
+	keyReplies    = "replies"
+	nameLimit101  = "limit 101"
+	namePage0     = "page 0"
+	// invalidListSort is a comment sort, which Trakt's list endpoints refuse.
+	invalidListSort   = "newest"
 	testUsername      = "sean"
 	pathIDTrakt       = "ids.trakt"
 	pathFirstCastChar = "cast.0.character"
@@ -97,9 +103,9 @@ func TestPersonToolArguments(t *testing.T) {
 		{name: "list type plural watchlists", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldListType: "watchlists"}), wantErr: invalid(fieldListType)},
 		{name: "list type favorites and sort items", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldListType: "favorites", fieldSort: "items"}), route: listsRoute + "favorites/items", body: emptyList},
 		{name: "list type unknown", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldListType: traversalID}), wantErr: invalid(fieldListType)},
-		{name: "sort unknown", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldSort: "newest"}), wantErr: invalid(fieldSort)},
-		{name: "limit 101", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
-		{name: "page 0", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
+		{name: "sort unknown", tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldSort: invalidListSort}), wantErr: invalid(fieldSort)},
+		{name: nameLimit101, tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: namePage0, tool: toolFetchPersonLists, args: merge(personRef(testPersonSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
 	}
 
 	runArgCases(t, cases)

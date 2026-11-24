@@ -7,6 +7,7 @@ var catalog = []func(*Server){
 	registerMovieTools,
 	registerMovieCatalogTools,
 	registerPeopleTools,
+	registerCommentTools,
 	registerShowTools,
 	registerSeasonTools,
 	registerEpisodeTools,
