@@ -91,7 +91,7 @@ func (s *Server) logTokenError(ctx context.Context, r *http.Request, err error) 
 }
 
 // revoke serves POST /oauth/revoke (RFC 7009). It revokes only our tokens:
-// the user's Google grant stays, so their other clients keep working (spec §7).
+// the user's Trakt grant stays, so their other clients keep working (spec §7).
 func (s *Server) revoke(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if !isForm(r) {

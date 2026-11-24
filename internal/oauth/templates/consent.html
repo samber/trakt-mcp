@@ -1,26 +1,25 @@
 <!doctype html>
 <html lang="en">
 <head>
-<title>Connect Google Contacts</title>
+<title>Connect Trakt</title>
 {{template "head"}}
 </head>
 <body>
 <main>
 <div class="card">
 {{template "brand"}}
-<h1>Connect Google Contacts</h1>
-<p class="muted">{{.ClientName}} wants to access your Google Contacts. You will be sent back to <strong>{{.RedirectHost}}</strong>.</p>
+<h1>Connect Trakt</h1>
+<p class="muted">{{.ClientName}} wants to access your Trakt account. You will be sent back to <strong>{{.RedirectHost}}</strong>.</p>
 <ul class="perms">
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Read and search your contacts and labels</span></li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Create, update and delete contacts</span></li>
-<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Create labels and change who is in them</span></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search movies and shows, and read your history, watchlist, ratings and lists</span></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Mark items watched, rate them, and add or remove them from your watchlist and lists</span></li>
 </ul>
-<p class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Next, Google asks you to sign in and to allow access to your contacts.</span></p>
+<p class="note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Next, Trakt asks you to sign in and to approve this server.</span></p>
 <form method="post" action="{{.Action}}">
 <input type="hidden" name="pending" value="{{.Pending}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <div class="actions">
-<button type="submit" name="action" value="approve" class="primary">Continue with Google</button>
+<button type="submit" name="action" value="approve" class="primary">Continue with Trakt</button>
 <button type="submit" name="action" value="deny">Deny</button>
 </div>
 </form>

@@ -13,21 +13,19 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/ory/fosite"
-	"golang.org/x/oauth2"
 
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 const (
-	// csrfCookieName binds the consent form and Google's callback to the
+	// csrfCookieName binds the consent form and Trakt's callback to the
 	// browser that opened /oauth/authorize.
-	csrfCookieName = "gcmcp_csrf"
+	csrfCookieName = "trakt_mcp_csrf"
 	// cookiePath limits the CSRF cookie to the OAuth endpoints.
 	cookiePath = "/oauth"
 	// maxFormBody bounds consent, token and revocation bodies; real ones are under 2 KiB.
@@ -57,13 +55,16 @@ const (
 	// form_post would render the redirect URI into an HTML form.
 	responseModeQuery = "query"
 
-	// Google callback parameters.
+	// Trakt callback parameters.
 	paramState = "state"
 	paramCode  = "code"
 	paramError = "error"
-	// tokenExtraIDToken and tokenExtraScope are fields of Google's token response.
-	tokenExtraIDToken = "id_token"
-	tokenExtraScope   = "scope"
+	// upstreamAccessDenied is the error Trakt returns when the user refuses
+	// the application on its consent page (RFC 6749 §4.1.2.1).
+	upstreamAccessDenied = "access_denied"
+	// upstreamErrorOther replaces a callback error value that is not shaped
+	// like an RFC 6749 error code, so arbitrary query text never reaches logs.
+	upstreamErrorOther = "other"
 
 	// errInvalidTarget is the RFC 8707 error for a resource we do not serve.
 	errInvalidTarget = "invalid_target"
@@ -86,13 +87,11 @@ var authorizeParamNames = []string{
 	paramCodeChallenge, paramCodeChallengeMethod, paramResource, paramResponseMode,
 }
 
-// googleConsumerDomains are the e-mail domains of Google consumer accounts.
-// Google issues every address on them, so it is authoritative for them even
-// without an hd claim.
-var googleConsumerDomains = []string{"gmail.com", "googlemail.com"}
-
 // pkceChallengeRe is the RFC 7636 unreserved character set.
 var pkceChallengeRe = regexp.MustCompile(`^[A-Za-z0-9._~-]+$`)
+
+// oauthErrorCodeRe matches the shape of an RFC 6749 error code.
+var oauthErrorCodeRe = regexp.MustCompile(`^[a-z_]{1,64}$`)
 
 //go:embed templates/*.html
 var templatesFS embed.FS
@@ -107,13 +106,13 @@ func parseTemplates() (*template.Template, error) {
 }
 
 // pending is an authorization in flight between /oauth/authorize and
-// Google's callback, stored in SQLite.
+// Trakt's callback, stored in SQLite.
 type pending struct {
 	// Form holds the client's authorization request parameters.
 	Form url.Values `json:"form"`
 	CSRF string     `json:"csrf"`
-	// GoogleVerifier is our PKCE verifier toward Google, set at consent.
-	GoogleVerifier string `json:"google_verifier,omitempty"`
+	// UpstreamVerifier is our PKCE verifier toward Trakt, set at consent.
+	UpstreamVerifier string `json:"upstream_verifier,omitempty"`
 	// Deadline is fixed at /oauth/authorize; re-saving does not extend it.
 	Deadline time.Time `json:"deadline"`
 }
@@ -143,15 +142,21 @@ var (
 		status: http.StatusInternalServerError, Title: "Something went wrong",
 		Message: "The server could not complete the sign-in. Try again in a moment.",
 	}
-	pageGoogleFailed = &page{
-		status: http.StatusBadGateway, Title: "Google sign-in failed",
-		Message: "Google did not complete the sign-in. Try again from your assistant.",
-	}
-	pageEmailUnverified = &page{
-		status: http.StatusForbidden, Title: "E-mail not verified",
-		Message: "Your Google account e-mail address is not verified.",
+	pageUpstreamFailed = &page{
+		status: http.StatusBadGateway, Title: "Trakt sign-in failed",
+		Message: "Trakt did not complete the sign-in. Try again from your assistant.",
 	}
 )
+
+// accessDeniedPage is shown when the user refused the application on Trakt's
+// consent page. Its retry link restarts the client's original request.
+func (s *Server) accessDeniedPage(form url.Values) *page {
+	return &page{
+		status: http.StatusForbidden, Title: "Trakt access not granted",
+		Message:  "You did not approve this server on Trakt's page, and access to your Trakt account is required for it to work.",
+		RetryURL: s.issuer + pathAuthorize + "?" + form.Encode(),
+	}
+}
 
 // busyPage is shown when a global sign-in budget is spent.
 func busyPage(retry time.Duration) *page {
@@ -224,7 +229,7 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
 }
 
 // consent serves POST /oauth/consent: deny returns access_denied to the
-// client, approve sends the browser to Google.
+// client, approve sends the browser to Trakt.
 func (s *Server) consent(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -263,36 +268,38 @@ func (s *Server) consent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The consent row is consumed; a fresh id becomes the state toward Trakt,
+	// so a consent page's pending id is never accepted at the callback.
 	state, err := randomToken()
 	if err != nil {
-		s.fail(w, r, "generate google state", err)
+		s.fail(w, r, "generate upstream state", err)
 		return
 	}
 
-	p.GoogleVerifier = oauth2.GenerateVerifier()
+	verifier, err := trakt.NewCodeVerifier()
+	if err != nil {
+		s.fail(w, r, "generate upstream code verifier", err)
+		return
+	}
+
+	p.UpstreamVerifier = verifier
 	if err := s.savePending(ctx, state, p); err != nil {
 		s.fail(w, r, "save pending authorization", err)
 		return
 	}
 
-	http.Redirect(w, r, s.up.AuthCodeURL(state, p.GoogleVerifier), http.StatusSeeOther)
+	http.Redirect(w, r, s.up.AuthCodeURL(state, p.UpstreamVerifier), http.StatusSeeOther)
 }
 
-// idClaims are the Google ID token claims read besides sub.
-type idClaims struct {
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	// HD is the Google Workspace domain; empty for consumer accounts.
-	HD string `json:"hd"`
-}
-
-// callback serves GET /oauth/google/callback: it finishes the Google login,
-// stores the user and their Google grant, and redirects to the client with
+// callback serves GET /oauth/trakt/callback: it finishes the Trakt login,
+// stores the user and their Trakt grant, and redirects to the client with
 // our authorization code.
 func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	q := r.URL.Query()
 
+	// state must name a live pending authorization: until it does, nothing in
+	// the request is trusted and the browser is never redirected.
 	p, pg := s.takePending(ctx, q.Get(paramState))
 	if pg != nil {
 		s.renderError(w, r, pg)
@@ -306,8 +313,8 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 
 	s.clearCSRFCookie(w)
 
-	if gerr := q.Get(paramError); gerr != "" {
-		s.renderGoogleError(w, r, gerr)
+	if uerr := q.Get(paramError); uerr != "" {
+		s.renderUpstreamError(w, r, uerr, p.Form)
 		return
 	}
 
@@ -322,35 +329,31 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, err := s.up.Exchange(ctx, q.Get(paramCode), p.GoogleVerifier)
+	tok, err := s.up.Exchange(ctx, q.Get(paramCode), p.UpstreamVerifier)
 	if err != nil {
-		s.log.WarnContext(ctx, "oauth: google code exchange failed", slog.Any("error", err))
-		s.renderError(w, r, pageGoogleFailed)
+		// Upstream errors carry a status and an OAuth error code, never a body.
+		s.log.WarnContext(ctx, "oauth: trakt code exchange failed", slog.Any("error", err))
+		s.renderError(w, r, pageUpstreamFailed)
 
 		return
 	}
 
-	sub, claims, pg := s.verifyIDToken(ctx, tok)
-	if pg != nil {
-		s.renderError(w, r, pg)
+	profile, err := s.up.Profile(ctx, tok.AccessToken)
+	if err != nil {
+		s.log.WarnContext(ctx, "oauth: trakt profile lookup failed", slog.Any("error", err))
+		s.renderError(w, r, pageUpstreamFailed)
+
 		return
 	}
 
-	if pg := s.checkGoogleGrant(ctx, tok, claims, p.Form); pg != nil {
-		s.renderError(w, r, pg)
-		return
-	}
-
-	user, err := s.st.UpsertUser(ctx, sub, claims.Email)
+	user, err := s.st.UpsertUser(ctx, profile.TraktID, profile.Slug)
 	if err != nil {
 		s.fail(w, r, "upsert user", err)
 		return
 	}
 	// A new consent always replaces the stored grant (spec §7).
-	if err := s.st.SaveGoogleToken(ctx, user.ID, store.GoogleToken{
-		RefreshToken: tok.RefreshToken, AccessToken: tok.AccessToken, Expiry: tok.Expiry,
-	}); err != nil {
-		s.fail(w, r, "save google token", err)
+	if err := s.st.SaveTraktToken(ctx, user.ID, tok); err != nil {
+		s.fail(w, r, "save trakt token", err)
 		return
 	}
 
@@ -366,42 +369,25 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	s.provider.WriteAuthorizeResponse(ctx, &issWriter{ResponseWriter: w, iss: s.issuer}, ar, resp)
 }
 
-// renderGoogleError reports an error returned by Google on the callback. Every
-// error, including access_denied, gets the same generic page; only the log
-// line tells them apart.
-func (s *Server) renderGoogleError(w http.ResponseWriter, r *http.Request, gerr string) {
-	s.log.InfoContext(r.Context(), "oauth: google returned an error", slog.String("error", gerr))
-	s.renderError(w, r, pageGoogleFailed)
-}
+// renderUpstreamError reports an error Trakt returned on the callback.
+// access_denied gets a page with a retry link, every other error the same
+// generic page. None is sent to the client: the user is still on our pages
+// and can retry from there.
+func (s *Server) renderUpstreamError(w http.ResponseWriter, r *http.Request, uerr string, form url.Values) {
+	if uerr == upstreamAccessDenied {
+		s.log.InfoContext(r.Context(), "oauth: user refused the application on trakt")
+		s.renderError(w, r, s.accessDeniedPage(form))
 
-// checkGoogleGrant returns the page to show when the Google exchange result
-// cannot be used: contacts scope not granted, account domain refused, or no
-// refresh token. It returns nil when the grant is acceptable.
-func (s *Server) checkGoogleGrant(ctx context.Context, tok *oauth2.Token, claims idClaims, form url.Values) *page {
-	if !grantedContacts(tok) {
-		return &page{
-			status: http.StatusForbidden, Title: "Contacts access missing",
-			Message:  "You did not tick the Contacts permission on Google's page, and access to Contacts is required for this server to work.",
-			RetryURL: s.issuer + pathAuthorize + "?" + form.Encode(),
-		}
+		return
 	}
 
-	if domain, ok := s.domainAllowed(claims); !ok {
-		s.log.InfoContext(ctx, "oauth: account domain refused", slog.String("domain", domain))
-
-		return &page{
-			status: http.StatusForbidden, Title: "Account not allowed",
-			Message: "Google accounts from the domain " + domain + " are not allowed on this server.",
-		}
+	code := upstreamErrorOther
+	if oauthErrorCodeRe.MatchString(uerr) {
+		code = uerr
 	}
 
-	if tok.RefreshToken == "" {
-		s.log.WarnContext(ctx, "oauth: google returned no refresh token")
-
-		return pageGoogleFailed
-	}
-
-	return nil
+	s.log.InfoContext(r.Context(), "oauth: trakt returned an error", slog.String("error", code))
+	s.renderError(w, r, pageUpstreamFailed)
 }
 
 // parseAuthorize validates an authorization request. It returns a page when
@@ -431,7 +417,7 @@ func (s *Server) parseAuthorize(ctx context.Context, form url.Values) (fosite.Au
 	if err != nil {
 		return ar, nil, err
 	}
-	// fosite checks PKCE only when issuing the code, after the Google login;
+	// fosite checks PKCE only when issuing the code, after the Trakt login;
 	// checking it here fails fast, before the user signs in for nothing.
 	if err := checkPKCE(form); err != nil {
 		return ar, nil, err
@@ -531,63 +517,6 @@ func (s *Server) writeAuthorizeError(ctx context.Context, w http.ResponseWriter,
 	s.provider.WriteAuthorizeError(ctx, &issWriter{ResponseWriter: w, iss: s.issuer}, ar, err)
 }
 
-// verifyIDToken checks the ID token in Google's token response: signature,
-// issuer, audience (our Google client id), expiry and a verified e-mail.
-func (s *Server) verifyIDToken(ctx context.Context, tok *oauth2.Token) (string, idClaims, *page) {
-	raw, ok := tok.Extra(tokenExtraIDToken).(string)
-	if !ok || raw == "" {
-		s.log.WarnContext(ctx, "oauth: google returned no id token")
-		return "", idClaims{}, pageGoogleFailed
-	}
-
-	idt, err := s.idTokens.Verify(ctx, raw)
-	if err != nil {
-		s.log.WarnContext(ctx, "oauth: google id token rejected", slog.Any("error", err))
-		return "", idClaims{}, pageGoogleFailed
-	}
-
-	var c idClaims
-	if err := idt.Claims(&c); err != nil {
-		s.log.WarnContext(ctx, "oauth: decode id token claims", slog.Any("error", err))
-		return "", idClaims{}, pageGoogleFailed
-	}
-
-	if !c.EmailVerified || c.Email == "" || idt.Subject == "" {
-		return "", idClaims{}, pageEmailUnverified
-	}
-
-	return idt.Subject, c, nil
-}
-
-// grantedContacts reports whether the user ticked the contacts permission:
-// Google's granular consent can grant fewer scopes than requested.
-func grantedContacts(tok *oauth2.Token) bool {
-	scope, _ := tok.Extra(tokenExtraScope).(string)
-	return slices.Contains(strings.Fields(scope), google.ScopeContacts)
-}
-
-// domainAllowed checks --allowed-domains (spec §6.3). The hd claim is the
-// only proof of a Workspace domain: anyone can create a consumer Google
-// account on any e-mail address, so a bare e-mail domain counts only for
-// domains Google itself issues addresses on. It returns the domain to name
-// in a refusal.
-func (s *Server) domainAllowed(c idClaims) (string, bool) {
-	emailDomain := ""
-	if at := strings.LastIndex(c.Email, "@"); at >= 0 {
-		emailDomain = strings.ToLower(c.Email[at+1:])
-	}
-
-	if hd := strings.ToLower(c.HD); hd != "" {
-		return hd, len(s.allowedDomains) == 0 || slices.Contains(s.allowedDomains, hd)
-	}
-
-	if len(s.allowedDomains) == 0 {
-		return emailDomain, true
-	}
-
-	return emailDomain, slices.Contains(googleConsumerDomains, emailDomain) && slices.Contains(s.allowedDomains, emailDomain)
-}
-
 // safeRedirect applies isAllowedRedirect to a raw URI: a client document may
 // list javascript: or data: URIs, which it refuses.
 func safeRedirect(raw string) bool {
@@ -662,7 +591,7 @@ func (s *Server) setCSRFCookie(w http.ResponseWriter, value string, maxAge int) 
 		MaxAge:   maxAge,
 		HttpOnly: true,
 		Secure:   true,
-		// Lax, not Strict: the cookie must come back on Google's top-level
+		// Lax, not Strict: the cookie must come back on Trakt's top-level
 		// redirect to the callback.
 		SameSite: http.SameSiteLaxMode,
 	})

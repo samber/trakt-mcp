@@ -2,12 +2,12 @@ package oauth
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io/fs"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,156 +19,164 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
-	jose "github.com/go-jose/go-jose/v4"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/testutil"
 	"golang.org/x/oauth2"
 	"golang.org/x/time/rate"
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/obs"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 const (
-	testBaseURL        = "https://mcp.example.com"
-	testResource       = testBaseURL + "/mcp"
-	testClientID       = "client-1"
-	testRedirect       = "https://claude.example.com/api/callback"
-	testGoogleClientID = "google-client-id"
-	testState          = "client-state-123"
-	testKeyID          = "k1"
+	testBaseURL       = "https://mcp.example.com"
+	testResource      = testBaseURL + "/mcp"
+	testClientID      = "client-1"
+	testRedirect      = "https://claude.example.com/api/callback"
+	testTraktClientID = "trakt-client-id"
+	testTraktSecret   = "trakt-client-secret" //nolint:gosec // G101: a fake value for the fake Trakt
+	testState         = "client-state-123"
+
+	// testTraktAuthHost is the Trakt consent host the browser is sent to; the
+	// tests never fetch it.
+	testTraktAuthHost = "trakt.example.com"
+	testTraktAuthPath = "/oauth/authorize"
+
+	// The fake Trakt account and grant.
+	fakeTraktCode    = "trakt-code"
+	fakeTraktAccess  = "trakt-access"
+	fakeTraktRefresh = "trakt-refresh"
+	fakeTraktID      = 4242
+	fakeTraktIDStr   = "4242"
+	fakeTraktSlug    = "ada-lovelace"
+	// fakeUpstreamBody is a marker the fake writes into failed responses; no
+	// page may ever show it.
+	fakeUpstreamBody = "upstream-body-marker-7f3a"
+	// settingsIDTrakt is the numeric id key of /users/settings' user.ids.
+	settingsIDTrakt = "trakt"
 )
 
-// fakeGoogle serves Google's token endpoint, a JWKS and the revoke endpoint.
-type fakeGoogle struct {
+// fakeTrakt serves Trakt's token endpoint, revoke endpoint and /users/settings.
+type fakeTrakt struct {
 	t   *testing.T
 	srv *httptest.Server
-	key *rsa.PrivateKey
 
-	mu            sync.Mutex
-	scope         string
-	email         string
-	hd            string
-	emailVerified bool
-	revokeHits    atomic.Int32
+	mu sync.Mutex
+	// tokenStatus and settingsStatus, when non-zero, make the endpoint fail
+	// with that status and fakeUpstreamBody.
+	tokenStatus    int
+	settingsStatus int
+	traktID        int64
+	slug           string
+	// verifiers are the PKCE verifiers received by the token endpoint.
+	verifiers []string
+
+	revokeHits atomic.Int32
 }
 
-func newFakeGoogle(t *testing.T) *fakeGoogle {
+func newFakeTrakt(t *testing.T) *fakeTrakt {
 	t.Helper()
 
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("GenerateKey: %v", err)
-	}
-
-	f := &fakeGoogle{
-		t:             t,
-		key:           key,
-		scope:         "openid https://www.googleapis.com/auth/userinfo.email " + google.ScopeContacts,
-		email:         "Ada@Example.com",
-		emailVerified: true,
-	}
+	f := &fakeTrakt{t: t, traktID: fakeTraktID, slug: fakeTraktSlug}
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /token", f.token)
-	mux.HandleFunc("GET /jwks", f.jwks)
-	mux.HandleFunc("POST /revoke", func(http.ResponseWriter, *http.Request) { f.revokeHits.Add(1) })
+	mux.HandleFunc("POST /oauth/token", f.token)
+	mux.HandleFunc("GET /users/settings", f.settings)
+	mux.HandleFunc("POST /oauth/revoke", func(http.ResponseWriter, *http.Request) { f.revokeHits.Add(1) })
 	f.srv = httptest.NewServer(mux)
 	t.Cleanup(f.srv.Close)
 
 	return f
 }
 
-func (f *fakeGoogle) set(fn func(f *fakeGoogle)) {
+func (f *fakeTrakt) set(fn func(f *fakeTrakt)) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	fn(f)
 }
 
-func (f *fakeGoogle) token(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		f.t.Errorf("ParseForm: %v", err)
+func (f *fakeTrakt) receivedVerifiers() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return append([]string(nil), f.verifiers...)
+}
+
+func (f *fakeTrakt) token(w http.ResponseWriter, r *http.Request) {
+	var body map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		f.t.Errorf("decode token body: %v", err)
 	}
 
-	if r.PostForm.Get("code") != "google-code" || r.PostForm.Get("code_verifier") == "" {
-		w.WriteHeader(http.StatusBadRequest)
+	f.mu.Lock()
+	status := f.tokenStatus
+	f.verifiers = append(f.verifiers, body["code_verifier"])
+	f.mu.Unlock()
+
+	if status != 0 {
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(fakeUpstreamBody))
+
+		return
+	}
+
+	if body["grant_type"] != grantAuthorizationCode || body["code"] != fakeTraktCode || body["code_verifier"] == "" ||
+		body["client_id"] != testTraktClientID || body["client_secret"] != testTraktSecret ||
+		!strings.HasSuffix(body["redirect_uri"], pathCallback) {
+		w.WriteHeader(http.StatusUnauthorized)
 		writeJSON(f.t, w, map[string]string{"error": "invalid_grant"})
 
 		return
 	}
 
-	f.mu.Lock()
-
-	claims := map[string]any{
-		"iss":            f.srv.URL,
-		"aud":            testGoogleClientID,
-		"sub":            "google-sub-1",
-		"email":          f.email,
-		"email_verified": f.emailVerified,
-		"iat":            time.Now().Unix(),
-		"exp":            time.Now().Add(time.Hour).Unix(),
-	}
-	if f.hd != "" {
-		claims["hd"] = f.hd
-	}
-
-	scope := f.scope
-	f.mu.Unlock()
 	writeJSON(f.t, w, map[string]any{
-		"access_token":    "google-access",
-		grantRefreshToken: "google-refresh",
-		"token_type":      "Bearer",
-		"expires_in":      3600,
-		"scope":           scope,
-		"id_token":        f.sign(claims),
+		"access_token":    fakeTraktAccess,
+		grantRefreshToken: fakeTraktRefresh,
+		"token_type":      "bearer",
+		"expires_in":      int64((24 * time.Hour).Seconds()),
+		"created_at":      time.Now().Unix(),
+		"scope":           "public",
 	})
 }
 
-func (f *fakeGoogle) sign(claims map[string]any) string {
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: jose.JSONWebKey{Key: f.key, KeyID: testKeyID}},
-		(&jose.SignerOptions{}).WithType("JWT"))
-	if err != nil {
-		f.t.Fatalf("NewSigner: %v", err)
+func (f *fakeTrakt) settings(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
+	status, id, slug := f.settingsStatus, f.traktID, f.slug
+	f.mu.Unlock()
+
+	if status != 0 {
+		w.WriteHeader(status)
+		_, _ = w.Write([]byte(fakeUpstreamBody))
+
+		return
 	}
 
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		f.t.Fatalf("marshal claims: %v", err)
+	if r.Header.Get("Authorization") != "Bearer "+fakeTraktAccess {
+		w.WriteHeader(http.StatusForbidden)
+		return
 	}
 
-	jws, err := signer.Sign(payload)
-	if err != nil {
-		f.t.Fatalf("Sign: %v", err)
-	}
-
-	s, err := jws.CompactSerialize()
-	if err != nil {
-		f.t.Fatalf("CompactSerialize: %v", err)
-	}
-
-	return s
+	writeJSON(f.t, w, map[string]any{
+		"user": map[string]any{
+			"username": slug,
+			"vip":      false,
+			"ids":      map[string]any{settingsIDTrakt: id, "slug": slug},
+		},
+	})
 }
 
-func (f *fakeGoogle) jwks(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(f.t, w, jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{
-		Key: &f.key.PublicKey, KeyID: testKeyID, Algorithm: string(jose.RS256), Use: "sig",
-	}}})
-}
-
-// env is a Server wired to a fake Google and a temp store with one DCR client.
+// env is a Server wired to a fake Trakt and a temp store with one DCR client.
 type env struct {
-	t      *testing.T
-	srv    *Server
-	mux    *http.ServeMux
-	st     *store.Store
-	kr     *crypto.Keyring
-	google *fakeGoogle
-	now    atomic.Pointer[time.Time]
+	t     *testing.T
+	srv   *Server
+	mux   *http.ServeMux
+	st    *store.Store
+	kr    *crypto.Keyring
+	trakt *fakeTrakt
+	now   atomic.Pointer[time.Time]
 	// reg holds the metrics of every server of this env.
 	reg     *prometheus.Registry
 	metrics *obs.Metrics
@@ -203,7 +211,7 @@ func newEnv(t *testing.T, opts ...envOption) *env {
 	}
 
 	reg := prometheus.NewRegistry()
-	e := &env{t: t, st: st, kr: kr, google: newFakeGoogle(t), reg: reg, metrics: obs.NewMetrics(reg)}
+	e := &env{t: t, st: st, kr: kr, trakt: newFakeTrakt(t), reg: reg, metrics: obs.NewMetrics(reg)}
 	e.srv, e.mux = e.newServer(testBaseURL, opts...)
 
 	return e
@@ -219,35 +227,31 @@ func (e *env) newServer(base string, opts ...envOption) (*Server, *http.ServeMux
 
 	cfg := config.Config{
 		BaseURL:       baseURL,
-		TraktClientID: testGoogleClientID,
+		TraktClientID: testTraktClientID,
 		EnableDCR:     true,
 	}
 	for _, o := range opts {
 		o(&cfg)
 	}
 
-	g := e.google
-	httpClient := g.srv.Client()
-	up := google.NewUpstream(google.UpstreamConfig{
-		ClientID:     testGoogleClientID,
-		ClientSecret: "google-secret",
-		RedirectURL:  base + "/oauth/google/callback",
-		Endpoint: oauth2.Endpoint{
-			AuthURL:   "https://accounts.example.com/auth",
-			TokenURL:  g.srv.URL + "/token",
-			AuthStyle: oauth2.AuthStyleInParams,
-		},
-		RevokeURL: g.srv.URL + "/revoke",
-	}, e.st, httpClient)
-	keySet := oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), httpClient), g.srv.URL+"/jwks")
+	f := e.trakt
+	up := trakt.NewUpstream(trakt.UpstreamConfig{
+		ClientID:     testTraktClientID,
+		ClientSecret: testTraktSecret,
+		RedirectURL:  base + pathCallback,
+		AuthURL:      "https://" + testTraktAuthHost + testTraktAuthPath,
+		TokenURL:     f.srv.URL + "/oauth/token",
+		RevokeURL:    f.srv.URL + "/oauth/revoke",
+		APIBaseURL:   f.srv.URL,
+		HTTP:         f.srv.Client(),
+	}, e.st)
 
 	srv, err := New(cfg, Deps{
-		Store:           e.st,
-		Clients:         NewClientResolver(e.st, NewCIMDFetcher(CIMDOptions{})),
-		Upstream:        up,
-		Keyring:         e.kr,
-		IDTokenVerifier: oidc.NewVerifier(g.srv.URL, keySet, &oidc.Config{ClientID: testGoogleClientID}),
-		Metrics:         e.metrics,
+		Store:    e.st,
+		Clients:  NewClientResolver(e.st, NewCIMDFetcher(CIMDOptions{})),
+		Upstream: up,
+		Keyring:  e.kr,
+		Metrics:  e.metrics,
 		Now: func() time.Time {
 			if p := e.now.Load(); p != nil {
 				return *p
@@ -302,9 +306,14 @@ type pkce struct{ verifier, challenge string }
 
 func newPKCE() pkce {
 	v := oauth2.GenerateVerifier()
-	sum := sha256.Sum256([]byte(v))
 
-	return pkce{verifier: v, challenge: base64.RawURLEncoding.EncodeToString(sum[:])}
+	return pkce{verifier: v, challenge: s256(v)}
+}
+
+// s256 is the RFC 7636 S256 transform of a verifier.
+func s256(verifier string) string {
+	sum := sha256.Sum256([]byte(verifier))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
 func authorizeParams(p pkce) url.Values {
@@ -313,15 +322,12 @@ func authorizeParams(p pkce) url.Values {
 		paramClientID:           {testClientID},
 		paramRedirectURI:        {testRedirect},
 		"scope":                 {MCPScope},
-		"state":                 {testState},
+		paramState:              {testState},
 		"code_challenge":        {p.challenge},
 		"code_challenge_method": {"S256"},
 		"resource":              {testResource},
 	}
 }
-
-// testAllowedDomain is the single domain the allow-list tests permit.
-const testAllowedDomain = "corp.example"
 
 var (
 	pendingRe = regexp.MustCompile(`name="pending" value="([^"]+)"`)
@@ -365,8 +371,9 @@ func (e *env) authorize(params url.Values) consentPage {
 	return consentPage{pending: pm[1], csrf: cm[1], cookie: cookie, body: body}
 }
 
-// approve posts the consent form and returns the Google state.
-func (e *env) approve(cp consentPage) string {
+// approveLocation posts the consent form and returns the Trakt consent URL
+// the browser is sent to.
+func (e *env) approveLocation(cp consentPage) *url.URL {
 	e.t.Helper()
 
 	rec := e.postForm("/oauth/consent", url.Values{fieldPending: {cp.pending}, fieldCSRF: {cp.csrf}, fieldAction: {actionApprove}}, cp.cookie)
@@ -379,16 +386,21 @@ func (e *env) approve(cp consentPage) string {
 		e.t.Fatalf("parse Location: %v", err)
 	}
 
-	if loc.Host != "accounts.example.com" || loc.Query().Get("code_challenge_method") != "S256" ||
-		loc.Query().Get("access_type") != "offline" || loc.Query().Get("prompt") != "consent" {
+	if loc.Host != testTraktAuthHost || loc.Path != testTraktAuthPath {
 		e.t.Fatalf("consent redirect = %s", loc)
 	}
 
-	return loc.Query().Get("state")
+	return loc
+}
+
+// approve posts the consent form and returns the state sent to Trakt.
+func (e *env) approve(cp consentPage) string {
+	e.t.Helper()
+	return e.approveLocation(cp).Query().Get(paramState)
 }
 
 func (e *env) callback(state string, cookie *http.Cookie) *httptest.ResponseRecorder {
-	return e.get("/oauth/google/callback?"+url.Values{"state": {state}, paramCode: {"google-code"}}.Encode(), cookie)
+	return e.get(pathCallback+"?"+url.Values{paramState: {state}, paramCode: {fakeTraktCode}}.Encode(), cookie)
 }
 
 // authCode runs the browser part of the flow and returns our authorization code.
@@ -411,11 +423,11 @@ func (e *env) authCode(p pkce) string {
 		e.t.Fatalf("redirect = %s", loc)
 	}
 
-	if q.Get("iss") != testBaseURL || q.Get("state") != testState || q.Get("code") == "" {
+	if q.Get("iss") != testBaseURL || q.Get(paramState) != testState || q.Get(paramCode) == "" {
 		e.t.Fatalf("redirect query = %v", q)
 	}
 
-	return q.Get("code")
+	return q.Get(paramCode)
 }
 
 type tokenResponse struct {
@@ -466,6 +478,15 @@ func (e *env) verify(srv *Server, token string) (*auth.TokenInfo, error) {
 	return srv.Verifier()(context.Background(), token, httptest.NewRequestWithContext(e.t.Context(), http.MethodPost, "/mcp", nil))
 }
 
+// assertNoUser fails when the fake Trakt account was stored.
+func (e *env) assertNoUser() {
+	e.t.Helper()
+
+	if _, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr); !errors.Is(err, store.ErrNotFound) {
+		e.t.Errorf("user stored: %v", err)
+	}
+}
+
 // errorRedirect asserts rec redirects to the client with the given OAuth error.
 func errorRedirect(t *testing.T, rec *httptest.ResponseRecorder, wantErr string) {
 	t.Helper()
@@ -483,7 +504,7 @@ func errorRedirect(t *testing.T, rec *httptest.ResponseRecorder, wantErr string)
 		t.Fatalf("redirect = %s", loc)
 	}
 
-	if q := loc.Query(); q.Get("error") != wantErr || q.Get("iss") != testBaseURL || q.Get("state") != testState {
+	if q := loc.Query(); q.Get("error") != wantErr || q.Get("iss") != testBaseURL || q.Get(paramState) != testState {
 		t.Fatalf("redirect query = %v, want error %s with iss and state", q, wantErr)
 	}
 }
@@ -535,14 +556,14 @@ func TestMetadata_Fields(t *testing.T) {
 			"authorization_endpoint":                         testBaseURL + "/oauth/authorize",
 			"token_endpoint":                                 testBaseURL + "/oauth/token",
 			"revocation_endpoint":                            testBaseURL + "/oauth/revoke",
-			"response_types_supported":                       []any{"code"},
+			"response_types_supported":                       []any{paramCode},
 			"grant_types_supported":                          []any{"authorization_code", "refresh_token"},
 			"code_challenge_methods_supported":               []any{"S256"},
 			"token_endpoint_auth_methods_supported":          []any{authMethodNone},
 			"revocation_endpoint_auth_methods_supported":     []any{"none"},
 			"client_id_metadata_document_supported":          true,
 			"authorization_response_iss_parameter_supported": true,
-			"scopes_supported":                               []any{"contacts"},
+			"scopes_supported":                               []any{MCPScope},
 		}
 		if dcr {
 			want["registration_endpoint"] = testBaseURL + "/oauth/register"
@@ -584,7 +605,7 @@ func TestProtectedResourceMetadata(t *testing.T) {
 	}
 
 	if got.Resource != testResource || len(got.AuthorizationServers) != 1 || got.AuthorizationServers[0] != testBaseURL ||
-		len(got.ScopesSupported) != 1 || got.ScopesSupported[0] != "contacts" {
+		len(got.ScopesSupported) != 1 || got.ScopesSupported[0] != MCPScope {
 		t.Errorf("metadata = %+v", got)
 	}
 
@@ -603,7 +624,7 @@ func TestFlow_HappyPath(t *testing.T) {
 		t.Errorf("token_type = %q", tr.TokenType)
 	}
 
-	if tr.Scope != "contacts" {
+	if tr.Scope != MCPScope {
 		t.Errorf("scope = %q", tr.Scope)
 	}
 
@@ -612,24 +633,236 @@ func TestFlow_HappyPath(t *testing.T) {
 		t.Fatalf("Verifier: %v", err)
 	}
 
-	u, err := e.st.UserBySubOrEmail(context.Background(), "google-sub-1")
+	u, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr)
 	if err != nil {
 		t.Fatalf("user not stored: %v", err)
 	}
 
-	if u.Email != "ada@example.com" {
-		t.Errorf("email = %q", u.Email)
-	}
-
 	assertTokenInfo(t, ti, u.ID)
-
-	gt, err := e.st.GoogleToken(context.Background(), u.ID)
-	if err != nil || gt.RefreshToken != "google-refresh" || gt.AccessToken != "google-access" {
-		t.Errorf("google token = %+v, %v", gt, err)
-	}
 
 	if _, err := e.verify(e.srv, "not-a-token"); !errors.Is(err, auth.ErrInvalidToken) {
 		t.Errorf("garbage token err = %v, want ErrInvalidToken", err)
+	}
+}
+
+func TestCallbackUpsertsUserBySlugAndTraktID(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.exchange(newPKCE())
+
+	u, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr)
+	if err != nil {
+		t.Fatalf("user by trakt id: %v", err)
+	}
+
+	if u.TraktID != fakeTraktIDStr || u.TraktSlug != fakeTraktSlug {
+		t.Errorf("user = %+v", u)
+	}
+
+	bySlug, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktSlug)
+	if err != nil || bySlug.ID != u.ID {
+		t.Fatalf("user by slug = %+v, %v", bySlug, err)
+	}
+
+	// A renamed account keeps our user id and gets its new slug.
+	const renamed = "ada-byron"
+
+	e.trakt.set(func(f *fakeTrakt) { f.slug = renamed })
+	e.exchange(newPKCE())
+
+	again, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr)
+	if err != nil || again.ID != u.ID || again.TraktSlug != renamed {
+		t.Errorf("after rename: %+v, %v; want id %s slug %s", again, err, u.ID, renamed)
+	}
+}
+
+func TestCallbackStoresTraktToken(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	e.exchange(newPKCE())
+
+	u, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+
+	tok, err := e.st.TraktToken(context.Background(), u.ID)
+	if err != nil {
+		t.Fatalf("TraktToken: %v", err)
+	}
+
+	if tok.AccessToken != fakeTraktAccess || tok.RefreshToken != fakeTraktRefresh || tok.Expiry.IsZero() {
+		t.Errorf("trakt token = %+v", tok)
+	}
+}
+
+func TestConsentRedirectsToTraktWithS256(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	cp := e.authorize(authorizeParams(newPKCE()))
+	loc := e.approveLocation(cp)
+	q := loc.Query()
+
+	if q.Get("response_type") != paramCode || q.Get("client_id") != testTraktClientID ||
+		q.Get("redirect_uri") != testBaseURL+"/oauth/trakt/callback" || q.Get(paramState) == "" ||
+		q.Get("code_challenge_method") != "S256" || q.Get("code_challenge") == "" {
+		t.Fatalf("trakt consent URL = %s", loc)
+	}
+
+	// The state toward Trakt is a fresh pending id, never the consent page's.
+	if q.Get(paramState) == cp.pending {
+		t.Error("state toward Trakt reuses the consent pending id")
+	}
+
+	if rec := e.callback(q.Get(paramState), cp.cookie); rec.Code != http.StatusSeeOther {
+		t.Fatalf("callback status = %d, body %s", rec.Code, rec.Body)
+	}
+
+	// The verifier sent at exchange is the one behind the challenge.
+	got := e.trakt.receivedVerifiers()
+	if len(got) != 1 || s256(got[0]) != q.Get("code_challenge") {
+		t.Errorf("verifiers = %v, want one matching challenge %s", got, q.Get("code_challenge"))
+	}
+}
+
+func TestCallbackExchangeFailureShowsErrorPage(t *testing.T) {
+	t.Parallel()
+
+	for _, status := range []int{http.StatusBadRequest, http.StatusUnauthorized, http.StatusInternalServerError} {
+		e := newEnv(t)
+		e.trakt.set(func(f *fakeTrakt) { f.tokenStatus = status })
+		cp := e.authorize(authorizeParams(newPKCE()))
+
+		body := errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusBadGateway, "Trakt sign-in failed")
+		if strings.Contains(body, fakeUpstreamBody) {
+			t.Errorf("status %d: page shows the upstream body: %s", status, body)
+		}
+
+		e.assertNoUser()
+	}
+}
+
+func TestCallbackProfileFailureShowsErrorPage(t *testing.T) {
+	t.Parallel()
+
+	for _, status := range []int{http.StatusForbidden, http.StatusInternalServerError} {
+		e := newEnv(t)
+		e.trakt.set(func(f *fakeTrakt) { f.settingsStatus = status })
+		cp := e.authorize(authorizeParams(newPKCE()))
+
+		body := errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusBadGateway, "Trakt sign-in failed")
+		if strings.Contains(body, fakeUpstreamBody) {
+			t.Errorf("status %d: page shows the upstream body: %s", status, body)
+		}
+
+		e.assertNoUser()
+	}
+
+	// A profile without a slug is refused too.
+	e := newEnv(t)
+	e.trakt.set(func(f *fakeTrakt) { f.slug = "" })
+	cp := e.authorize(authorizeParams(newPKCE()))
+	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusBadGateway, "Trakt sign-in failed")
+}
+
+func TestCallback_AccessDeniedShowsRetryPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	cp := e.authorize(authorizeParams(newPKCE()))
+	state := e.approve(cp)
+	// A usable code next to the error must not be exchanged: the error wins.
+	rec := e.get(pathCallback+"?"+url.Values{paramState: {state}, "error": {"access_denied"}, paramCode: {fakeTraktCode}}.Encode(), cp.cookie)
+
+	body := errorPage(t, rec, http.StatusForbidden, "Trakt access not granted")
+	if !strings.Contains(body, `href="`+testBaseURL+`/oauth/authorize?`) {
+		t.Errorf("no retry link: %s", body)
+	}
+
+	if strings.Contains(body, "code=") {
+		t.Errorf("page carries an authorization code: %s", body)
+	}
+
+	e.assertNoUser()
+}
+
+func TestCallback_OtherUpstreamErrorShowsGenericPage(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	cp := e.authorize(authorizeParams(newPKCE()))
+	state := e.approve(cp)
+	rec := e.get(pathCallback+"?"+url.Values{paramState: {state}, "error": {"server_error"}}.Encode(), cp.cookie)
+	errorPage(t, rec, http.StatusBadGateway, "Trakt sign-in failed")
+	e.assertNoUser()
+}
+
+func TestCallback_WrongState(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+	cp := e.authorize(authorizeParams(newPKCE()))
+	e.approve(cp)
+
+	for _, state := range []string{"", "forged-state", cp.pending} {
+		rec := e.get(pathCallback+"?"+url.Values{paramState: {state}, paramCode: {fakeTraktCode}}.Encode(), cp.cookie)
+		errorPage(t, rec, http.StatusBadRequest, "expired")
+	}
+
+	if got := e.trakt.receivedVerifiers(); len(got) != 0 {
+		t.Errorf("code exchanged for an unvalidated state: %v", got)
+	}
+
+	e.assertNoUser()
+}
+
+func TestAuthorizeRejectsContactsScope(t *testing.T) {
+	t.Parallel()
+
+	e := newEnv(t)
+
+	for _, scope := range []string{"contacts", "trakt contacts", "openid"} {
+		params := authorizeParams(newPKCE())
+		params.Set("scope", scope)
+		errorRedirect(t, e.get("/oauth/authorize?"+params.Encode()), "invalid_scope")
+	}
+}
+
+func TestNoGoogleStringsInTemplates(t *testing.T) {
+	t.Parallel()
+
+	n := 0
+
+	err := fs.WalkDir(templatesFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+
+		n++
+
+		data, err := fs.ReadFile(templatesFS, path)
+		if err != nil {
+			return err
+		}
+
+		lower := strings.ToLower(string(data))
+		for _, banned := range []string{"google", "contact"} {
+			if strings.Contains(lower, banned) {
+				t.Errorf("%s contains %q", path, banned)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk templates: %v", err)
+	}
+
+	if n == 0 {
+		t.Fatal("no embedded template found")
 	}
 }
 
@@ -701,6 +934,10 @@ func TestFlow_RefreshRotationAndReuse(t *testing.T) {
 		t.Fatalf("first refresh: status %d, %+v", code, tr2)
 	}
 
+	if tr2.Scope != MCPScope {
+		t.Errorf("refreshed scope = %q", tr2.Scope)
+	}
+
 	if _, err := e.verify(e.srv, tr2.AccessToken); err != nil {
 		t.Fatalf("rotated access token rejected: %v", err)
 	}
@@ -723,12 +960,48 @@ func TestFlow_RefreshRotationAndReuse(t *testing.T) {
 	}
 
 	// One code exchange and one successful refresh; refused ones are not grants.
-	want := "gcmcp_oauth_grants_total{kind=\"authorization_code\"} 1\ngcmcp_oauth_grants_total{kind=\"refresh_token\"} 1\n"
-	if err := testutil.GatherAndCompare(e.reg, strings.NewReader(
-		"# HELP gcmcp_oauth_grants_total Access tokens issued to MCP clients, by grant type.\n# TYPE gcmcp_oauth_grants_total counter\n"+want,
-	), "gcmcp_oauth_grants_total"); err != nil {
-		t.Errorf("grant metrics: %v", err)
+	assertOneGrantOfEachKind(t, e.reg)
+}
+
+func assertOneGrantOfEachKind(t *testing.T, reg *prometheus.Registry) {
+	t.Helper()
+
+	want := map[string]float64{grantAuthorizationCode: 1, grantRefreshToken: 1}
+	if got := grantCounts(t, reg); !maps.Equal(got, want) {
+		t.Errorf("grant metrics = %v, want %v", got, want)
 	}
+}
+
+// grantsMetricSuffix ends the grant counter's name; the namespace prefix
+// belongs to the obs package.
+const grantsMetricSuffix = "_oauth_grants_total"
+
+// grantCounts returns the grant counter's values by kind label.
+func grantCounts(t *testing.T, reg *prometheus.Registry) map[string]float64 {
+	t.Helper()
+
+	mfs, err := reg.Gather()
+	if err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
+
+	out := map[string]float64{}
+
+	for _, mf := range mfs {
+		if !strings.HasSuffix(mf.GetName(), grantsMetricSuffix) {
+			continue
+		}
+
+		for _, m := range mf.GetMetric() {
+			for _, l := range m.GetLabel() {
+				if l.GetName() == "kind" {
+					out[l.GetValue()] = m.GetCounter().GetValue()
+				}
+			}
+		}
+	}
+
+	return out
 }
 
 func TestFlow_PKCERequired(t *testing.T) {
@@ -866,8 +1139,8 @@ func TestFlow_PrivateUseSchemeRedirect(t *testing.T) {
 	}
 
 	q := loc.Query()
-	if loc.Scheme != "com.example.app" || loc.Path != "/callback" || q.Get("code") == "" ||
-		q.Get("state") != testState || q.Get("iss") != testBaseURL {
+	if loc.Scheme != "com.example.app" || loc.Path != "/callback" || q.Get(paramCode) == "" ||
+		q.Get(paramState) != testState || q.Get("iss") != testBaseURL {
 		t.Errorf("redirect = %s", loc)
 	}
 }
@@ -899,67 +1172,6 @@ func TestFlow_Deny(t *testing.T) {
 	errorRedirect(t, rec, "access_denied")
 }
 
-func TestFlow_ContactsScopeNotGranted(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.google.set(func(f *fakeGoogle) { f.scope = "openid https://www.googleapis.com/auth/userinfo.email" })
-	cp := e.authorize(authorizeParams(newPKCE()))
-
-	body := errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "access to Contacts is required")
-	if !strings.Contains(body, `href="`+testBaseURL+`/oauth/authorize?`) {
-		t.Errorf("no retry link: %s", body)
-	}
-
-	if _, err := e.st.UserBySubOrEmail(context.Background(), "google-sub-1"); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("user stored without contacts scope: %v", err)
-	}
-}
-
-func TestFlow_DomainRefused(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.srv.allowedDomains = []string{testAllowedDomain}
-	cp := e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "example.com", "not allowed")
-
-	if _, err := e.st.UserBySubOrEmail(context.Background(), "google-sub-1"); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("refused user stored: %v", err)
-	}
-
-	// The hd claim also admits the account.
-	e.google.set(func(f *fakeGoogle) { f.hd = "corp.example" })
-
-	cp = e.authorize(authorizeParams(newPKCE()))
-	if rec := e.callback(e.approve(cp), cp.cookie); rec.Code != http.StatusSeeOther {
-		t.Errorf("hd match refused: %d %s", rec.Code, rec.Body)
-	}
-}
-
-func TestFlow_EmailNotVerified(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.google.set(func(f *fakeGoogle) { f.emailVerified = false })
-	cp := e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden)
-}
-
-func TestFlow_AccessDeniedShowsGenericPage(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	cp := e.authorize(authorizeParams(newPKCE()))
-	state := e.approve(cp)
-	rec := e.get("/oauth/google/callback?"+url.Values{"state": {state}, "error": {"access_denied"}}.Encode(), cp.cookie)
-	errorPage(t, rec, http.StatusBadGateway, "Google sign-in failed")
-
-	if strings.Contains(rec.Body.String(), "early access") {
-		t.Error("access_denied page still mentions early access")
-	}
-}
-
 func TestFlow_CSRFMismatch(t *testing.T) {
 	t.Parallel()
 
@@ -989,11 +1201,19 @@ func TestFlow_PendingExpired(t *testing.T) {
 
 	errorPage(t, e.callback("unknown-state", cp.cookie), http.StatusBadRequest, "expired")
 
+	// A callback arriving after the pending request's deadline is refused.
+	e.now.Store(nil)
+	cp = e.authorize(authorizeParams(newPKCE()))
+	state := e.approve(cp)
+	e.advance(11 * time.Minute)
+	errorPage(t, e.callback(state, cp.cookie), http.StatusBadRequest, "expired")
+	e.assertNoUser()
+
 	// A callback replay finds nothing.
 	e.now.Store(nil)
 	cp = e.authorize(authorizeParams(newPKCE()))
 
-	state := e.approve(cp)
+	state = e.approve(cp)
 	if rec := e.callback(state, cp.cookie); rec.Code != http.StatusSeeOther {
 		t.Fatalf("first callback: %d", rec.Code)
 	}
@@ -1001,10 +1221,16 @@ func TestFlow_PendingExpired(t *testing.T) {
 	errorPage(t, e.callback(state, cp.cookie), http.StatusBadRequest, "expired")
 }
 
-func TestConsentPage_EscapesClientName(t *testing.T) {
+func TestConsentPage_TextAndEscaping(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
+
+	cp := e.authorize(authorizeParams(newPKCE()))
+	if !strings.Contains(cp.body, "Claude wants to access your Trakt account. You will be sent back to <strong>claude.example.com</strong>.") {
+		t.Errorf("consent text missing: %s", cp.body)
+	}
+
 	if err := e.st.SaveClient(context.Background(), &store.OAuthClient{
 		ID: testClientID, Kind: store.ClientKindDCR, Name: "<script>x</script>",
 		RedirectURIs: []string{testRedirect},
@@ -1012,7 +1238,7 @@ func TestConsentPage_EscapesClientName(t *testing.T) {
 		t.Fatalf("SaveClient: %v", err)
 	}
 
-	cp := e.authorize(authorizeParams(newPKCE()))
+	cp = e.authorize(authorizeParams(newPKCE()))
 	if strings.Contains(cp.body, "<script>x") {
 		t.Errorf("client name not escaped: %s", cp.body)
 	}
@@ -1049,7 +1275,7 @@ func TestConsentCookie_SecureOnLocalhost(t *testing.T) {
 	}
 }
 
-func TestRevoke_KeepsGoogleToken(t *testing.T) {
+func TestRevoke_KeepsTraktToken(t *testing.T) {
 	t.Parallel()
 
 	e := newEnv(t)
@@ -1072,17 +1298,17 @@ func TestRevoke_KeepsGoogleToken(t *testing.T) {
 		t.Error("access token of a revoked grant still valid")
 	}
 
-	if n := e.google.revokeHits.Load(); n != 0 {
-		t.Errorf("Google revoke hits = %d, want 0", n)
+	if n := e.trakt.revokeHits.Load(); n != 0 {
+		t.Errorf("Trakt revoke hits = %d, want 0", n)
 	}
 
-	u, err := e.st.UserBySubOrEmail(context.Background(), "google-sub-1")
+	u, err := e.st.UserBySlugOrTraktID(context.Background(), fakeTraktIDStr)
 	if err != nil {
 		t.Fatalf("user: %v", err)
 	}
 
-	if _, err := e.st.GoogleToken(context.Background(), u.ID); err != nil {
-		t.Errorf("Google token gone after revoke: %v", err)
+	if _, err := e.st.TraktToken(context.Background(), u.ID); err != nil {
+		t.Errorf("Trakt token gone after revoke: %v", err)
 	}
 }
 
@@ -1146,60 +1372,6 @@ func TestVerifier_ExpiredAccessToken(t *testing.T) {
 	if _, err := e.verify(e.srv, tr.AccessToken); !errors.Is(err, auth.ErrInvalidToken) {
 		t.Errorf("expired token: err = %v, want ErrInvalidToken", err)
 	}
-}
-
-func TestFlow_DomainAllowedByHD(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.srv.allowedDomains = []string{"corp.example"}
-	e.google.set(func(f *fakeGoogle) {
-		f.hd = "Corp.Example"
-		f.email = "alice@corp.example"
-	})
-
-	cp := e.authorize(authorizeParams(newPKCE()))
-	if rec := e.callback(e.approve(cp), cp.cookie); rec.Code != http.StatusSeeOther {
-		t.Errorf("hd match refused: %d %s", rec.Code, rec.Body)
-	}
-
-	// An hd outside the list is refused even when the e-mail domain matches.
-	e.google.set(func(f *fakeGoogle) { f.hd = "other.example" })
-	cp = e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "other.example", "not allowed")
-}
-
-func TestFlow_DomainEmailOnlyRefusedForNonGoogleDomain(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.srv.allowedDomains = []string{"corp.example"}
-	// A consumer account registered on a corporate address carries no hd.
-	e.google.set(func(f *fakeGoogle) { f.email = "alice@corp.example" })
-	cp := e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "corp.example", "not allowed")
-
-	if _, err := e.st.UserBySubOrEmail(context.Background(), "google-sub-1"); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("refused user stored: %v", err)
-	}
-}
-
-func TestFlow_DomainGmailAllowed(t *testing.T) {
-	t.Parallel()
-
-	e := newEnv(t)
-	e.srv.allowedDomains = []string{"gmail.com"}
-	e.google.set(func(f *fakeGoogle) { f.email = "Alice@Gmail.com" })
-
-	cp := e.authorize(authorizeParams(newPKCE()))
-	if rec := e.callback(e.approve(cp), cp.cookie); rec.Code != http.StatusSeeOther {
-		t.Errorf("gmail.com refused: %d %s", rec.Code, rec.Body)
-	}
-
-	// A Google consumer domain still has to be listed.
-	e.google.set(func(f *fakeGoogle) { f.email = "alice@googlemail.com" })
-	cp = e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusForbidden, "googlemail.com", "not allowed")
 }
 
 func TestAuthorize_PendingBudgetSpent(t *testing.T) {

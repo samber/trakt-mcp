@@ -14,16 +14,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/obs"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 const (
@@ -31,22 +30,16 @@ const (
 	accessTokenTTL  = time.Hour
 	authCodeTTL     = 10 * time.Minute
 	refreshTokenTTL = 180 * 24 * time.Hour
-	// pendingTTL bounds the time between our /authorize and Google's callback.
+	// pendingTTL bounds the time between our /authorize and Trakt's callback.
 	pendingTTL = 10 * time.Minute
 
 	// hmacLabel is the HKDF label deriving fosite's HMAC secret from the keyring (spec §6.4).
 	hmacLabel = "fosite-hmac"
-	// MCPScope is the only scope this server grants.
-	MCPScope = "contacts"
+	// MCPScope is the only scope this server grants: Trakt has no granular
+	// scopes, so it means "act on my Trakt account" (spec §6.1).
+	MCPScope = "trakt"
 	// mcpPath is the MCP endpoint; <base-url>/mcp is the token audience (RFC 8707).
 	mcpPath = "/mcp"
-
-	// googleIssuer is the ID token issuer; go-oidc also accepts its scheme-less form.
-	googleIssuer = "https://accounts.google.com"
-	// googleJWKSURL publishes the keys signing Google ID tokens.
-	googleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
-	// jwksFetchTimeout keeps a cold key fetch inside the callback's latency budget.
-	jwksFetchTimeout = 10 * time.Second
 
 	// randomTokenBytes of randomness make pending ids and CSRF tokens unguessable (256 bits).
 	randomTokenBytes = 32
@@ -60,21 +53,30 @@ const (
 	pathResourceMetadata = "/.well-known/oauth-protected-resource"
 	pathAuthorize        = "/oauth/authorize"
 	pathConsent          = "/oauth/consent"
-	pathCallback         = "/oauth/google/callback"
+	pathCallback         = "/oauth/trakt/callback"
 	pathToken            = "/oauth/token" //nolint:gosec // G101: an endpoint path, not a credential
 	pathRegister         = "/oauth/register"
 	pathRevoke           = "/oauth/revoke"
 )
 
+// CallbackPath is where Trakt sends the browser back; the redirect URI
+// registered at Trakt is <base-url> followed by it (spec §7).
+const CallbackPath = pathCallback
+
+// Upstream is the Trakt side of the login: the consent URL, the code
+// exchange and the account lookup. *trakt.Upstream implements it.
+type Upstream interface {
+	AuthCodeURL(state, codeVerifier string) string
+	Exchange(ctx context.Context, code, codeVerifier string) (store.TraktToken, error)
+	Profile(ctx context.Context, accessToken string) (trakt.Profile, error)
+}
+
 // Deps are the collaborators of a Server.
 type Deps struct {
 	Store    *store.Store
 	Clients  *ClientResolver
-	Upstream *google.Upstream
+	Upstream Upstream
 	Keyring  *crypto.Keyring
-	// IDTokenVerifier checks Google ID tokens; nil selects Google's
-	// production issuer and keys.
-	IDTokenVerifier *oidc.IDTokenVerifier
 	// Logger defaults to slog.Default().
 	Logger *slog.Logger
 	// Metrics counts issued grants; nil disables it.
@@ -84,15 +86,14 @@ type Deps struct {
 }
 
 // Server is this server's OAuth 2.1 authorization server toward MCP clients,
-// logging users in through Google.
+// logging users in through Trakt.
 type Server struct {
 	provider fosite.OAuth2Provider
 	// fositeConfig is read by fosite on every request; tests shorten lifespans through it.
 	fositeConfig *fosite.Config
 	st           *store.Store
 	clients      *ClientResolver
-	up           *google.Upstream
-	idTokens     *oidc.IDTokenVerifier
+	up           Upstream
 	log          *slog.Logger
 	metrics      *obs.Metrics
 	now          func() time.Time
@@ -100,10 +101,9 @@ type Server struct {
 	// pendingLimit is the global budget of pending authorizations.
 	pendingLimit *bucket
 
-	issuer         string
-	resource       string
-	enableDCR      bool
-	allowedDomains []string
+	issuer    string
+	resource  string
+	enableDCR bool
 }
 
 // New builds a Server from the validated configuration.
@@ -127,7 +127,6 @@ func New(cfg config.Config, deps Deps) (*Server, error) {
 		st:           deps.Store,
 		clients:      deps.Clients,
 		up:           deps.Upstream,
-		idTokens:     deps.IDTokenVerifier,
 		log:          deps.Logger,
 		metrics:      deps.Metrics,
 		now:          deps.Now,
@@ -143,12 +142,6 @@ func New(cfg config.Config, deps Deps) (*Server, error) {
 
 	if s.now == nil {
 		s.now = time.Now
-	}
-
-	if s.idTokens == nil {
-		ctx := oidc.ClientContext(context.Background(), &http.Client{Timeout: jwksFetchTimeout})
-		s.idTokens = oidc.NewVerifier(googleIssuer, oidc.NewRemoteKeySet(ctx, googleJWKSURL),
-			&oidc.Config{ClientID: cfg.TraktClientID})
 	}
 
 	secret, rotated := deps.Keyring.HMACSecrets(hmacLabel)
@@ -210,7 +203,7 @@ func (s *Server) ResourceMetadataURL() string {
 }
 
 // Verifier returns the go-sdk bearer token verifier: the token must be one of
-// our live access tokens, for audience <base-url>/mcp with scope contacts.
+// our live access tokens, for audience <base-url>/mcp with scope MCPScope.
 func (s *Server) Verifier() auth.TokenVerifier {
 	return func(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {
 		use, ar, err := s.provider.IntrospectToken(ctx, token, fosite.AccessToken, new(fosite.DefaultSession))
@@ -333,6 +326,11 @@ type providerClient struct {
 
 // GetAudience implements fosite.Client.
 func (c *providerClient) GetAudience() fosite.Arguments { return fosite.Arguments{c.audience} }
+
+// GetScopes implements fosite.Client. Every client may ask for MCPScope and
+// nothing else, so fosite refuses any other requested scope with
+// invalid_scope, whatever the stored client carries.
+func (c *providerClient) GetScopes() fosite.Arguments { return fosite.Arguments{MCPScope} }
 
 // GetRedirectURIs implements fosite.Client.
 func (c *providerClient) GetRedirectURIs() []string {
