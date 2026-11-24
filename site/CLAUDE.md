@@ -13,12 +13,12 @@
 - `public/manifest.json` and the 96/192/512 px PNG icons come from `node scripts/icons.mjs` (reads `public/favicon.svg`). `public/<key>.txt` is the IndexNow key file: its name and content are the same key, and it must stay served at the site root.
 - The GitHub logo comes from the `simple-icons` dev dependency, inlined at build time. Never use the Trakt logo; the footer and legal pages say the project is not affiliated with or endorsed by Trakt (`NOT_AFFILIATED` in `src/data/site.ts`).
 - Check every visual change in a real browser before reporting it: `astro preview`, then screenshots. Gates do not catch white text on white cards or missing spaces before inline spans (`{' '}`).
-- Demo data is generic: public movie and series titles and example ratings, never a real viewing history. The tool list (`TOOLS` in `src/data/site.ts`, 80 names) must equal the registrations in `internal/tools` (`check-dist.mjs` compares them). Tool arguments shown in demos must match the JSON names in `internal/tools`.
+- Demo data is generic: public movie and series titles and example ratings, never a real viewing history. The tool list (`TOOLS` in `src/data/site.ts`; the count shown on the page is its length) must equal the registrations in `internal/tools` (`check-dist.mjs` compares them). Tool arguments shown in demos must match the JSON names in `internal/tools`.
 
 ## Domains
 
-| Role                     | URL                                                   |
-| ------------------------ | ----------------------------------------------------- |
+| Role                     | URL                                                      |
+| ------------------------ | -------------------------------------------------------- |
 | Website                  | `https://trakt-mcp.samber.dev` (placeholder, `SITE_URL`) |
 | MCP server, OAuth issuer | `https://mcp.trakt-mcp.samber.dev` (`/mcp`, `MCP_URL`)   |
 

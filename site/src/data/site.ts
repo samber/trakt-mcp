@@ -63,7 +63,7 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_playback_progress', summary: 'See what you paused halfway.', group: 'history' },
   { name: 'remove_playback_item', summary: 'Clear a paused playback entry.', group: 'history' },
 
-  // Watchlist, collection, ratings, smart lists.
+  // Watchlist, collection, ratings.
   { name: 'fetch_watchlist', summary: 'Read your watchlist, filtered by type and sorted as you like.', group: 'library' },
   { name: 'add_to_watchlist', summary: 'Add items to your watchlist, with a note if you have Trakt VIP.', group: 'library' },
   { name: 'remove_from_watchlist', summary: 'Remove items from your watchlist.', group: 'library' },
@@ -73,8 +73,6 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_ratings', summary: 'Read the ratings you gave.', group: 'library' },
   { name: 'add_ratings', summary: 'Rate movies, shows, seasons or episodes from 1 to 10.', group: 'library' },
   { name: 'remove_ratings', summary: 'Remove ratings you gave.', group: 'library' },
-  { name: 'fetch_smart_lists', summary: 'See your smart lists.', group: 'library' },
-  { name: 'fetch_smart_list_items', summary: 'Read the items of one smart list.', group: 'library' },
 
   // Check-ins and recommendations.
   { name: 'checkin_to_show', summary: 'Check in to the episode you are watching now.', group: 'checkin' },
@@ -143,7 +141,6 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_person_summary', summary: 'Details of an actor, director or crew member.', group: 'people' },
   { name: 'fetch_person_movies', summary: 'The movies a person worked on.', group: 'people' },
   { name: 'fetch_person_shows', summary: 'The shows a person worked on.', group: 'people' },
-  { name: 'fetch_person_lists', summary: 'Public lists that contain a person.', group: 'people' },
   { name: 'fetch_show_comments', summary: 'Comments on a show, spoilers hidden by default.', group: 'people' },
   { name: 'fetch_comment', summary: 'Read one comment.', group: 'people' },
   { name: 'fetch_comment_replies', summary: 'Read the replies to a comment.', group: 'people' },
@@ -154,7 +151,7 @@ export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; descriptio
   {
     group: 'library',
     title: 'Your lists and ratings',
-    description: 'Watchlist, collection, ratings and smart lists: read them, add to them, remove from them.',
+    description: 'Watchlist, collection and ratings: read them, add to them, remove from them.',
   },
   {
     group: 'checkin',
@@ -231,4 +228,4 @@ export const FAQ: readonly FaqEntry[] = [
 ];
 
 /** Date (YYYY-MM-DD) of the last change to the privacy policy or the terms. Update it with every edit of either page. */
-export const LEGAL_UPDATED = '2026-11-23';
+export const LEGAL_UPDATED = '2026-11-24';

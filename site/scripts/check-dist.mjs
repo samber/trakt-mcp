@@ -235,14 +235,13 @@ if (existsSync(`${DIST}terms.html`) && !visibleText(read('terms.html')).includes
   fail('terms.html: governing law (French law) is missing');
 }
 
-// Privacy policy statements the owner and the Google verification rely on.
+// Privacy policy statements the owner relies on.
 if (existsSync(`${DIST}privacy.html`)) {
   const privacy = visibleText(read('privacy.html'));
   for (const phrase of [
     'returned to the assistant you connected',
     'arguments and results are not logged',
     'hosting provider',
-    'outside the European Union',
     'portable',
     'data source and processor',
     'Connected Apps',

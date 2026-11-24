@@ -9,7 +9,7 @@ export default defineConfig({
   site: SITE,
   output: 'static',
   // "/privacy" and "/terms" are the canonical paths, with no trailing slash:
-  // the privacy URL registered with Google must stay valid.
+  // the privacy URL registered with Trakt and the assistant directories must stay valid.
   trailingSlash: 'never',
   build: { format: 'file' },
   integrations: [
