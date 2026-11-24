@@ -46,7 +46,7 @@ var accessByPrefix = map[string]Access{
 
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
-var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists", "fetch_movie_lists", "fetch_show_lists", "search_by_id"}
+var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists", "fetch_movie_lists", "fetch_show_lists", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()

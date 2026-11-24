@@ -152,6 +152,11 @@ func parsePerson(body []byte) (Person, error) {
 		return Person{}, err
 	}
 
+	return trimPerson(raw), nil
+}
+
+// trimPerson trims a person of any Trakt response, bounding its text.
+func trimPerson(raw traktPerson) Person {
 	return Person{
 		Name:       boundText(raw.Name, maxTitleRunes),
 		IDs:        PersonIDs{Trakt: raw.IDs.Trakt, Slug: raw.IDs.Slug, IMDb: deref(raw.IDs.IMDb), TMDB: deref(raw.IDs.TMDB)},
@@ -166,7 +171,7 @@ func parsePerson(body []byte) (Person, error) {
 			Instagram: deref(raw.SocialIDs.Instagram),
 			Wikipedia: deref(raw.SocialIDs.Wikipedia),
 		},
-	}, nil
+	}
 }
 
 type traktMovieRole struct {
