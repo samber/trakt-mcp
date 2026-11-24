@@ -38,10 +38,11 @@ type WatchlistArgs struct {
 
 // WatchlistItem is one entry of the user's watchlist.
 type WatchlistItem struct {
-	Rank     int    `json:"rank"`
-	ListedAt string `json:"listed_at,omitempty"`
-	Type     string `json:"type"            jsonschema:"movie, show, season or episode"`
-	Notes    string `json:"notes,omitempty" jsonschema:"the user's own note"`
+	Rank       int    `json:"rank"`
+	ListItemID int    `json:"list_item_id,omitempty" jsonschema:"id the update_watchlist_item and reorder_watchlist tools take"`
+	ListedAt   string `json:"listed_at,omitempty"`
+	Type       string `json:"type"            jsonschema:"movie, show, season or episode"`
+	Notes      string `json:"notes,omitempty" jsonschema:"the user's own note"`
 	MediaRef
 }
 
@@ -76,6 +77,7 @@ func registerWatchlistTools(s *Server) {
 
 type traktWatchlistItem struct {
 	Rank     int     `json:"rank"`
+	ID       int     `json:"id"`
 	ListedAt *string `json:"listed_at"`
 	Type     string  `json:"type"`
 	Notes    *string `json:"notes"`
@@ -84,11 +86,12 @@ type traktWatchlistItem struct {
 
 func trimWatchlistItem(w traktWatchlistItem) WatchlistItem {
 	return WatchlistItem{
-		Rank:     w.Rank,
-		ListedAt: deref(w.ListedAt),
-		Type:     w.Type,
-		Notes:    boundText(deref(w.Notes), maxNotesRunes),
-		MediaRef: w.trim(),
+		Rank:       w.Rank,
+		ListItemID: w.ID,
+		ListedAt:   deref(w.ListedAt),
+		Type:       w.Type,
+		Notes:      boundText(deref(w.Notes), maxNotesRunes),
+		MediaRef:   w.trim(),
 	}
 }
 

@@ -34,11 +34,11 @@ var watchlistCases = []accountCase{
 	{
 		tool: toolFetchWatchlist, args: map[string]any{}, route: routeWatchlistDefault, fixture: "sync_watchlist",
 		want: map[string]any{
-			"items.0.rank": 1, "items.0.listed_at": testWatchedAt, pathFirstItemType: itemMovie, "items.0.notes": "Watch with friends",
+			"items.0.rank": 1, "items.0.list_item_id": 101, "items.1.list_item_id": 102, "items.0.listed_at": testWatchedAt, pathFirstItemType: itemMovie, "items.0.notes": "Watch with friends",
 			pathFirstMovieTitle: testMovieTitle, pathSecondType: itemSeason, "items.1.season.number": 1, "items.1.show.title": testShowTitle,
 			"items.2.episode.number": 1, "items.2.show.ids.slug": testShowSlug,
 		},
-		absent: []string{"items.1.notes", pathFirstShow, "items.0.id"},
+		absent: []string{"items.1.notes", pathFirstShow},
 	},
 	{
 		tool: toolAddToWatchlist, args: itemsArg(itemArg(itemMovie, testMovieSlug), itemArg(itemShow, testShowSlug)),

@@ -40,7 +40,7 @@ var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 // Read) and a new prefix must be added here deliberately.
 var accessByPrefix = map[string]Access{
 	"fetch_": Read, "search_": Read,
-	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write,
+	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "reorder_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
 
