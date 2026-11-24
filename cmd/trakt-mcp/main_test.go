@@ -321,6 +321,39 @@ func TestDisconnectUnknownUser(t *testing.T) {
 	}
 }
 
+// TestDisconnectAmbiguousSlug pins that a slug held by two users revokes and
+// deletes nothing, and surfaces ErrAmbiguous.
+func TestDisconnectAmbiguousSlug(t *testing.T) {
+	t.Parallel()
+	lockSlogDefault(t)
+
+	ctx := context.Background()
+	st, first := newDisconnectFixture(ctx, t, true)
+
+	second, err := st.UpsertUser(ctx, "1002", testSlug)
+	if err != nil {
+		t.Fatalf("UpsertUser: %v", err)
+	}
+
+	rv := &fakeRevoker{}
+
+	var out bytes.Buffer
+
+	if err := disconnectUser(ctx, st, rv, testSlug, &out); !errors.Is(err, store.ErrAmbiguous) {
+		t.Errorf("err = %v, want ErrAmbiguous", err)
+	}
+
+	if len(rv.revoked) != 0 || out.Len() != 0 {
+		t.Errorf("revoked = %q, stdout = %q; want neither", rv.revoked, out.String())
+	}
+
+	for _, id := range []string{first.TraktID, second.TraktID} {
+		if _, err := st.UserBySlugOrTraktID(ctx, id); err != nil {
+			t.Errorf("user %s deleted or unreadable: %v", id, err)
+		}
+	}
+}
+
 // disconnectedLine is the success line: it names the Trakt id and the
 // internal id so the operator can confirm which person a stale slug matched.
 func disconnectedLine(u store.User) string {

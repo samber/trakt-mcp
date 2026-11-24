@@ -178,8 +178,9 @@ type revoker interface {
 // user. A failed revoke only warns: the local data must go regardless, and
 // the user can still revoke from their Trakt connected-apps page. who is a
 // Trakt slug or numeric id; a renamed account can leave a stale slug that
-// resolves to someone else, so the output names every id matched and an
-// operator should prefer the numeric Trakt id.
+// resolves to someone else, so the success line names the Trakt id, slug and
+// internal id of the one user matched, and an operator should prefer the
+// numeric Trakt id. A slug held by several users fails without touching any.
 func disconnectUser(ctx context.Context, st *store.Store, rv revoker, who string, stdout io.Writer) error {
 	u, err := st.UserBySlugOrTraktID(ctx, who)
 	if err != nil {

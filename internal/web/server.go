@@ -36,6 +36,10 @@ const (
 // cfg.MetricsPath behind Basic auth only when metrics are enabled without a
 // separate listener; otherwise that path is an ordinary 404.
 func New(cfg config.Config, oauthSrv *oauth.Server, mcpHandler, metricsHandler http.Handler) http.Handler {
+	if cfg.SiteURL == nil {
+		panic("web.New: config.SiteURL is required; config.Load enforces it for serve")
+	}
+
 	mux := http.NewServeMux()
 	oauthSrv.Mount(mux)
 	mux.Handle(patternMCP, mcpHandler)

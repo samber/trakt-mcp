@@ -48,7 +48,7 @@ type Config struct {
 	APIKey string
 	// UserAgent identifies the project and version, never the user.
 	UserAgent string
-	// HTTP defaults to a client with defaultHTTPTimeout.
+	// HTTP defaults to a client with defaultHTTPTimeout; a supplied client with no Timeout gets it too.
 	HTTP *http.Client
 }
 
@@ -93,6 +93,10 @@ func New(cfg Config) *Client {
 		// A shallow copy, so the policy below never changes the caller's client.
 		copied := *cfg.HTTP
 		hc = &copied
+		// A caller client without a Timeout would leave every round trip unbounded.
+		if hc.Timeout == 0 {
+			hc.Timeout = defaultHTTPTimeout
+		}
 	}
 	// Redirects are never followed: Go would turn a redirected POST into a
 	// body-less GET, and the Trakt headers would go to another host. The doer

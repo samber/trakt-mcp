@@ -113,7 +113,7 @@ type UpstreamConfig struct {
 	// UserAgent identifies the project and version, never the user; it
 	// defaults to "trakt-mcp".
 	UserAgent string
-	// HTTP defaults to a client with defaultHTTPTimeout. Redirects are never
+	// HTTP defaults to a client with defaultHTTPTimeout; a supplied client with no Timeout gets it too. Redirects are never
 	// followed.
 	HTTP *http.Client
 	// Logger defaults to slog.Default().
@@ -191,6 +191,10 @@ func newUpstream(cfg UpstreamConfig, st tokenStore) *Upstream {
 		// A shallow copy, so the policy below never changes the caller's client.
 		copied := *cfg.HTTP
 		hc = &copied
+		// A caller client without a Timeout would leave every round trip unbounded.
+		if hc.Timeout == 0 {
+			hc.Timeout = defaultHTTPTimeout
+		}
 	}
 	// A redirected POST would lose its body, and the client secret could be
 	// sent to another host.

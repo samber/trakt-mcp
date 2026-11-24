@@ -304,3 +304,19 @@ func TestPrivacy_RouteRemoved(t *testing.T) {
 		t.Errorf("GET /privacy: status %d, want 404", res.status)
 	}
 }
+
+func TestNew_NilSiteURLPanicsClearly(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig(t)
+	cfg.SiteURL = nil
+
+	defer func() {
+		msg, _ := recover().(string)
+		if !strings.Contains(msg, "SiteURL is required") {
+			t.Errorf("panic = %q, want a message naming SiteURL", msg)
+		}
+	}()
+
+	New(cfg, nil, fixed(mcpBody), fixed(metricsBody))
+}

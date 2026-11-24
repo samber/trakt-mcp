@@ -702,3 +702,29 @@ func TestDefaultHTTPClientHasTimeout(t *testing.T) {
 		t.Fatalf("default base URL = %q", c.baseURL)
 	}
 }
+
+// TestCallerClientWithoutTimeoutGetsDefault pins that a supplied client with
+// no Timeout is bounded too, without changing the caller's own client.
+func TestCallerClientWithoutTimeoutGetsDefault(t *testing.T) {
+	t.Parallel()
+
+	own := &http.Client{}
+
+	if got := New(Config{APIKey: testAPIKey, HTTP: own}).http.Timeout; got != defaultHTTPTimeout {
+		t.Errorf("client timeout = %v, want %v", got, defaultHTTPTimeout)
+	}
+
+	if got := newUpstream(UpstreamConfig{HTTP: own}, nil).http.Timeout; got != defaultHTTPTimeout {
+		t.Errorf("upstream timeout = %v, want %v", got, defaultHTTPTimeout)
+	}
+
+	if own.Timeout != 0 {
+		t.Errorf("caller's client timeout = %v, want 0 (not mutated)", own.Timeout)
+	}
+
+	const custom = 5 * time.Second
+
+	if got := New(Config{APIKey: testAPIKey, HTTP: &http.Client{Timeout: custom}}).http.Timeout; got != custom {
+		t.Errorf("custom client timeout = %v, want %v", got, custom)
+	}
+}
