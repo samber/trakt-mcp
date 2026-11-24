@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/samber/trakt-mcp/internal/trakt"
@@ -178,9 +179,17 @@ type traktWatchSource struct {
 	LinkCount int     `json:"link_count"`
 }
 
-// parseWatchSources flattens Trakt's list of group-keyed maps, groups in
-// alphabetical order so the output is stable.
-func parseWatchSources(body []byte) (Listing[WatchSource], error) {
+// parseWatchSources returns a decoder that flattens Trakt's list of
+// group-keyed maps, groups in alphabetical order so the output is stable. A
+// non-empty country keeps only the groups equal to it, ignoring case like
+// parseWatchNow; the result is cut at maxReferenceItems.
+func parseWatchSources(country string) func([]byte) (Listing[WatchSource], error) {
+	return func(body []byte) (Listing[WatchSource], error) {
+		return flattenWatchSources(body, country)
+	}
+}
+
+func flattenWatchSources(body []byte, country string) (Listing[WatchSource], error) {
 	raw, err := decodeAs[[]map[string][]traktWatchSource](body)
 	if err != nil {
 		return Listing[WatchSource]{}, err
@@ -190,8 +199,11 @@ func parseWatchSources(body []byte) (Listing[WatchSource], error) {
 
 	for _, byGroup := range raw {
 		groups := make([]string, 0, len(byGroup))
+
 		for group := range byGroup {
-			groups = append(groups, group)
+			if country == "" || strings.EqualFold(group, country) {
+				groups = append(groups, group)
+			}
 		}
 
 		slices.Sort(groups)
@@ -206,11 +218,13 @@ func parseWatchSources(body []byte) (Listing[WatchSource], error) {
 		}
 	}
 
-	return Listing[WatchSource]{Items: items}, nil
+	return Listing[WatchSource]{Items: capList(items)}, nil
 }
 
-// WatchSourcesArgs are the arguments of fetch_watchnow_sources: none.
-type WatchSourcesArgs struct{}
+// WatchSourcesArgs are the arguments of fetch_watchnow_sources.
+type WatchSourcesArgs struct {
+	Country string `json:"country,omitempty" jsonschema:"two-letter lower-case ISO 3166-1 country code such as fr or us; keeps only that country's providers"`
+}
 
 func registerWatchNowTools(s *Server) {
 	Register(s, Spec{
@@ -227,7 +241,7 @@ func registerWatchNowTools(s *Server) {
 	}, fetchEpisodeWatchNow)
 	Register(s, Spec{
 		Name: "fetch_watchnow_sources", Title: "Fetch streaming providers", Access: Read,
-		Description: "List every streaming provider Trakt knows, with provider key, name, offer type and the number of titles linked. Use it to read the provider keys of where-to-watch results.",
+		Description: "List the streaming providers Trakt knows, with provider key, name, offer type and the number of titles linked. Use it to read the provider keys of where-to-watch results. Pass country (such as fr) to keep one country's providers: without it the list is very long and is cut at " + strconv.Itoa(maxReferenceItems) + " entries (this server's cap, not Trakt's).",
 	}, fetchWatchNowSources)
 }
 
@@ -273,8 +287,18 @@ func fetchEpisodeWatchNow(ctx context.Context, c *trakt.UserClient, in EpisodeWa
 	})
 }
 
-func fetchWatchNowSources(ctx context.Context, c *trakt.UserClient, _ WatchSourcesArgs) (Listing[WatchSource], error) {
+func fetchWatchNowSources(ctx context.Context, c *trakt.UserClient, in WatchSourcesArgs) (Listing[WatchSource], error) {
+	var country string
+
+	if in.Country != "" {
+		var err error
+
+		if country, err = countryArg(in.Country); err != nil {
+			return Listing[WatchSource]{}, err
+		}
+	}
+
 	return fetchParsed(func() (*http.Response, error) {
 		return c.API().GetWatchnowSourcesAll(ctx)
-	}, parseWatchSources)
+	}, parseWatchSources(country))
 }

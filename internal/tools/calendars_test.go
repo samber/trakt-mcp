@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -84,4 +86,43 @@ func TestCalendarToolArguments(t *testing.T) {
 	}
 
 	runArgCases(t, cases)
+}
+
+// TestCalendarOutputIsCapped requires a window with more than
+// maxCalendarEntries entries to be cut, for both response shapes.
+func TestCalendarOutputIsCapped(t *testing.T) {
+	t.Parallel()
+
+	const (
+		showEntry  = `{"first_aired":"2026-11-24T02:00:00.000Z","episode":{"season":1,"number":1,"title":"E","ids":{"trakt":1}},"show":{"title":"S","year":2020,"ids":{"trakt":1,"slug":"s"}}}`
+		movieEntry = `{"released":"2026-11-27","movie":{"title":"M","year":2026,"ids":{"trakt":1,"slug":"m"}}}`
+	)
+
+	cases := []struct {
+		name, tool, kind, entry string
+	}{
+		{"shows", toolCalendarShows, "shows", showEntry},
+		{mediaMovies, toolCalendarMovies, mediaMovies, movieEntry},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			body := "[" + strings.Repeat(tc.entry+",", maxCalendarEntries) + tc.entry + "]"
+
+			h := newHarness(t)
+			h.trakt.respond(calendarRoute(tc.kind), http.StatusOK, body, nil)
+
+			var out struct {
+				Items []map[string]any `json:"items"`
+			}
+
+			h.ok(tc.tool, calendarArgs(nil), &out)
+
+			if len(out.Items) != maxCalendarEntries {
+				t.Errorf("items = %d, want the cap %d", len(out.Items), maxCalendarEntries)
+			}
+		})
+	}
 }

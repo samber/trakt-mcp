@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -187,5 +188,80 @@ func TestWatchNowTextIsBounded(t *testing.T) {
 
 	if len([]rune(srcs.Items[0].Type)) > maxProviderTypeRunes {
 		t.Errorf("type = %q, want it cut", srcs.Items[0].Type)
+	}
+}
+
+// TestWatchNowSourcesCountry requires the country argument to keep only that
+// country's providers, ignore the case of Trakt's group key, and be validated.
+func TestWatchNowSourcesCountry(t *testing.T) {
+	t.Parallel()
+
+	const body = `[{"fr":[{"source":"netflix","name":"Netflix"}],"US":[{"source":"hulu","name":"Hulu"}]}]`
+
+	cases := []struct {
+		name, country string
+		want          []string
+	}{
+		{"fr only", "fr", []string{"netflix"}},
+		{"group case ignored", "us", []string{"hulu"}},
+		{"unknown country is empty", "zz", nil},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.trakt.respond(routeWatchNowSrc, http.StatusOK, body, nil)
+
+			var out Listing[WatchSource]
+
+			h.ok(toolWatchNowSources, map[string]any{fieldCountry: tc.country}, &out)
+
+			var got []string
+			for _, it := range out.Items {
+				got = append(got, it.Source)
+			}
+
+			if fmt.Sprint(got) != fmt.Sprint(tc.want) {
+				t.Errorf("sources = %v, want %v", got, tc.want)
+			}
+		})
+	}
+
+	runArgCases(t, []argCase{
+		{name: "country three letters", tool: toolWatchNowSources, args: map[string]any{fieldCountry: "FRA"}, wantErr: invalid(fieldCountry)},
+		{name: "country upper case", tool: toolWatchNowSources, args: map[string]any{fieldCountry: "FR"}, wantErr: invalid(fieldCountry)},
+	})
+}
+
+// TestWatchNowSourcesAreCapped requires a list longer than maxReferenceItems
+// to be cut.
+func TestWatchNowSourcesAreCapped(t *testing.T) {
+	t.Parallel()
+
+	var b strings.Builder
+
+	b.WriteString(`[{"fr":[`)
+
+	for i := range maxReferenceItems + 1 {
+		if i > 0 {
+			b.WriteString(",")
+		}
+
+		fmt.Fprintf(&b, `{"source":"s%d","name":"n"}`, i)
+	}
+
+	b.WriteString(`]}]`)
+
+	h := newHarness(t)
+	h.trakt.respond(routeWatchNowSrc, http.StatusOK, b.String(), nil)
+
+	var out Listing[WatchSource]
+
+	h.ok(toolWatchNowSources, map[string]any{}, &out)
+
+	if len(out.Items) != maxReferenceItems {
+		t.Errorf("items = %d, want the cap %d", len(out.Items), maxReferenceItems)
 	}
 }

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/samber/trakt-mcp/internal/trakt"
@@ -28,7 +29,17 @@ const (
 	maxCalendarDays = 33
 	// minCalendarDays is 1: a window needs at least one day.
 	minCalendarDays = 1
+
+	// maxCalendarEntries caps the entries a calendar tool returns. Trakt does
+	// not paginate calendars; with scope all and a 33-day window the answer is
+	// huge, so this is this server's own limit to protect the model's context,
+	// not a Trakt limit.
+	maxCalendarEntries = 300
 )
+
+// calendarCapNote is appended to every calendar tool description so the model
+// knows a long window is cut.
+var calendarCapNote = " Long windows on scope all are cut at " + strconv.Itoa(maxCalendarEntries) + " entries (this server's cap, not Trakt's): narrow days."
 
 // calendarScopes lists the accepted values of the scope argument.
 var calendarScopes = []string{calendarScopeMy, calendarScopeAll}
@@ -113,7 +124,14 @@ func trimCalendarEntry(e traktCalendarEntry) CalendarEntry {
 }
 
 func parseCalendar(body []byte) (Listing[CalendarEntry], error) {
-	return unpaged(body, trimCalendarEntry)
+	out, err := unpaged(body, trimCalendarEntry)
+	if err != nil {
+		return out, err
+	}
+
+	out.Items = out.Items[:min(len(out.Items), maxCalendarEntries)]
+
+	return out, nil
 }
 
 // fetchCalendar validates the window, then runs call with it.
@@ -129,31 +147,31 @@ func fetchCalendar(in CalendarArgs, call func(w calendarWindow) (*http.Response,
 func registerCalendarTools(s *Server) {
 	Register(s, Spec{
 		Name: "fetch_calendar_shows", Title: "Fetch TV show calendar", Access: Read,
-		Description: "List the TV series episodes airing in a date window, each with its episode and TV show. Scope my is the user's own TV shows, all is every TV show.",
+		Description: "List the TV series episodes airing in a date window, each with its episode and TV show. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
 	}, fetchCalendarShows)
 	Register(s, Spec{
 		Name: "fetch_calendar_new_shows", Title: "Fetch new TV shows calendar", Access: Read,
-		Description: "List brand-new TV series whose first season starts in a date window. Scope my is the user's own TV shows, all is every TV show.",
+		Description: "List brand-new TV series whose first season starts in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
 	}, fetchCalendarNewShows)
 	Register(s, Spec{
 		Name: "fetch_calendar_show_premieres", Title: "Fetch TV season premieres calendar", Access: Read,
-		Description: "List TV series season premieres airing in a date window. Scope my is the user's own TV shows, all is every TV show.",
+		Description: "List TV series season premieres airing in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
 	}, fetchCalendarShowPremieres)
 	Register(s, Spec{
 		Name: "fetch_calendar_show_finales", Title: "Fetch TV season finales calendar", Access: Read,
-		Description: "List TV series season and series finales airing in a date window. Scope my is the user's own TV shows, all is every TV show.",
+		Description: "List TV series season and series finales airing in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
 	}, fetchCalendarShowFinales)
 	Register(s, Spec{
 		Name: "fetch_calendar_movies", Title: "Fetch movie calendar", Access: Read,
-		Description: "List the movies with a release date in a date window. Scope my is the user's own movies, all is every movie.",
+		Description: "List the movies with a release date in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
 	}, fetchCalendarMovies)
 	Register(s, Spec{
 		Name: "fetch_calendar_dvd", Title: "Fetch DVD and Blu-ray calendar", Access: Read,
-		Description: "List the movies released on DVD or other physical media in a date window. Scope my is the user's own movies, all is every movie.",
+		Description: "List the movies released on DVD or other physical media in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
 	}, fetchCalendarDVD)
 	Register(s, Spec{
 		Name: "fetch_calendar_streaming", Title: "Fetch streaming releases calendar", Access: Read,
-		Description: "List the movies released on streaming services in a date window. Scope my is the user's own movies, all is every movie.",
+		Description: "List the movies released on streaming services in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
 	}, fetchCalendarStreaming)
 }
 
