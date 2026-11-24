@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/samber/trakt-mcp/internal/trakt"
@@ -25,6 +27,17 @@ const (
 	// maxFilterTextRunes bounds each text value of a smart list's filters:
 	// they are short slugs and codes, and a bound keeps hostile text small.
 	maxFilterTextRunes = 100
+	// maxFilterEntries caps the keys of a filters object and the elements of
+	// a filters array: real filters hold a few dozen keys and short lists, and
+	// a cap keeps a hostile definition from flooding the model's context.
+	maxFilterEntries = 50
+	// maxFilterDepth caps how deep filters nest (the filters object is level
+	// 1): real filters are an object of scalars and short arrays.
+	maxFilterDepth = 3
+
+	// msgSmartListForbidden answers a Trakt 403 on a smart list read. Trakt
+	// sends 403 for a list the connected account may not see.
+	msgSmartListForbidden = "this smart list is private or not shared with the connected Trakt account"
 )
 
 var (
@@ -131,13 +144,31 @@ func trimSmartList(l traktSmartList) SmartList {
 	return out
 }
 
-// cleanFilters returns the filters without JSON nulls and with every text
-// value bounded; a missing object becomes an empty one.
-func cleanFilters(in map[string]any) map[string]any {
-	out := make(map[string]any, len(in))
+// cleanFilters returns the filters without JSON nulls, with every text value
+// bounded, at most maxFilterEntries entries per object or array and at most
+// maxFilterDepth levels; a missing object becomes an empty one.
+func cleanFilters(in map[string]any) map[string]any { return cleanFilterMap(in, 1) }
 
-	for k, v := range in {
-		if c := cleanFilterValue(v); c != nil {
+func cleanFilterMap(in map[string]any, depth int) map[string]any {
+	out := make(map[string]any, len(in))
+	if depth > maxFilterDepth {
+		return out
+	}
+
+	// Sorted keys make the cap deterministic.
+	keys := make([]string, 0, len(in))
+	for k := range in {
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		if len(out) >= maxFilterEntries {
+			break
+		}
+
+		if c := cleanFilterValue(in[k], depth+1); c != nil {
 			out[boundText(k, maxFilterTextRunes)] = c
 		}
 	}
@@ -145,25 +176,49 @@ func cleanFilters(in map[string]any) map[string]any {
 	return out
 }
 
-func cleanFilterValue(v any) any {
+// cleanFilterValue cleans a value found inside a container of level depth-1;
+// a container deeper than maxFilterDepth is dropped.
+func cleanFilterValue(v any, depth int) any {
 	switch x := v.(type) {
 	case string:
 		return boundText(x, maxFilterTextRunes)
 	case []any:
+		if depth > maxFilterDepth {
+			return nil
+		}
+
 		list := make([]any, 0, len(x))
 
 		for _, e := range x {
-			if c := cleanFilterValue(e); c != nil {
+			if len(list) >= maxFilterEntries {
+				break
+			}
+
+			if c := cleanFilterValue(e, depth+1); c != nil {
 				list = append(list, c)
 			}
 		}
 
 		return list
 	case map[string]any:
-		return cleanFilters(x)
+		if depth > maxFilterDepth {
+			return nil
+		}
+
+		return cleanFilterMap(x, depth)
 	default:
 		return v
 	}
+}
+
+// smartListError turns a Trakt 403 into the private-list message; every other
+// error goes on to the shared mapping.
+func smartListError(err error) error {
+	if te, ok := errors.AsType[*trakt.Error](err); ok && te.Kind == trakt.KindUnknown && te.Status == http.StatusForbidden {
+		return newToolError(msgSmartListForbidden)
+	}
+
+	return err
 }
 
 func fetchSmartLists(ctx context.Context, c *trakt.UserClient, in SmartListsArgs) (Listing[SmartList], error) {
@@ -177,9 +232,11 @@ func fetchSmartLists(ctx context.Context, c *trakt.UserClient, in SmartListsArgs
 		return Listing[SmartList]{}, err
 	}
 
-	return fetchParsed(func() (*http.Response, error) {
+	out, err := fetchParsed(func() (*http.Response, error) {
 		return c.API().GetUsersSmartListsPersonal(ctx, string(id)) //nolint:wrapcheck // *trakt.Error is mapped by Kind
 	}, func(body []byte) (Listing[SmartList], error) { return unpaged(body, trimSmartList) })
+
+	return out, smartListError(err)
 }
 
 type traktSmartListItem struct {
@@ -218,7 +275,7 @@ func fetchSmartListItems(ctx context.Context, c *trakt.UserClient, in SmartListI
 		return Listing[SmartListItem]{}, err
 	}
 
-	return paginateDecoded(ctx, in.PageArgs, trimSmartListItem, func(page, limit int) (*http.Response, error) {
+	out, err := paginateDecoded(ctx, in.PageArgs, trimSmartListItem, func(page, limit int) (*http.Response, error) {
 		n := strconv.Itoa(limit)
 
 		//nolint:wrapcheck // *trakt.Error is mapped by Kind
@@ -226,4 +283,6 @@ func fetchSmartListItems(ctx context.Context, c *trakt.UserClient, in SmartListI
 			Extended: extendedFullPtr(), Page: &page, Limit: &n,
 		})
 	})
+
+	return out, smartListError(err)
 }

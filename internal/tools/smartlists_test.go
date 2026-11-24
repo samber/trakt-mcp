@@ -2,6 +2,7 @@ package tools
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -172,7 +173,7 @@ func TestSmartListsTraktFailures(t *testing.T) {
 	}{
 		{"not found", http.StatusNotFound, `{"error_description":"` + injectionMarker + `"}`, msgNotFound},
 		{"unauthorized", http.StatusUnauthorized, `{"error_description":"` + injectionMarker + `"}`, msgUpstreamAuth},
-		{"private list of another user", http.StatusForbidden, `{"error_description":"` + injectionMarker + `"}`, "Trakt rejected the request (status 403)"},
+		{"private list of another user", http.StatusForbidden, `{"error_description":"` + injectionMarker + `"}`, msgSmartListForbidden},
 		{"server error", http.StatusInternalServerError, `{"error_description":"` + injectionMarker + `"}`, "Trakt returned an error (status 500)"},
 		{"bad gateway", http.StatusBadGateway, ``, "Trakt returned an error (status 502)"},
 		{"malformed body", http.StatusOK, `{"not": "a list"`, msgInternal},
@@ -265,5 +266,75 @@ func TestSmartListsEmptyAndNull(t *testing.T) {
 
 	if got, ok := lookup(out, "items.0.filters"); !ok || got == nil {
 		t.Errorf("filters = %v (present %v), want {}", got, ok)
+	}
+}
+
+func filterKeys(n int) map[string]any {
+	m := make(map[string]any, n)
+	for i := range n {
+		m["k"+strconv.Itoa(1000+i)] = true
+	}
+
+	return m
+}
+
+func nested(levels int) map[string]any {
+	var v any = "leaf"
+	for range levels {
+		v = map[string]any{"k": v}
+	}
+
+	m, _ := v.(map[string]any)
+
+	return m
+}
+
+// TestCleanFiltersCaps checks the entry and depth caps at the cap and one
+// past it.
+func TestCleanFiltersCaps(t *testing.T) {
+	t.Parallel()
+
+	for _, n := range []int{maxFilterEntries, maxFilterEntries + 1, maxFilterEntries * 3} {
+		if got, want := len(cleanFilters(filterKeys(n))), min(n, maxFilterEntries); got != want {
+			t.Errorf("%d keys: kept %d, want %d", n, got, want)
+		}
+	}
+
+	// Deterministic: the smallest keys survive.
+	if _, ok := cleanFilters(filterKeys(maxFilterEntries + 1))["k1050"]; ok {
+		t.Error("key past the cap kept")
+	}
+
+	for _, n := range []int{maxFilterEntries, maxFilterEntries + 1} {
+		arr := make([]any, n)
+		for i := range arr {
+			arr[i] = "x"
+		}
+
+		list, _ := cleanFilters(map[string]any{"a": arr})["a"].([]any)
+		if want := min(n, maxFilterEntries); len(list) != want {
+			t.Errorf("%d elements: kept %d, want %d", n, len(list), want)
+		}
+	}
+
+	// The filters object is level 1: nested maps survive down to maxFilterDepth.
+	depthOf := func(m map[string]any) int {
+		d := 1
+
+		for {
+			next, ok := m["k"].(map[string]any)
+			if !ok {
+				return d
+			}
+
+			m, d = next, d+1
+		}
+	}
+
+	// nested(n) is the filters object with n levels of maps.
+	for _, n := range []int{maxFilterDepth, maxFilterDepth + 1, maxFilterDepth + 5} {
+		if got, want := depthOf(cleanFilters(nested(n))), min(n, maxFilterDepth); got != want {
+			t.Errorf("%d levels: kept %d, want %d", n, got, want)
+		}
 	}
 }
