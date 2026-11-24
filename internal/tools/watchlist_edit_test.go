@@ -1,7 +1,9 @@
 package tools
 
 import (
+	"encoding/json"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -145,5 +147,31 @@ func TestWatchlistEditDescriptionsMentionVIP(t *testing.T) {
 		if d := tools[name].Description; !strings.Contains(d, "VIP") {
 			t.Errorf("%s description %q does not mention Trakt VIP", name, d)
 		}
+	}
+}
+
+// TestUpdateWatchlistItemNotesIsRequired requires notes in the input schema's
+// required list: were it optional, a call without notes would send an empty
+// note and silently clear the stored one.
+func TestUpdateWatchlistItemNotesIsRequired(t *testing.T) {
+	t.Parallel()
+
+	tool := listTools(t, NewServer(offlineDeps()))[toolUpdateWatchlistItem]
+
+	raw, err := json.Marshal(tool.InputSchema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var schema struct {
+		Required []string `json:"required"`
+	}
+
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
+	}
+
+	if !slices.Contains(schema.Required, argNotes) {
+		t.Errorf("required = %v, want %q listed", schema.Required, argNotes)
 	}
 }

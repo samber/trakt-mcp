@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	// maxSortByLen bounds sort_by: Trakt's OpenAPI file documents no values,
+	// maxSortByLen bounds sort: Trakt's OpenAPI file documents no values,
 	// so the argument is passed through as a short token. UNVERIFIED: not
 	// documented by Trakt.
 	maxSortByLen = 32
@@ -30,8 +30,8 @@ const (
 		"requesting the next page until items is empty."
 )
 
-// sortByPattern is the shape of a sort_by value: a lowercase token such as
-// last_watched. It keeps injected query syntax out of the request.
+// sortByPattern is the shape of the sort value: a lowercase token of letters,
+// digits and underscores. It keeps injected query syntax out of the request.
 var sortByPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
 // hiddenTypes are the types fetch_hidden_progress accepts.
@@ -41,7 +41,7 @@ var hiddenTypes = []string{hiddenTypeShow}
 type UpNextArgs struct {
 	PageArgs
 
-	SortBy       string `json:"sort_by,omitempty"       jsonschema:"a Trakt sort field, as a lowercase token; values are not documented, omit it for Trakt's default"`
+	Sort         string `json:"sort,omitempty"          jsonschema:"a Trakt sort field, as a lowercase token; values are not documented, omit it for Trakt's default"`
 	SortHow      string `json:"sort_how,omitempty"      jsonschema:"asc or desc; omit it for Trakt's default"`
 	IncludeStats *bool  `json:"include_stats,omitempty" jsonschema:"include minutes watched, minutes left and play count of each show"`
 }
@@ -149,7 +149,7 @@ type ProgressItemsArgs struct {
 func registerUpNextTools(s *Server) {
 	Register(s, Spec{
 		Name: "fetch_up_next", Title: "Fetch up next", Access: Read,
-		Description: "List the TV shows the user is watching, each with the next episode to watch, ordered by sort_by and sort_how " +
+		Description: "List the TV shows the user is watching, each with the next episode to watch, ordered by sort and sort_how " +
 			"(optionally with watch stats)." + upNextPagingNote,
 	}, fetchUpNext)
 	Register(s, Spec{
@@ -168,7 +168,7 @@ func registerUpNextTools(s *Server) {
 	}, unhideFromProgress)
 }
 
-// sortByArg validates sort_by: empty, or a short lowercase token. Trakt
+// sortByArg validates sort: empty, or a short lowercase token. Trakt
 // documents no values, so no list of them is enforced.
 func sortByArg(value string) (*string, error) {
 	if value == "" {
@@ -176,14 +176,14 @@ func sortByArg(value string) (*string, error) {
 	}
 
 	if len(value) > maxSortByLen || !sortByPattern.MatchString(value) {
-		return nil, invalidArgument(fieldSortBy)
+		return nil, invalidArgument(fieldSort)
 	}
 
 	return &value, nil
 }
 
 func fetchUpNext(ctx context.Context, c *trakt.UserClient, in UpNextArgs) (Listing[UpNextEntry], error) {
-	sortBy, err := sortByArg(in.SortBy)
+	sortBy, err := sortByArg(in.Sort)
 	if err != nil {
 		return Listing[UpNextEntry]{}, err
 	}

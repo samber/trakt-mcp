@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -145,6 +146,8 @@ func TestResetProgressArguments(t *testing.T) {
 		{name: "date only", tool: toolResetShowProgress, args: reset("2024-03-01"), wantErr: invalid(fieldResetAt)},
 		{name: "blank", tool: toolResetShowProgress, args: reset(" "), wantErr: invalid(fieldResetAt)},
 		{name: "future", tool: toolResetShowProgress, args: reset(testFarFuture), wantErr: invalid(fieldResetAt)},
+		{name: "just inside tolerance", tool: toolResetShowProgress, args: reset(time.Now().Add(maxResetFutureSkew - time.Minute).UTC().Format(time.RFC3339)), route: routeResetProgress, body: emptyObject},
+		{name: "just outside tolerance", tool: toolResetShowProgress, args: reset(time.Now().Add(maxResetFutureSkew + time.Minute).UTC().Format(time.RFC3339)), wantErr: invalid(fieldResetAt)},
 		{name: "bad show", tool: toolResetShowProgress, args: merge(showShow(traversalID), map[string]any{argResetAt: testWatchedAt}), wantErr: invalid(fieldShowID)},
 		{name: "empty show", tool: toolResetShowProgress, args: showShow(""), wantErr: invalid(fieldShowID)},
 		{name: "undo bad show", tool: toolUndoResetShowProgress, args: showShow(traversalID), wantErr: invalid(fieldShowID)},

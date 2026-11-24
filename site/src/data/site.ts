@@ -109,12 +109,12 @@ export const TOOLS: readonly Tool[] = [
   { name: 'remove_list_items', summary: 'Remove items from a list.', group: 'lists' },
   { name: 'delete_list', summary: 'Delete a custom list.', group: 'lists' },
 
-  // Notes (Trakt VIP) and favorites.
-  { name: 'fetch_note', summary: 'Read one of your notes (Trakt VIP).', group: 'notes' },
-  { name: 'fetch_user_notes', summary: 'List your notes, optionally for one kind of item (Trakt VIP).', group: 'notes' },
-  { name: 'create_note', summary: 'Attach a note to a movie, show, season, episode or person (Trakt VIP).', group: 'notes' },
-  { name: 'update_note', summary: 'Edit a note (Trakt VIP).', group: 'notes' },
-  { name: 'delete_note', summary: 'Delete a note (Trakt VIP).', group: 'notes' },
+  // Notes (free accounts keep few) and favorites.
+  { name: 'fetch_note', summary: 'Read one of your notes (free accounts keep few notes).', group: 'notes' },
+  { name: 'fetch_user_notes', summary: 'List your notes, optionally for one kind of item (free accounts keep few notes).', group: 'notes' },
+  { name: 'create_note', summary: 'Attach a note to a movie, show, season, episode or person (free accounts keep few notes).', group: 'notes' },
+  { name: 'update_note', summary: 'Edit a note (free accounts keep few notes).', group: 'notes' },
+  { name: 'delete_note', summary: 'Delete a note (free accounts keep few notes).', group: 'notes' },
   { name: 'fetch_favorites', summary: 'Read your favorite movies and shows.', group: 'notes' },
   { name: 'add_to_favorites', summary: 'Add movies or shows to your favorites, with an optional note.', group: 'notes' },
   { name: 'update_favorite', summary: 'Set or clear the note on a favorite, or move it to a new rank.', group: 'notes' },
@@ -253,7 +253,7 @@ export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; descriptio
   {
     group: 'notes',
     title: 'Notes and favorites',
-    description: 'Keep notes on titles and people (Trakt VIP) and curate your favorites.',
+    description: 'Keep notes on titles and people and curate your favorites.',
   },
   {
     group: 'checkin',

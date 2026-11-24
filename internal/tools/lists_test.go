@@ -48,7 +48,7 @@ var listDetailWant = map[string]any{
 }
 
 var listItemsWant = map[string]any{
-	pathFirstRank: 1, pathFirstCommID: 9001, pathFirstItemType: itemMovie, "items.0.notes": "Watch first", "items.0.listed_at": "2024-01-01T00:00:00.000Z",
+	pathFirstRank: 1, "items.0.list_item_id": 9001, pathFirstItemType: itemMovie, "items.0.notes": "Watch first", "items.0.listed_at": "2024-01-01T00:00:00.000Z",
 	"items.0.movie.title": "Heat", pathSecondType: itemShow, pathSecondShowSlug: testShowSlug, "items.2.type": itemSeason,
 	"items.2.show.ids.slug": testShowSlug, "items.3.type": itemEpisode, "items.3.episode.number": 2, "items.4.type": itemPerson,
 	"items.4.person.name": "Michael Mann", "items.4.person.ids.slug": "michael-mann", "items.4.person.ids.imdb": "nm0000520",
@@ -238,7 +238,7 @@ func TestListTextIsBounded(t *testing.T) {
 
 		i := out.Items[0]
 		if len([]rune(i.Notes)) > maxNotesRunes || len([]rune(i.Type)) > maxListFieldRunes || i.Person == nil ||
-			len([]rune(i.Person.Name)) > maxTitleRunes || len([]rune(i.Person.Biography)) > maxBiographyRunes {
+			len([]rune(i.Person.Name)) > maxTitleRunes || len([]rune(i.Person.Biography)) > maxListOverviewRunes {
 			t.Errorf("item = %+v, want bounded text", i)
 		}
 	})

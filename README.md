@@ -211,20 +211,20 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 
 ### Watchlist edits, notes and favorites (12)
 
-| Tool                    | What it does                                                            |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `update_watchlist_item` | Sets or clears the note of a watchlist entry (VIP only).                |
-| `reorder_watchlist`     | Reorders your whole watchlist by `list_item_id`.                        |
-| `fetch_note`            | One of your notes (VIP only).                                           |
-| `fetch_user_notes`      | Your notes, optionally for one kind of item (VIP only).                 |
-| `create_note`           | Attaches a note to a movie, show, season, episode or person (VIP only). |
-| `update_note`           | Edits a note (VIP only).                                                |
-| `delete_note`           | Deletes a note (VIP only).                                              |
-| `fetch_favorites`       | Your favorite movies and shows.                                         |
-| `add_to_favorites`      | Adds up to 50 movies or shows to your favorites, with an optional note. |
-| `update_favorite`       | Sets or clears the note of a favorite, or moves it to a new rank.       |
-| `reorder_favorites`     | Reorders your favorites by `list_item_id`.                              |
-| `remove_from_favorites` | Removes up to 50 movies or shows from your favorites.                   |
+| Tool                    | What it does                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `update_watchlist_item` | Sets or clears the note of a watchlist entry (VIP only).                                    |
+| `reorder_watchlist`     | Reorders your whole watchlist by `list_item_id`.                                            |
+| `fetch_note`            | One of your notes (free accounts keep few notes).                                           |
+| `fetch_user_notes`      | Your notes, optionally for one kind of item (free accounts keep few notes).                 |
+| `create_note`           | Attaches a note to a movie, show, season, episode or person (free accounts keep few notes). |
+| `update_note`           | Edits a note (free accounts keep few notes).                                                |
+| `delete_note`           | Deletes a note (free accounts keep few notes).                                              |
+| `fetch_favorites`       | Your favorite movies and shows.                                                             |
+| `add_to_favorites`      | Adds up to 50 movies or shows to your favorites, with an optional note.                     |
+| `update_favorite`       | Sets or clears the note of a favorite, or moves it to a new rank.                           |
+| `reorder_favorites`     | Reorders your favorites by `list_item_id`.                                                  |
+| `remove_from_favorites` | Removes up to 50 movies or shows from your favorites.                                       |
 
 ### Progress and up next (7)
 
@@ -238,7 +238,7 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | `hide_from_progress`             | Hides TV shows or seasons from your progress and up next.                      |
 | `unhide_from_progress`           | Shows hidden TV shows or seasons in your progress again.                       |
 
-Notes, watchlist notes and show progress reset need Trakt VIP; other accounts get "Trakt VIP is required for this feature".
+Watchlist notes and show progress reset need Trakt VIP; other accounts get "Trakt VIP is required for this feature". Free accounts can keep only a few notes; past the cap Trakt answers with an account limit error.
 
 ## 🚀 Getting started
 

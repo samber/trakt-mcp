@@ -203,8 +203,13 @@ func GroupItems(items []Item) (SyncItems, error) {
 // parseTimestamp validates an ISO 8601 timestamp (RFC 3339, any offset) not
 // more than maxFutureSkew ahead, and returns it in traktTimeLayout.
 func parseTimestamp(field, value string) (string, error) {
+	return parseTimestampWithin(field, value, maxFutureSkew)
+}
+
+// parseTimestampWithin is parseTimestamp with an explicit clock tolerance.
+func parseTimestampWithin(field, value string, skew time.Duration) (string, error) {
 	t, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil || t.After(time.Now().Add(maxFutureSkew)) {
+	if err != nil || t.After(time.Now().Add(skew)) {
 		return "", invalidArgument(field)
 	}
 

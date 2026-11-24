@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/samber/trakt-mcp/internal/trakt"
 	"github.com/samber/trakt-mcp/internal/trakt/api"
@@ -17,6 +18,11 @@ const (
 	// lastActivityCollected is the collection-progress alternative to
 	// watched: next and last episode follow the last collected episode.
 	lastActivityCollected = "collected"
+
+	// maxResetFutureSkew is how far ahead of this server's clock a reset_at may
+	// be: Trakt refuses a reset that starts later than now, so only a few
+	// minutes of clock drift between caller and server are tolerated.
+	maxResetFutureSkew = 5 * time.Minute
 
 	// resetVIPNote tells the assistant what a reset is and that it is paid.
 	resetVIPNote = "Applies to TV shows only. The user's watch history is kept: a reset starts a rewatch, " +
@@ -233,7 +239,7 @@ func resetShowProgress(ctx context.Context, c *trakt.UserClient, in ResetProgres
 	} else {
 		var at string
 
-		at, err = parseTimestamp(fieldResetAt, in.ResetAt)
+		at, err = parseTimestampWithin(fieldResetAt, in.ResetAt, maxResetFutureSkew)
 		if err != nil {
 			return ResetProgressResult{}, err
 		}

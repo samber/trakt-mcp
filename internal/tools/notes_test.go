@@ -246,8 +246,8 @@ func TestNoteDescriptions(t *testing.T) {
 	}
 
 	for _, name := range []string{toolFetchNote, toolFetchUserNotes, toolCreateNote, toolUpdateNote, toolDeleteNote} {
-		if d := tools[name].Description; !strings.Contains(d, "VIP") {
-			t.Errorf("%s description %q does not mention Trakt VIP", name, d)
+		if d := tools[name].Description; !strings.Contains(d, "Free Trakt accounts can keep only a few notes") {
+			t.Errorf("%s description %q does not state the free-account note cap", name, d)
 		}
 	}
 }

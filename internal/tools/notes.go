@@ -21,8 +21,8 @@ const (
 	// states no limit; this reuses the 500-character bound of watchlist
 	// notes so a mistaken call stays small.
 	maxNoteRunes = maxNotesRunes
-	// vipNoteNote tells the assistant that notes are a paid Trakt feature.
-	vipNoteNote = " Notes need Trakt VIP."
+	// vipNoteNote tells the assistant that free Trakt accounts have a note cap.
+	vipNoteNote = " Free Trakt accounts can keep only a few notes; past the cap Trakt answers with an account limit error."
 )
 
 // notePrivacies are the visibility values of a note (spec: POST /notes).
@@ -214,7 +214,7 @@ func trimNote(n traktNote) Note {
 	out.MediaRef = n.Item.trim()
 
 	if n.Item.Person != nil {
-		p := trimPerson(*n.Item.Person)
+		p := trimEmbeddedPerson(*n.Item.Person)
 		out.Person = &p
 	}
 
@@ -260,7 +260,7 @@ func trimUserNote(n traktUserNote) UserNote {
 	}
 
 	if n.Person != nil {
-		p := trimPerson(*n.Person)
+		p := trimEmbeddedPerson(*n.Person)
 		out.Person = &p
 	}
 

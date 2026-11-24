@@ -148,7 +148,7 @@ func registerMovieExtraTools(s *Server) {
 	}, fetchMovieLists)
 	Register(s, Spec{
 		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
-		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note.",
+		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note." + untrustedNote,
 	}, fetchMovieReleases)
 }
 

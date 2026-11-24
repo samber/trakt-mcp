@@ -86,7 +86,7 @@ type TrendingList struct {
 // owner's text.
 type ListItem struct {
 	Rank     int     `json:"rank"`
-	ID       int     `json:"id"                  jsonschema:"Trakt's id of this list entry, not of the title"`
+	ID       int     `json:"list_item_id"       jsonschema:"Trakt's id of this list entry, not of the title"`
 	ListedAt string  `json:"listed_at,omitempty"`
 	Type     string  `json:"type"                jsonschema:"movie, show, season, episode or person"`
 	Notes    string  `json:"notes,omitempty"     jsonschema:"the list owner's note on this entry"`
@@ -187,7 +187,7 @@ func trimListItem(i traktListItem) ListItem {
 	}
 
 	if i.Person != nil {
-		p := trimPerson(*i.Person)
+		p := trimEmbeddedPerson(*i.Person)
 		out.Person = &p
 	}
 
