@@ -12,14 +12,14 @@ import (
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/oauth"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 const (
 	testKey         = "A:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-	testBaseURL     = "https://contacts.example.com"
+	testBaseURL     = "https://trakt-mcp.example.com"
 	testSiteURL     = "https://site.example.com"
 	testMetricsPath = "/metrics"
 	testMetricsUser = "prom"
@@ -36,8 +36,14 @@ func testConfig(t *testing.T) config.Config {
 		t.Fatalf("parse base: %v", err)
 	}
 
+	site, err := url.Parse(testSiteURL)
+	if err != nil {
+		t.Fatalf("parse site: %v", err)
+	}
+
 	return config.Config{
 		BaseURL:         u,
+		SiteURL:         site,
 		TraktClientID:   "client-id",
 		EnableDCR:       true,
 		MetricsPath:     testMetricsPath,
@@ -65,7 +71,7 @@ func newOAuth(t *testing.T, cfg config.Config) *oauth.Server {
 		}
 	})
 
-	up := google.NewUpstream(google.UpstreamConfig{ClientID: "client-id", ClientSecret: "secret"}, st, nil)
+	up := trakt.NewUpstream(trakt.UpstreamConfig{ClientID: "client-id", ClientSecret: "secret", RedirectURL: testBaseURL + oauth.CallbackPath}, st)
 
 	srv, err := oauth.New(cfg, oauth.Deps{
 		Store:    st,
@@ -269,17 +275,10 @@ func TestRoutes_MCPAndOAuthMounted(t *testing.T) {
 	}
 }
 
-func TestHome_RedirectsToSite(t *testing.T) {
+func TestRootRedirectsToSiteURL(t *testing.T) {
 	t.Parallel()
 
-	h := newHandler(t, func(c *config.Config) {
-		u, err := url.Parse(testSiteURL)
-		if err != nil {
-			t.Fatalf("parse site: %v", err)
-		}
-
-		c.SiteURL = u
-	})
+	h := newHandler(t, nil)
 
 	res := do(t, h, http.MethodGet, "/", nil)
 	if res.status != http.StatusFound {
@@ -296,25 +295,10 @@ func TestHome_RedirectsToSite(t *testing.T) {
 	}
 }
 
-func TestHome_NoSiteIs404(t *testing.T) {
-	t.Parallel()
-
-	h := newHandler(t, nil)
-	unknown := do(t, h, http.MethodGet, "/no-such-page", nil)
-	assertSame404(t, do(t, h, http.MethodGet, "/", nil), unknown)
-}
-
 func TestPrivacy_RouteRemoved(t *testing.T) {
 	t.Parallel()
 
-	h := newHandler(t, func(c *config.Config) {
-		u, err := url.Parse(testSiteURL)
-		if err != nil {
-			t.Fatalf("parse site: %v", err)
-		}
-
-		c.SiteURL = u
-	})
+	h := newHandler(t, nil)
 
 	if res := do(t, h, http.MethodGet, "/privacy", nil); res.status != http.StatusNotFound {
 		t.Errorf("GET /privacy: status %d, want 404", res.status)

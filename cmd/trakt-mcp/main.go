@@ -15,8 +15,8 @@ import (
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 // version is set at build time with -ldflags "-X main.version=<tag>".
@@ -151,8 +151,8 @@ func runRekey(ctx context.Context, cfg config.Config, stdout io.Writer) (err err
 	return err
 }
 
-// runDisconnect revokes a user's Google grant and deletes the user, found by
-// e-mail or Google sub, with every token stored for them.
+// runDisconnect revokes a user's Trakt grant and deletes the user, found by
+// Trakt slug or numeric Trakt id, with every token stored for them.
 func runDisconnect(ctx context.Context, cfg config.Config, stdout io.Writer) (err error) {
 	st, err := openStore(ctx, cfg)
 	if err != nil {
@@ -160,37 +160,41 @@ func runDisconnect(ctx context.Context, cfg config.Config, stdout io.Writer) (er
 	}
 	defer func() { err = errors.Join(err, st.Close()) }()
 
-	up := google.NewUpstream(google.UpstreamConfig{
+	up := trakt.NewUpstream(trakt.UpstreamConfig{
 		ClientID:     cfg.TraktClientID,
 		ClientSecret: cfg.TraktClientSecret,
-	}, st, nil)
+		UserAgent:    userAgent(),
+	}, st)
 
 	return disconnectUser(ctx, st, up, cfg.Args[0], stdout)
 }
 
-// revoker revokes a Google token.
+// revoker revokes a Trakt token.
 type revoker interface {
 	Revoke(ctx context.Context, token string) error
 }
 
-// disconnectUser revokes the user's refresh token at Google, then deletes the
+// disconnectUser revokes the user's refresh token at Trakt, then deletes the
 // user. A failed revoke only warns: the local data must go regardless, and
-// the user can still revoke from their Google account page.
+// the user can still revoke from their Trakt connected-apps page. who is a
+// Trakt slug or numeric id; a renamed account can leave a stale slug that
+// resolves to someone else, so the output names every id matched and an
+// operator should prefer the numeric Trakt id.
 func disconnectUser(ctx context.Context, st *store.Store, rv revoker, who string, stdout io.Writer) error {
-	u, err := st.UserBySubOrEmail(ctx, who)
+	u, err := st.UserBySlugOrTraktID(ctx, who)
 	if err != nil {
 		return fmt.Errorf("disconnect %q: %w", who, err)
 	}
 
-	tok, err := st.GoogleToken(ctx, u.ID)
+	tok, err := st.TraktToken(ctx, u.ID)
 	switch {
 	case errors.Is(err, store.ErrNotFound):
-		slog.InfoContext(ctx, "no google token to revoke", "user_id", u.ID)
+		slog.InfoContext(ctx, "no trakt token to revoke", "user_id", u.ID)
 	case err != nil:
 		return fmt.Errorf("disconnect %q: %w", who, err)
 	default:
 		if err := rv.Revoke(ctx, tok.RefreshToken); err != nil {
-			slog.WarnContext(ctx, "google revoke failed, deleting user anyway", "user_id", u.ID, "error", err)
+			slog.WarnContext(ctx, "trakt revoke failed, deleting user anyway", "user_id", u.ID, "error", err)
 		}
 	}
 
@@ -199,7 +203,12 @@ func disconnectUser(ctx context.Context, st *store.Store, rv revoker, who string
 	}
 
 	slog.InfoContext(ctx, "user disconnected", slog.String("user_id", u.ID), slog.String("reason", reasonCLI))
-	_, err = fmt.Fprintf(stdout, "disconnected %s\n", u.ID)
+	_, err = fmt.Fprintf(stdout, "disconnected trakt id %s (slug %s, user %s)\n", u.TraktID, u.TraktSlug, u.ID)
 
 	return err
+}
+
+// userAgent identifies this project and build to Trakt, never a user.
+func userAgent() string {
+	return "trakt-mcp/" + version
 }

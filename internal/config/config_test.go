@@ -11,7 +11,8 @@ import (
 
 // requiredArgs holds the minimum flags Load accepts; tests append to it.
 var requiredArgs = []string{
-	"--base-url=https://contacts.example.com",
+	"--base-url=https://trakt-mcp.example.com",
+	"--site-url=https://site.example.com",
 	"--trakt-client-id=client-id",
 }
 
@@ -104,7 +105,7 @@ func TestLoad_ProvidedValues(t *testing.T) {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.BaseURL == nil || cfg.BaseURL.String() != "https://contacts.example.com" {
+	if cfg.BaseURL == nil || cfg.BaseURL.String() != "https://trakt-mcp.example.com" {
 		t.Errorf("BaseURL = %v", cfg.BaseURL)
 	}
 
@@ -112,8 +113,8 @@ func TestLoad_ProvidedValues(t *testing.T) {
 		t.Errorf("secrets not read from env: %q %q", cfg.TraktClientSecret, cfg.EncryptionKeys)
 	}
 
-	if cfg.SiteURL != nil {
-		t.Errorf("SiteURL = %v, want nil when unset", cfg.SiteURL)
+	if cfg.SiteURL == nil || cfg.SiteURL.String() != "https://site.example.com" {
+		t.Errorf("SiteURL = %v, want the required --site-url", cfg.SiteURL)
 	}
 }
 
@@ -136,7 +137,7 @@ func TestLoad_SiteURL(t *testing.T) {
 		t.Run(raw, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := Load(CmdServe, withArgs("--site-url="+raw), envFunc(nil))
+			cfg, err := Load(CmdServe, argsWithout("--site-url", "--site-url="+raw), envFunc(nil))
 			if !ok {
 				if err == nil || !strings.Contains(err.Error(), "site-url") {
 					t.Errorf("err = %v, want error naming site-url", err)
@@ -159,12 +160,12 @@ func TestLoad_SiteURL(t *testing.T) {
 func TestLoad_SiteURLFromEnv(t *testing.T) {
 	t.Parallel()
 
-	cfg, err := Load(CmdServe, withArgs(), envFunc(map[string]string{"SITE_URL": "https://site.example.com"}))
+	cfg, err := Load(CmdServe, argsWithout("--site-url"), envFunc(map[string]string{"SITE_URL": "https://env-site.example.com"}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 
-	if cfg.SiteURL == nil || cfg.SiteURL.String() != "https://site.example.com" {
+	if cfg.SiteURL == nil || cfg.SiteURL.String() != "https://env-site.example.com" {
 		t.Errorf("SiteURL = %v", cfg.SiteURL)
 	}
 }
@@ -310,7 +311,7 @@ func TestLoad_InvalidEnv(t *testing.T) {
 func TestLoad_SecretsEnvOnly(t *testing.T) {
 	t.Parallel()
 
-	for _, flag := range []string{"--google-client-secret=x", "--encryption-keys=x"} {
+	for _, flag := range []string{"--trakt-client-secret=x", "--encryption-keys=x"} {
 		if _, err := Load(CmdServe, withArgs(flag), envFunc(nil)); err == nil {
 			t.Errorf("%s: err = nil, want unknown-flag error", flag)
 		}
@@ -322,6 +323,7 @@ func TestLoad_Required(t *testing.T) {
 
 	flagCases := map[string]string{
 		"base-url":        "--base-url",
+		"site-url":        "--site-url",
 		"trakt-client-id": "--trakt-client-id",
 	}
 	for name, prefix := range flagCases {
@@ -378,6 +380,7 @@ func TestLoad_BaseURLMustBeHTTPS(t *testing.T) {
 
 			args := []string{
 				"--base-url=" + raw,
+				"--site-url=https://site.example.com",
 				"--trakt-client-id=client-id",
 			}
 
@@ -612,7 +615,7 @@ func TestFlagBeatsEnv(t *testing.T) {
 		t.Errorf("TraktClientID = %q, want from-flag", cfg.TraktClientID)
 	}
 
-	cfg, err = Load(CmdServe, []string{"--base-url=https://trakt.example.com"}, envFunc(map[string]string{"TRAKT_CLIENT_ID": testFromEnv}))
+	cfg, err = Load(CmdServe, []string{"--base-url=https://trakt.example.com", "--site-url=https://site.example.com"}, envFunc(map[string]string{"TRAKT_CLIENT_ID": testFromEnv}))
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
@@ -666,4 +669,18 @@ func TestLoad_RateLimitGlobal(t *testing.T) {
 	if cfg.RateLimitGlobal != 7 {
 		t.Errorf("RateLimitGlobal = %d, want 7", cfg.RateLimitGlobal)
 	}
+}
+
+// argsWithout returns requiredArgs minus the flag named drop (for example
+// "--site-url"), plus extra.
+func argsWithout(drop string, extra ...string) []string {
+	var args []string
+
+	for _, a := range requiredArgs {
+		if !strings.HasPrefix(a, drop+"=") {
+			args = append(args, a)
+		}
+	}
+
+	return append(args, extra...)
 }

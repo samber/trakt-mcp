@@ -103,7 +103,7 @@ type Config struct {
 	RateLimitWrites int
 	// RateLimitGlobal caps requests per minute across all users.
 	RateLimitGlobal int
-	// SiteURL is where GET / redirects; nil (nullable) when no website is configured.
+	// SiteURL is where GET / redirects; required by serve, nil for the offline commands.
 	SiteURL *url.URL
 	// OpenAIAppsChallenge is the domain-verification token served at
 	// /.well-known/openai-apps-challenge; empty (nullable) serves nothing.
@@ -188,7 +188,7 @@ func newFlagSet(getenv func(string) string, r *raw) (*flag.FlagSet, error) {
 	integer(&r.rateLimitReads, flagRateLimitReads, defaultRateLimitReads, "per-user reads per minute")
 	integer(&r.rateLimitWrites, flagRateLimitWrites, defaultRateLimitWrites, "per-user writes per minute")
 	integer(&r.rateLimitGlobal, flagRateLimitGlobal, defaultRateLimitGlobal, "requests per minute across all users")
-	str(&r.siteURL, flagSiteURL, "", "website URL that GET / redirects to (empty: / answers 404)")
+	str(&r.siteURL, flagSiteURL, "", "website URL that GET / redirects to")
 	str(&r.openAIAppsChallenge, flagOpenAIAppsChallenge, "", "OpenAI domain-verification token served at /.well-known/openai-apps-challenge (empty: 404)")
 
 	return fs, errors.Join(errs...)
@@ -219,6 +219,7 @@ const (
 // Keys of the values a command may require; flags carry a "--" prefix in errors.
 const (
 	reqBaseURL           = "--" + flagBaseURL
+	reqSiteURL           = "--" + flagSiteURL
 	reqDBPath            = "--" + flagDBPath
 	reqTraktClientID     = "--" + flagTraktClientID
 	reqTraktClientSecret = envTraktClientSecret
@@ -237,7 +238,7 @@ type commandSpec struct {
 
 var commandSpecs = map[string]commandSpec{
 	CmdServe: {required: []string{
-		reqBaseURL, reqDBPath, reqTraktClientID, reqTraktClientSecret,
+		reqBaseURL, reqSiteURL, reqDBPath, reqTraktClientID, reqTraktClientSecret,
 		reqEncryptionKeys,
 	}},
 	CmdRekey: {required: []string{reqDBPath, reqEncryptionKeys}},
@@ -367,6 +368,7 @@ func validateArgs(cmd string, spec commandSpec, args []string) []error {
 func validateRequired(spec commandSpec, r *raw, cfg Config) []error {
 	values := map[string]string{
 		reqBaseURL:           r.baseURL,
+		reqSiteURL:           strings.TrimSpace(r.siteURL),
 		reqDBPath:            cfg.DBPath,
 		reqTraktClientID:     cfg.TraktClientID,
 		reqTraktClientSecret: cfg.TraktClientSecret,

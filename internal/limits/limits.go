@@ -51,7 +51,7 @@ type entry struct {
 	reads    *rate.Limiter
 	writes   *rate.Limiter
 	// writeMu serializes the user's writes so concurrent edits of the same
-	// contact do not race on etags.
+	// resource do not race.
 	writeMu sync.Mutex
 	// lockRefs counts WriteLock holders plus waiters; guarded by Limiter.mu.
 	// Eviction skips entries with lockRefs > 0 so a waiter and a later caller

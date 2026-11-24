@@ -16,6 +16,15 @@ import (
 	"github.com/samber/trakt-mcp/internal/store"
 )
 
+const (
+	// testTraktID is a numeric Trakt account id, as `disconnect` accepts.
+	testTraktID = "1001"
+	// testSlug is the Trakt slug of the same account.
+	testSlug = "alice"
+	// testRefreshToken is the stored Trakt refresh token the disconnect tests expect to be revoked.
+	testRefreshToken = "refresh-1"
+)
+
 func noEnv(string) string { return "" }
 
 // slogDefaultMu serializes tests that replace or write through the process-wide
@@ -52,7 +61,7 @@ func TestRun_StubsAndUnknown(t *testing.T) {
 		"flags only":         {"--listen=:1"},
 		config.CmdServe:      {config.CmdServe},
 		config.CmdRekey:      {config.CmdRekey},
-		config.CmdDisconnect: {config.CmdDisconnect, "a@b.c"},
+		config.CmdDisconnect: {config.CmdDisconnect, "alice"},
 		"unknown":            {"bogus"},
 	}
 	for name, args := range cases {
@@ -151,7 +160,7 @@ func TestRun_Disconnect(t *testing.T) {
 		t.Fatalf("store.Open: %v", err)
 	}
 
-	u, err := st.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := st.UpsertUser(ctx, testTraktID, testSlug)
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -161,17 +170,17 @@ func TestRun_Disconnect(t *testing.T) {
 	}
 
 	var out, errOut bytes.Buffer
-	if code := run([]string{"disconnect", "A@example.com"}, env, &out, &errOut); code != 0 {
+	if code := run([]string{"disconnect", "Alice"}, env, &out, &errOut); code != 0 {
 		t.Fatalf("exit = %d, stderr = %q", code, errOut.String())
 	}
 
-	if got, want := out.String(), "disconnected "+u.ID+"\n"; got != want {
+	if got, want := out.String(), disconnectedLine(u); got != want {
 		t.Errorf("stdout = %q, want %q", got, want)
 	}
 
 	out.Reset()
 
-	if code := run([]string{"disconnect", "sub-1"}, env, &out, &errOut); code != exitFailure {
+	if code := run([]string{"disconnect", testTraktID}, env, &out, &errOut); code != exitFailure {
 		t.Errorf("second disconnect exit = %d, want %d", code, exitFailure)
 	}
 
@@ -232,18 +241,20 @@ func (f *fakeRevoker) Revoke(_ context.Context, token string) error {
 	return f.err
 }
 
-func TestDisconnectUser(t *testing.T) {
+func TestDisconnectBySlug(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
 		name        string
+		who         string
 		token       bool
 		revokeErr   error
 		wantRevoked []string
 	}{
-		{name: "revokes then deletes", token: true, wantRevoked: []string{"refresh-1"}},
-		{name: "revoke failure still deletes", token: true, revokeErr: errors.New("HTTP 503"), wantRevoked: []string{"refresh-1"}},
-		{name: "no token deletes only", token: false},
+		{name: "slug revokes then deletes", who: testSlug, token: true, wantRevoked: []string{testRefreshToken}},
+		{name: "trakt id revokes then deletes", who: testTraktID, token: true, wantRevoked: []string{testRefreshToken}},
+		{name: "revoke failure still deletes", who: testSlug, token: true, revokeErr: errors.New("HTTP 503"), wantRevoked: []string{testRefreshToken}},
+		{name: "no token deletes only", who: testSlug, token: false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -261,7 +272,7 @@ func TestDisconnectUser(t *testing.T) {
 			slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
 			t.Cleanup(func() { slog.SetDefault(prev) })
 
-			if err := disconnectUser(ctx, st, rv, "sub-1", &out); err != nil {
+			if err := disconnectUser(ctx, st, rv, tc.who, &out); err != nil {
 				t.Fatalf("disconnectUser: %v", err)
 			}
 
@@ -270,26 +281,53 @@ func TestDisconnectUser(t *testing.T) {
 				t.Errorf("logs = %s, want %s", logs.String(), wantLog)
 			}
 
-			if strings.Contains(logs.String(), "a@example.com") {
-				t.Errorf("logs name the e-mail: %s", logs.String())
+			if strings.Contains(logs.String(), testSlug) {
+				t.Errorf("logs name the Trakt slug: %s", logs.String())
 			}
 
 			if !reflect.DeepEqual(rv.revoked, tc.wantRevoked) {
 				t.Errorf("revoked = %q, want %q", rv.revoked, tc.wantRevoked)
 			}
 
-			if _, err := st.UserBySubOrEmail(ctx, "sub-1"); !errors.Is(err, store.ErrNotFound) {
+			if _, err := st.UserBySlugOrTraktID(ctx, testTraktID); !errors.Is(err, store.ErrNotFound) {
 				t.Errorf("user still present: %v", err)
 			}
 
-			if got, want := out.String(), "disconnected "+u.ID+"\n"; got != want {
+			if got, want := out.String(), disconnectedLine(u); got != want {
 				t.Errorf("stdout = %q, want %q", got, want)
 			}
 		})
 	}
 }
 
-// newDisconnectFixture opens a temp store holding user "sub-1", with a Google
+// TestDisconnectUnknownUser pins the not-found error and that nothing is revoked.
+func TestDisconnectUnknownUser(t *testing.T) {
+	t.Parallel()
+	lockSlogDefault(t)
+
+	ctx := context.Background()
+	st, _ := newDisconnectFixture(ctx, t, true)
+	rv := &fakeRevoker{}
+
+	var out bytes.Buffer
+
+	err := disconnectUser(ctx, st, rv, "nobody", &out)
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+
+	if len(rv.revoked) != 0 || out.Len() != 0 {
+		t.Errorf("revoked = %q, stdout = %q; want neither", rv.revoked, out.String())
+	}
+}
+
+// disconnectedLine is the success line: it names the Trakt id and the
+// internal id so the operator can confirm which person a stale slug matched.
+func disconnectedLine(u store.User) string {
+	return "disconnected trakt id " + u.TraktID + " (slug " + u.TraktSlug + ", user " + u.ID + ")\n"
+}
+
+// newDisconnectFixture opens a temp store holding user "alice", with a Trakt
 // refresh token when withToken is set.
 func newDisconnectFixture(ctx context.Context, t *testing.T, withToken bool) (*store.Store, store.User) {
 	t.Helper()
@@ -315,14 +353,14 @@ func newDisconnectFixture(ctx context.Context, t *testing.T, withToken bool) (*s
 		}
 	})
 
-	u, err := st.UpsertUser(ctx, "sub-1", "a@example.com")
+	u, err := st.UpsertUser(ctx, testTraktID, testSlug)
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
 	if withToken {
-		if err := st.SaveGoogleToken(ctx, u.ID, store.GoogleToken{RefreshToken: "refresh-1", AccessToken: "access-1"}); err != nil {
-			t.Fatalf("SaveGoogleToken: %v", err)
+		if err := st.SaveTraktToken(ctx, u.ID, store.TraktToken{RefreshToken: testRefreshToken, AccessToken: "access-1"}); err != nil {
+			t.Fatalf("SaveTraktToken: %v", err)
 		}
 	}
 

@@ -30,7 +30,7 @@ const (
 	ClientKindDCR = "dcr"
 
 	// mcpScope is the only scope this server grants.
-	mcpScope = "contacts"
+	mcpScope = "trakt"
 	// grantAuthorizationCode and grantRefreshToken are the only grants a public MCP client needs.
 	grantAuthorizationCode = "authorization_code"
 	grantRefreshToken      = "refresh_token"

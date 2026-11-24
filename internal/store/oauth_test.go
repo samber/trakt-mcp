@@ -55,8 +55,8 @@ func newRequest(reqID, subject string) *fosite.Request {
 	r.RequestedAt = testNow
 	r.Client = &OAuthClient{ID: testClientID}
 	r.Session = sess
-	r.RequestedScope = fosite.Arguments{"contacts"}
-	r.GrantedScope = fosite.Arguments{"contacts"}
+	r.RequestedScope = fosite.Arguments{"trakt"}
+	r.GrantedScope = fosite.Arguments{"trakt"}
 	r.RequestedAudience = fosite.Arguments{"https://mcp.example.com/mcp"}
 	r.GrantedAudience = fosite.Arguments{"https://mcp.example.com/mcp"}
 	r.Form = url.Values{
@@ -105,7 +105,7 @@ func TestOAuthClient_FositeProperties(t *testing.T) {
 		t.Errorf("response types = %v", c.GetResponseTypes())
 	}
 
-	if !c.GetScopes().ExactOne("contacts") {
+	if !c.GetScopes().ExactOne("trakt") {
 		t.Errorf("scopes = %v", c.GetScopes())
 	}
 
@@ -222,7 +222,7 @@ func TestAuthorizeCode_RoundTrip(t *testing.T) {
 
 	assertCodeSession(t, got.GetSession(), u.ID)
 
-	if !got.GetGrantedScopes().ExactOne("contacts") || !got.GetRequestedScopes().ExactOne("contacts") {
+	if !got.GetGrantedScopes().ExactOne("trakt") || !got.GetRequestedScopes().ExactOne("trakt") {
 		t.Errorf("scopes = %v / %v", got.GetRequestedScopes(), got.GetGrantedScopes())
 	}
 

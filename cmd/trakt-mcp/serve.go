@@ -18,20 +18,17 @@ import (
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/jobs"
 	"github.com/samber/trakt-mcp/internal/limits"
 	"github.com/samber/trakt-mcp/internal/oauth"
 	"github.com/samber/trakt-mcp/internal/obs"
 	"github.com/samber/trakt-mcp/internal/store"
 	"github.com/samber/trakt-mcp/internal/tools"
+	"github.com/samber/trakt-mcp/internal/trakt"
 	"github.com/samber/trakt-mcp/internal/web"
 )
 
 const (
-	// googleCallbackPath is the Google redirect URI path registered in Cloud
-	// Console; oauth.Server serves it.
-	googleCallbackPath = "/oauth/google/callback"
 	// readHeaderTimeout bounds slow-header (Slowloris) clients.
 	readHeaderTimeout = 10 * time.Second
 	// readTimeout bounds reading a whole request, body included, so a client
@@ -41,7 +38,7 @@ const (
 	// idleTimeout closes idle keep-alive connections that PaaS routers leave open.
 	idleTimeout = 120 * time.Second
 	// shutdownTimeout drains in-flight requests on SIGINT/SIGTERM; a tool call
-	// rarely exceeds a few seconds of Google latency.
+	// rarely exceeds a few seconds of Trakt latency.
 	shutdownTimeout = 15 * time.Second
 )
 
@@ -72,15 +69,16 @@ func runServe(ctx context.Context, cfg config.Config, stdout io.Writer) (err err
 	metrics := obs.NewMetrics(reg)
 
 	base := strings.TrimSuffix(cfg.BaseURL.String(), "/")
-	up := google.NewUpstream(google.UpstreamConfig{
+	up := trakt.NewUpstream(trakt.UpstreamConfig{
 		ClientID:     cfg.TraktClientID,
 		ClientSecret: cfg.TraktClientSecret,
-		RedirectURL:  base + googleCallbackPath,
-		// Always wired, metrics or not: the hook also records the Google
+		RedirectURL:  base + oauth.CallbackPath,
+		UserAgent:    userAgent(),
+		// Always wired, metrics or not: the transport also records the Trakt
 		// status that tool-call log lines report.
-		OnPeopleCall: metrics.GoogleHook(),
-		Logger:       log,
-	}, st, nil)
+		HTTP:   &http.Client{Transport: metrics.Transport(nil)},
+		Logger: log,
+	}, st)
 
 	osrv, err := oauth.New(cfg, oauth.Deps{
 		Store:    st,
@@ -94,9 +92,9 @@ func runServe(ctx context.Context, cfg config.Config, stdout io.Writer) (err err
 		return err
 	}
 
-	lim := limits.New(cfg.RateLimitReads, cfg.RateLimitWrites)
+	lim := limits.New(cfg.RateLimitReads, cfg.RateLimitWrites, limits.WithGlobal(cfg.RateLimitGlobal))
 	mcpHandler := tools.NewHandler(tools.Deps{
-		People:              up,
+		Trakt:               up,
 		Store:               st,
 		Limiter:             lim,
 		Verifier:            osrv.Verifier(),

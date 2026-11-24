@@ -14,10 +14,14 @@ import (
 
 	"github.com/samber/trakt-mcp/internal/config"
 	"github.com/samber/trakt-mcp/internal/crypto"
+	"github.com/samber/trakt-mcp/internal/oauth"
 )
 
 // serveWait bounds startup and shutdown in the serve test.
 const serveWait = 10 * time.Second
+
+// testSiteURL is the website GET / redirects to.
+const testSiteURL = "https://site.example.com"
 
 // serveConfig loads a serve config on a random loopback port.
 func serveConfig(t *testing.T, extra ...string) config.Config {
@@ -35,6 +39,7 @@ func serveConfig(t *testing.T, extra ...string) config.Config {
 
 	args := append([]string{
 		"--base-url=http://localhost:8080",
+		"--site-url=" + testSiteURL,
 		"--listen=127.0.0.1:0",
 		"--db-path=" + filepath.Join(t.TempDir(), "db.sqlite"),
 		"--trakt-client-id=client-id",
@@ -230,5 +235,74 @@ func TestNewHTTPServer_Timeouts(t *testing.T) {
 
 	if readTimeout <= 0 {
 		t.Error("readTimeout must bound slow request bodies")
+	}
+}
+
+// TestServeWiresTraktUpstream boots the whole server and checks the pieces
+// serve.go assembles: the Trakt callback route, the site redirect, and the
+// bearer-protected MCP endpoint.
+func TestServeWiresTraktUpstream(t *testing.T) {
+	t.Parallel()
+
+	lines, stop := startServe(t, serveConfig(t))
+	base := "http://" + waitFor(t, lines, "listening").Addr
+
+	// The Trakt callback is mounted: without a pending flow it answers an
+	// error page, never the mux's 404.
+	resp := httpGet(t, base+oauth.CallbackPath)
+	closeBody(t, resp)
+
+	if resp.StatusCode == http.StatusNotFound {
+		t.Errorf("GET %s: status 404, want the OAuth callback handler", oauth.CallbackPath)
+	}
+
+	// Only the Trakt callback exists.
+	old := httpGet(t, base+"/oauth/google/callback")
+	closeBody(t, old)
+
+	if old.StatusCode != http.StatusNotFound {
+		t.Errorf("GET /oauth/google/callback: status %d, want 404", old.StatusCode)
+	}
+
+	if err := stop(); err != nil {
+		t.Errorf("runServe: %v", err)
+	}
+}
+
+// TestRootRedirectsToSiteURL pins the root redirect through the real wiring.
+func TestRootRedirectsToSiteURL(t *testing.T) {
+	t.Parallel()
+
+	lines, stop := startServe(t, serveConfig(t))
+	base := "http://" + waitFor(t, lines, "listening").Addr
+
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, base+"/", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("GET /: %v", err)
+	}
+
+	closeBody(t, resp)
+
+	if resp.StatusCode != http.StatusFound || resp.Header.Get("Location") != testSiteURL {
+		t.Errorf("GET /: status %d, Location %q; want 302 to %s", resp.StatusCode, resp.Header.Get("Location"), testSiteURL)
+	}
+
+	if err := stop(); err != nil {
+		t.Errorf("runServe: %v", err)
+	}
+}
+
+func closeBody(t *testing.T, resp *http.Response) {
+	t.Helper()
+
+	if err := resp.Body.Close(); err != nil {
+		t.Fatalf("close body: %v", err)
 	}
 }

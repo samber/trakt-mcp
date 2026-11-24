@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,8 +13,8 @@ import (
 	"time"
 
 	"github.com/samber/trakt-mcp/internal/crypto"
-	"github.com/samber/trakt-mcp/internal/google"
 	"github.com/samber/trakt-mcp/internal/store"
+	"github.com/samber/trakt-mcp/internal/trakt"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 	pollEvery   = 10 * time.Millisecond
 )
 
-// fakeRevoke is Google's revoke endpoint; it records every revoked token.
+// fakeRevoke is Trakt's revoke endpoint; it records every revoked token.
 type fakeRevoke struct {
 	mu     sync.Mutex
 	tokens []string
@@ -36,13 +37,17 @@ func newFakeRevoke(t *testing.T, status int) *fakeRevoke {
 
 	f := &fakeRevoke{status: status}
 	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
+		var body struct {
+			Token string `json:"token"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		f.mu.Lock()
-		f.tokens = append(f.tokens, r.PostForm.Get("token"))
+		f.tokens = append(f.tokens, body.Token)
 		f.mu.Unlock()
 		w.WriteHeader(f.status)
 	}))
@@ -60,8 +65,8 @@ func (f *fakeRevoke) revoked() []string {
 
 type fixture struct {
 	st *store.Store
-	up *google.Upstream
-	// withToken has a stored Google grant, withoutToken has none.
+	up *trakt.Upstream
+	// withToken has a stored Trakt grant, withoutToken has none.
 	withToken, withoutToken store.User
 }
 
@@ -86,16 +91,16 @@ func newFixture(t *testing.T, rv *fakeRevoke) *fixture {
 		}
 	})
 
-	a, err := st.UpsertUser(ctx, "sub-a", "a@example.com")
+	a, err := st.UpsertUser(ctx, "1001", "user-a")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
 
-	if err := st.SaveGoogleToken(ctx, a.ID, store.GoogleToken{RefreshToken: "refresh-a", AccessToken: "access-a"}); err != nil {
-		t.Fatalf("SaveGoogleToken: %v", err)
+	if err := st.SaveTraktToken(ctx, a.ID, store.TraktToken{RefreshToken: "refresh-a", AccessToken: "access-a"}); err != nil {
+		t.Fatalf("SaveTraktToken: %v", err)
 	}
 
-	b, err := st.UpsertUser(ctx, "sub-b", "b@example.com")
+	b, err := st.UpsertUser(ctx, "1002", "user-b")
 	if err != nil {
 		t.Fatalf("UpsertUser: %v", err)
 	}
@@ -106,7 +111,7 @@ func newFixture(t *testing.T, rv *fakeRevoke) *fixture {
 		t.Fatalf("SaveClient: %v", err)
 	}
 
-	up := google.NewUpstream(google.UpstreamConfig{RevokeURL: rv.srv.URL}, st, rv.srv.Client())
+	up := trakt.NewUpstream(trakt.UpstreamConfig{RevokeURL: rv.srv.URL, HTTP: rv.srv.Client()}, st)
 
 	return &fixture{st: st, up: up, withToken: a, withoutToken: b}
 }
@@ -152,11 +157,11 @@ func waitDeleted(t *testing.T, st *store.Store, users ...store.User) {
 		remaining := 0
 
 		for _, u := range users {
-			_, err := st.UserBySubOrEmail(context.Background(), u.GoogleSub)
+			_, err := st.UserBySlugOrTraktID(context.Background(), u.TraktID)
 			switch {
 			case errors.Is(err, store.ErrNotFound):
 			case err != nil:
-				t.Fatalf("UserBySubOrEmail: %v", err)
+				t.Fatalf("UserBySlugOrTraktID: %v", err)
 			default:
 				remaining++
 			}
@@ -187,8 +192,8 @@ func TestJobs_PurgesInactiveAndRevokes(t *testing.T) {
 		t.Errorf("revoked = %q, want exactly [refresh-a]", got)
 	}
 
-	if _, err := f.st.GoogleToken(context.Background(), f.withToken.ID); !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("GoogleToken after purge: err = %v, want ErrNotFound", err)
+	if _, err := f.st.TraktToken(context.Background(), f.withToken.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("TraktToken after purge: err = %v, want ErrNotFound", err)
 	}
 
 	if _, err := f.st.ClientByID(context.Background(), "client-1"); !errors.Is(err, store.ErrNotFound) {
@@ -222,7 +227,7 @@ func TestJobs_ActiveUsersKept(t *testing.T) {
 	stop()
 
 	for _, u := range []store.User{f.withToken, f.withoutToken} {
-		if _, err := f.st.UserBySubOrEmail(context.Background(), u.GoogleSub); err != nil {
+		if _, err := f.st.UserBySlugOrTraktID(context.Background(), u.TraktID); err != nil {
 			t.Errorf("active user %s: %v", u.ID, err)
 		}
 	}
@@ -257,7 +262,7 @@ func TestPurgeUser_ReconnectedMeanwhileKept(t *testing.T) {
 	for _, u := range []store.User{f.withToken, f.withoutToken} {
 		purgeUser(context.Background(), f.st, f.up, u.ID, cutoff)
 
-		if _, err := f.st.UserBySubOrEmail(context.Background(), u.GoogleSub); err != nil {
+		if _, err := f.st.UserBySlugOrTraktID(context.Background(), u.TraktID); err != nil {
 			t.Errorf("reconnected user %s deleted: %v", u.ID, err)
 		}
 	}
@@ -266,8 +271,8 @@ func TestPurgeUser_ReconnectedMeanwhileKept(t *testing.T) {
 		t.Errorf("revoked = %q, want none for a reconnected user", got)
 	}
 
-	tok, err := f.st.GoogleToken(context.Background(), f.withToken.ID)
+	tok, err := f.st.TraktToken(context.Background(), f.withToken.ID)
 	if err != nil || tok.RefreshToken != "refresh-a" {
-		t.Errorf("GoogleToken = %+v, %v; want the grant kept", tok, err)
+		t.Errorf("TraktToken = %+v, %v; want the grant kept", tok, err)
 	}
 }

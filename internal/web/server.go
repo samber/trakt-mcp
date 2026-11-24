@@ -31,8 +31,8 @@ const (
 	authHeaderChallenge = `Basic realm="metrics"`
 )
 
-// New returns the main listener's handler. GET / redirects to cfg.SiteURL when
-// set; otherwise it is an ordinary 404. metricsHandler is served on
+// New returns the main listener's handler. GET / redirects to cfg.SiteURL, which
+// config requires. metricsHandler is served on
 // cfg.MetricsPath behind Basic auth only when metrics are enabled without a
 // separate listener; otherwise that path is an ordinary 404.
 func New(cfg config.Config, oauthSrv *oauth.Server, mcpHandler, metricsHandler http.Handler) http.Handler {
@@ -44,11 +44,9 @@ func New(cfg config.Config, oauthSrv *oauth.Server, mcpHandler, metricsHandler h
 		mux.Handle(patternOpenAIChallenge, openAIChallengeHandler(cfg.OpenAIAppsChallenge))
 	}
 
-	if cfg.SiteURL != nil {
-		// 302, not 301: browsers cache a 301 forever, which would pin the
-		// redirect after the website moves.
-		mux.Handle(patternHome, http.RedirectHandler(cfg.SiteURL.String(), http.StatusFound))
-	}
+	// 302, not 301: browsers cache a 301 forever, which would pin the
+	// redirect after the website moves.
+	mux.Handle(patternHome, http.RedirectHandler(cfg.SiteURL.String(), http.StatusFound))
 
 	if !cfg.Metrics || cfg.MetricsListen != "" || metricsHandler == nil {
 		return mux

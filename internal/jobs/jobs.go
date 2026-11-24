@@ -1,6 +1,6 @@
 // Package jobs runs the background cleanup of spec §10: hourly removal of
 // expired OAuth rows and pending authorizations, and a daily purge of
-// inactive users (Google grant revoked first) and unused clients. It also
+// inactive users (Trakt grant revoked first) and unused clients. It also
 // flushes the batched last_seen_at updates every minute.
 package jobs
 
@@ -29,9 +29,12 @@ const (
 	// day: anyone can create them without authenticating (DCR, CIMD lookups),
 	// and a real client finishes its first sign-in within minutes.
 	neverUsedClientWindow = 24 * time.Hour
+	// reasonInactive is the "user disconnected" log reason of the inactivity
+	// purge; the Trakt-side revocation has its own reason in package trakt.
+	reasonInactive = "inactive"
 )
 
-// Revoker revokes a Google token; *google.Upstream implements it.
+// Revoker revokes a Trakt token; *trakt.Upstream implements it.
 type Revoker interface {
 	Revoke(ctx context.Context, token string) error
 }
@@ -116,24 +119,24 @@ func purge(ctx context.Context, st *store.Store, rv Revoker, now func() time.Tim
 	}
 }
 
-// purgeUser deletes an inactive user, then revokes the Google grant read
+// purgeUser deletes an inactive user, then revokes the Trakt grant read
 // just before. The delete is guarded: a user who reconnected since
 // InactiveUsers ran (newer last_seen_at, or a new refresh token) is kept, and
 // their grant is not revoked. Revoking after the delete means the token
 // revoked is exactly the one deleted. A token that cannot be read (sealed
 // under a retired key) is not revoked and does not block the purge: the local
 // data must go regardless. A failed revoke only warns, for the same reason;
-// the user can still revoke from their Google account page.
+// the user can still revoke from their Trakt connected-apps page.
 func purgeUser(ctx context.Context, st *store.Store, rv Revoker, userID string, cutoff time.Time) {
 	refresh := ""
 	// expected is nullable: nil deletes without comparing the stored token.
 	expected := &refresh
 
-	tok, err := st.GoogleToken(ctx, userID)
+	tok, err := st.TraktToken(ctx, userID)
 	switch {
 	case errors.Is(err, store.ErrNotFound):
 	case err != nil:
-		slog.WarnContext(ctx, "jobs: read google token, deleting user without revoking",
+		slog.WarnContext(ctx, "jobs: read trakt token, deleting user without revoking",
 			slog.String("user_id", userID), slog.Any("error", err))
 
 		expected = nil
@@ -152,14 +155,14 @@ func purgeUser(ctx context.Context, st *store.Store, rv Revoker, userID string, 
 		return
 	}
 
-	slog.InfoContext(ctx, "user disconnected", slog.String("user_id", userID), slog.String("reason", "inactive"))
+	slog.InfoContext(ctx, "user disconnected", slog.String("user_id", userID), slog.String("reason", reasonInactive))
 
 	if refresh == "" {
 		return
 	}
 
 	if err := rv.Revoke(ctx, refresh); err != nil {
-		slog.WarnContext(ctx, "jobs: google revoke failed after deleting the user",
+		slog.WarnContext(ctx, "jobs: trakt revoke failed after deleting the user",
 			slog.String("user_id", userID), slog.Any("error", err))
 	}
 }
