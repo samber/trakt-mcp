@@ -412,8 +412,10 @@ func (u *Upstream) Profile(ctx context.Context, accessToken string) (Profile, er
 	var settings struct {
 		User struct {
 			IDs struct {
+				// Trakt is nullable in Trakt's schema; UUID is always present.
 				Trakt *int64 `json:"trakt"`
 				Slug  string `json:"slug"`
+				UUID  string `json:"uuid"`
 			} `json:"ids"`
 			VIP bool `json:"vip"`
 		} `json:"user"`
@@ -432,11 +434,19 @@ func (u *Upstream) Profile(ctx context.Context, accessToken string) (Profile, er
 	}
 
 	ids := settings.User.IDs
-	if ids.Trakt == nil || ids.Slug == "" {
+
+	// The numeric id is null for some accounts. The uuid never changes either,
+	// so it identifies the user when the numeric id is absent.
+	id := ids.UUID
+	if ids.Trakt != nil {
+		id = strconv.FormatInt(*ids.Trakt, 10)
+	}
+
+	if id == "" || ids.Slug == "" {
 		return Profile{}, errors.New("trakt profile: response lacks the user id or slug")
 	}
 
-	return Profile{TraktID: strconv.FormatInt(*ids.Trakt, 10), Slug: ids.Slug, VIP: settings.User.VIP}, nil
+	return Profile{TraktID: id, Slug: ids.Slug, VIP: settings.User.VIP}, nil
 }
 
 // Client returns a client acting as userID. It fails with ErrUpstreamAuth when

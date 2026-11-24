@@ -795,13 +795,43 @@ func TestProfileReadsSettings(t *testing.T) {
 	}
 }
 
+// Trakt documents ids.trakt as nullable and returns it null for some accounts;
+// the stable uuid then identifies the user.
+func TestProfileFallsBackToUUIDWhenTraktIDIsNull(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"null":    `{"user":{"ids":{"slug":"alice","trakt":null,"uuid":"uuid-1"},"vip":false}}`,
+		"missing": `{"user":{"ids":{"slug":"alice","uuid":"uuid-1"},"vip":false}}`,
+	}
+
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			env := newUpEnv(t, false)
+			env.fake.setSettings(body)
+
+			p, err := env.up.Profile(context.Background(), "access-profile")
+			if err != nil {
+				t.Fatalf("Profile: %v", err)
+			}
+
+			if p != (Profile{TraktID: "uuid-1", Slug: "alice"}) {
+				t.Errorf("profile = %+v", p)
+			}
+		})
+	}
+}
+
 func TestProfileMissingSlugIsError(t *testing.T) {
 	t.Parallel()
 
 	cases := map[string]string{
-		"missing slug": `{"user":{"ids":{"trakt":1001}}}`,
-		"missing id":   `{"user":{"ids":{"slug":"alice"}}}`,
-		"empty object": `{}`,
+		"missing slug":        `{"user":{"ids":{"trakt":1001}}}`,
+		"missing id":          `{"user":{"ids":{"slug":"alice"}}}`,
+		"null id and no uuid": `{"user":{"ids":{"slug":"alice","trakt":null}}}`,
+		"empty object":        `{}`,
 	}
 
 	for name, body := range cases {
