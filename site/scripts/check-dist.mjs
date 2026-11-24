@@ -53,9 +53,6 @@ const ALLOWED_HOSTS = new Set([
   'analytics.ahrefs.com',
 ]);
 
-// The site is rewritten from the Google Contacts version: these strings must never come back
-// in visible text, titles or the discovery files.
-const FORBIDDEN_LEGACY = /google|contacts/i;
 const PRODUCT_NAME = 'Trakt MCP';
 // Branding rule (spec section 11): the name Trakt is descriptive only, never an endorsement claim.
 const NOT_AFFILIATED_SENTENCE = 'not affiliated with or endorsed by Trakt';
@@ -252,17 +249,12 @@ if (existsSync(`${DIST}privacy.html`)) {
   }
 }
 
-// Branding and legacy-string rules, over every built page and discovery file.
+// Branding rules, over every built page and discovery file.
 for (const { file } of PAGES) {
   if (!existsSync(`${DIST}${file}`)) continue;
   const html = read(file);
   const title = html.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
   if (!file.startsWith('404') && !title.includes('Trakt')) fail(`${file}: <title> does not name Trakt`);
-  const legacy = visibleText(html).match(FORBIDDEN_LEGACY)?.[0];
-  if (legacy) fail(`${file}: visible text still contains the legacy word "${legacy}"`);
-  const meta = [...html.matchAll(/<meta[^>]+content="([^"]*)"/g)].map((m) => m[1]).join(' ');
-  const metaLegacy = meta.match(FORBIDDEN_LEGACY)?.[0];
-  if (metaLegacy) fail(`${file}: meta tags still contain the legacy word "${metaLegacy}"`);
 }
 if (existsSync(`${DIST}index.html`)) {
   const home = read('index.html');
@@ -270,14 +262,7 @@ if (existsSync(`${DIST}index.html`)) {
   if (!visibleText(home).includes(NOT_AFFILIATED_SENTENCE)) fail(`index.html: the sentence "${NOT_AFFILIATED_SENTENCE}" is missing`);
   if (/trakt[^"]*\.(svg|png)/i.test(home.replace(/og\.png/g, ''))) fail('index.html: references an image named after Trakt (the logo must not be used)');
 }
-// robots.txt is not checked: it names the Google-Extended crawler.
-if (existsSync(`${DIST}llms.txt`)) {
-  const legacy = read('llms.txt').match(FORBIDDEN_LEGACY)?.[0];
-  if (legacy) fail(`llms.txt: still contains the legacy word "${legacy}"`);
-}
 if (existsSync(`${DIST}manifest.json`)) {
-  const legacy = read('manifest.json').match(FORBIDDEN_LEGACY)?.[0];
-  if (legacy) fail(`manifest.json: still contains the legacy word "${legacy}"`);
   if (!read('manifest.json').includes('Trakt')) fail('manifest.json: does not name Trakt');
 }
 

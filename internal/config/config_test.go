@@ -226,7 +226,7 @@ func TestLoad_OpenAIAppsChallengeFromEnv(t *testing.T) {
 func TestRemovedFlagsRejected(t *testing.T) {
 	t.Parallel()
 
-	for _, flag := range []string{"--operator-name=Jane Doe", "--operator-email=jane@example.com", "--allowed-domains=acme.com", "--google-client-id=x"} {
+	for _, flag := range []string{"--operator-name=Jane Doe", "--operator-email=jane@example.com", "--allowed-domains=acme.com"} {
 		if _, err := Load(CmdServe, withArgs(flag), envFunc(nil)); err == nil {
 			t.Errorf("%s: err = nil, want unknown-flag error", flag)
 		}

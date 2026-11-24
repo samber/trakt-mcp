@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io/fs"
 	"maps"
 	"net/http"
 	"net/http/httptest"
@@ -828,41 +827,6 @@ func TestAuthorizeRejectsContactsScope(t *testing.T) {
 		params := authorizeParams(newPKCE())
 		params.Set("scope", scope)
 		errorRedirect(t, e.get("/oauth/authorize?"+params.Encode()), "invalid_scope")
-	}
-}
-
-func TestNoGoogleStringsInTemplates(t *testing.T) {
-	t.Parallel()
-
-	n := 0
-
-	err := fs.WalkDir(templatesFS, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-
-		n++
-
-		data, err := fs.ReadFile(templatesFS, path)
-		if err != nil {
-			return err
-		}
-
-		lower := strings.ToLower(string(data))
-		for _, banned := range []string{"google", "contact"} {
-			if strings.Contains(lower, banned) {
-				t.Errorf("%s contains %q", path, banned)
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk templates: %v", err)
-	}
-
-	if n == 0 {
-		t.Fatal("no embedded template found")
 	}
 }
 

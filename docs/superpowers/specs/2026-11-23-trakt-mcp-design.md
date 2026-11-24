@@ -4,8 +4,6 @@ Date: 2026-11-23. Author: Samuel Berthe. Status: draft for review.
 
 Module: `github.com/samber/trakt-mcp`. License: MIT. Code and docs in English.
 
-This spec replaces `2026-11-19-google-contacts-mcp-design.md`. The repository started as `google-contacts-mcp`; the OAuth authorization server, storage, crypto, rate limiting and HTTP layers carry over, and the Google Contacts layer is replaced by Trakt.
-
 ## 1. Intent
 
 Let anyone with a Trakt account connect Claude or ChatGPT to it, with nothing to install. The assistant browses Trakt's catalog (trending, popular, search, details, people, comments) and manages the user's own data: watchlist, watch history, collection, ratings, check-ins, recommendations and smart lists.
@@ -48,7 +46,7 @@ Anti-goals (failure even if it works):
 
 ### 4.1 Authorization server toward MCP clients
 
-Unchanged from the Google version: **ory/fosite**, chosen by the user for security pedigree, with hand-written RFC 8414 metadata, CIMD, `iss` and `resource` binding. giantswarm/mcp-oauth stays a reference for the CIMD fetcher.
+**ory/fosite**, chosen by the user for security pedigree, with hand-written RFC 8414 metadata, CIMD, `iss` and `resource` binding. giantswarm/mcp-oauth stays a reference for the CIMD fetcher.
 
 ### 4.2 Trakt API client
 
@@ -104,7 +102,7 @@ Unknown paths, and the metrics path when disabled, return the same 404.
 
 ## 6. OAuth toward MCP clients
 
-Unchanged from the Google version except the scope name and the upstream step.
+The scope is `trakt`; the upstream step is the Trakt authorization-code exchange.
 
 ### 6.1 Metadata (RFC 8414)
 
@@ -141,8 +139,7 @@ Unchanged from the Google version except the scope name and the upstream step.
 - Confidential Web OAuth application. Redirect URI `<base-url>/oauth/trakt/callback`. Authorization endpoint `https://trakt.tv/oauth/authorize`; token and revoke endpoints on `https://api.trakt.tv/oauth/`.
 - Every API call sends `trakt-api-key: <client id>`, `trakt-api-version: 2`, `Content-Type: application/json`, `Authorization: Bearer <access token>` and a `User-Agent` naming the project and version (no personal data).
 - Trakt access and refresh tokens are encrypted with AES-256-GCM, additional data = our user id. `ENCRYPTION_KEYS` is a comma-separated `keyid:base64(32 bytes)` list; the first is active for new writes. `rekey` re-encrypts every row. Rotation: add the new key, restart, run `rekey`, remove the old key.
-- **Single-use refresh.** The per-user token source serializes refresh through a per-user lock held across read, call and write. The new token pair is written to SQLite before the lock is released. A failed refresh never discards the stored refresh token, unless Trakt answers `invalid_grant`. Concurrent tool calls share one refresh. (This is the main difference from the Google version, where refresh tokens were reusable.)
-- A Trakt 401 drops the cached access token and forces one refresh; if that works the call is retried once, and a second 401 returns "Trakt access was revoked; reconnect this connector". `invalid_grant` on refresh means the user revoked the application at Trakt: delete all rows for that user (which also kills our tokens) and return the same tool error. The client's next MCP request then gets 401 `invalid_token` and restarts the OAuth flow.
+- **Single-use refresh.** The per-user token source serializes refresh through a per-user lock held across read, call and write. The new token pair is written to SQLite before the lock is released. A failed refresh never discards the stored refresh token, unless Trakt answers `invalid_grant`. Concurrent tool calls share one refresh.- A Trakt 401 drops the cached access token and forces one refresh; if that works the call is retried once, and a second 401 returns "Trakt access was revoked; reconnect this connector". `invalid_grant` on refresh means the user revoked the application at Trakt: delete all rows for that user (which also kills our tokens) and return the same tool error. The client's next MCP request then gets 401 `invalid_token` and restarts the OAuth flow.
 - One Trakt grant per user, shared by all of that user's MCP clients. Each new consent replaces the stored Trakt tokens.
 - `POST /oauth/revoke` from a client revokes only our tokens for that client, never at Trakt. Only `disconnect` (CLI) and the 180-day purge revoke at Trakt (`POST /oauth/revoke`).
 - Per-user write lock: Trakt mutations of one user run sequentially.
@@ -228,7 +225,7 @@ Never stored: watch history, watchlist, ratings, collection, comments, tool inpu
 
 Activity is batched in memory and flushed to `users.last_seen_at` every minute and on store close. Background jobs: hourly deletion of expired fosite rows and pending authorizations; daily purge of users inactive for 180 days (rows deleted, Trakt token revoked at Trakt after the delete succeeded), unused clients (180 days) and clients that never obtained a token (24 hours). The user delete re-checks `last_seen_at` and the stored refresh token in one transaction. Every disconnection logs `user disconnected` at info with `user_id` and `reason` (`inactive`, `trakt_revoked`, `rotated_token_lost`, `cli`). `rotated_token_lost` means Trakt refused a refresh token this process had spent without saving its replacement; `trakt_revoked` covers every other refusal, since Trakt answers `invalid_grant` for both. Shutdown waits for running token refreshes (up to the refresh timeout) before closing the store.
 
-User deletion runs the explicit `deleteUserChildren` list; every new per-user table is added to it. Schema migrations are embedded, numbered sequentially, and restart from a fresh `001` (clean break from the Google schema: no migration of existing data).
+User deletion runs the explicit `deleteUserChildren` list; every new per-user table is added to it. Schema migrations are embedded, numbered sequentially, and start at `001`.
 
 ## 11. Public instance, site and privacy
 
@@ -270,7 +267,7 @@ Environment variables carry **no prefix**: each flag reads the env var of the sa
 | `--rate-limit-global` / `RATE_LIMIT_GLOBAL` | `1200` | Trakt requests per minute across all users |
 | `--openai-apps-challenge` / `OPENAI_APPS_CHALLENGE` | none | Serves `/.well-known/openai-apps-challenge` |
 
-Removed from the Google version: `--google-client-id`, `GCMCP_GOOGLE_CLIENT_SECRET`, `--allowed-domains` (Trakt has no organization domains), `--operator-name`, `--operator-email` (the site carries them). Subcommands: `serve` (default), `genkey`, `rekey`, `disconnect <trakt-slug-or-id>` (revokes at Trakt, deletes all rows), `version`.
+Subcommands: `serve` (default), `genkey`, `rekey`, `disconnect <trakt-slug-or-id>` (revokes at Trakt, deletes all rows), `version`.
 
 The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide with variables set by a host or shell. `docs/self-hosting.md` states the full list so operators can check.
 

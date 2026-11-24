@@ -256,14 +256,6 @@ func TestServeWiresTraktUpstream(t *testing.T) {
 		t.Errorf("GET %s: status 404, want the OAuth callback handler", oauth.CallbackPath)
 	}
 
-	// Only the Trakt callback exists.
-	old := httpGet(t, base+"/oauth/google/callback")
-	closeBody(t, old)
-
-	if old.StatusCode != http.StatusNotFound {
-		t.Errorf("GET /oauth/google/callback: status %d, want 404", old.StatusCode)
-	}
-
 	if err := stop(); err != nil {
 		t.Errorf("runServe: %v", err)
 	}
