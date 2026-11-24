@@ -38,8 +38,14 @@ const (
 	// idleTimeout closes idle keep-alive connections that PaaS routers leave open.
 	idleTimeout = 120 * time.Second
 	// shutdownTimeout drains in-flight requests on SIGINT/SIGTERM; a tool call
-	// rarely exceeds a few seconds of Trakt latency.
+	// rarely exceeds a few seconds of Trakt latency. docs/self-hosting.md
+	// states the kill grace period derived from it and refreshDrainTimeout.
 	shutdownTimeout = 15 * time.Second
+	// refreshDrainTimeout bounds the wait for token refreshes still running
+	// after the drain. It covers a whole refresh (trakt.RefreshTimeout) plus a
+	// margin for the save that follows Trakt's answer. The host's kill grace
+	// period must exceed shutdownTimeout plus this; see docs/self-hosting.md.
+	refreshDrainTimeout = trakt.RefreshTimeout + 5*time.Second
 )
 
 // runServe runs the HTTP server until ctx is done, then drains requests,
@@ -131,7 +137,30 @@ func runServe(ctx context.Context, cfg config.Config, stdout io.Writer) (err err
 	stopBackground()
 	bg.Wait()
 
+	// Jobs and abandoned requests may still run a detached refresh whose
+	// rotated token must be saved before the deferred st.Close.
+	waitRefreshes(ctx, log, up)
+
 	return runErr
+}
+
+// refreshWaiter is the part of trakt.Upstream that shutdown waits on.
+type refreshWaiter interface {
+	Wait(ctx context.Context) error
+}
+
+// waitRefreshes waits up to refreshDrainTimeout for running token refreshes.
+// ctx is usually canceled already, so the wait gets its own deadline. A
+// timeout is logged, not returned: the store closes anyway, and the affected
+// user will have to reconnect.
+func waitRefreshes(ctx context.Context, log *slog.Logger, w refreshWaiter) {
+	waitCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), refreshDrainTimeout)
+	defer cancel()
+
+	if err := w.Wait(waitCtx); err != nil {
+		log.ErrorContext(ctx, "token refresh still running at shutdown; its rotated token may be lost",
+			slog.String("error", err.Error()))
+	}
 }
 
 // listenAll binds every server's address before anything starts serving, so a

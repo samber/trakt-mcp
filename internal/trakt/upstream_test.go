@@ -1075,3 +1075,199 @@ func TestCanceledCallerDoesNotAbortSharedRefresh(t *testing.T) {
 		t.Errorf("token requests = %d, want 1", n)
 	}
 }
+
+// startAbandonedRefresh starts a refresh whose only caller gives up while the
+// token endpoint is still answering, as a client timing out during shutdown
+// would. It returns once the caller has returned; closing release lets the
+// endpoint answer with a rotated pair.
+func startAbandonedRefresh(t *testing.T, env *upEnv) (releaseFn func()) {
+	t.Helper()
+
+	entered := make(chan struct{})
+	release := make(chan struct{})
+
+	env.fake.setToken(func(w http.ResponseWriter, _ map[string]string) {
+		close(entered)
+		<-release
+		writeTokenPair(w, upNewAccess, upNewRefresh)
+	})
+
+	// Registered before the store-closing cleanup runs, so a failing test
+	// never leaves the endpoint blocked.
+	var once sync.Once
+
+	t.Cleanup(func() { once.Do(func() { close(release) }) })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := env.source(t).AccessToken(ctx)
+		done <- err
+	}()
+
+	<-entered
+	cancel()
+
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("caller err = %v, want context.Canceled", err)
+	}
+
+	return func() { once.Do(func() { close(release) }) }
+}
+
+func TestWaitReturnsAfterDetachedRefreshSaved(t *testing.T) {
+	t.Parallel()
+
+	env := newUpEnv(t, true)
+	release := startAbandonedRefresh(t, env)
+
+	waited := make(chan error, 1)
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		waited <- env.up.Wait(ctx)
+	}()
+
+	select {
+	case err := <-waited:
+		t.Fatalf("Wait returned %v while a refresh was in flight", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	release()
+
+	if err := <-waited; err != nil {
+		t.Fatalf("Wait: %v", err)
+	}
+
+	// Wait returning means the store may be closed now: the rotated pair must
+	// already be there.
+	if got := env.stored(t).RefreshToken; got != upNewRefresh {
+		t.Errorf("stored refresh after Wait = %q, want the rotated one", got)
+	}
+}
+
+func TestWaitHonorsContextExpiry(t *testing.T) {
+	t.Parallel()
+
+	env := newUpEnv(t, true)
+	release := startAbandonedRefresh(t, env)
+
+	defer func() {
+		release()
+		// Let the flight finish before the store closes in cleanup.
+		if err := env.up.Wait(context.Background()); err != nil {
+			t.Errorf("final Wait: %v", err)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	if err := env.up.Wait(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("Wait = %v, want context.DeadlineExceeded", err)
+	}
+}
+
+func TestWaitWithoutFlightsReturnsAtOnce(t *testing.T) {
+	t.Parallel()
+
+	env := newUpEnv(t, false)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if err := env.up.Wait(ctx); err != nil {
+		t.Errorf("Wait with no flight = %v, want nil", err)
+	}
+}
+
+func TestInvalidGrantAfterLostSaveIsNotLoggedAsRevoked(t *testing.T) {
+	t.Parallel()
+
+	env := newUpEnv(t, true)
+	// Every save of the rotated pair fails: the stored refresh token is now
+	// spent at Trakt, which Trakt reports as invalid_grant next time.
+	env.fault.failSaves.Store(maxSaveAttempts)
+
+	if _, err := env.source(t).AccessToken(context.Background()); err == nil {
+		t.Fatal("first AccessToken: want a save error")
+	}
+
+	env.fake.setToken(func(w http.ResponseWriter, _ map[string]string) {
+		writeOAuthError(w, http.StatusBadRequest, oauthErrInvalidGrant)
+	})
+
+	if _, err := env.source(t).AccessToken(context.Background()); !errors.Is(err, ErrUpstreamAuth) {
+		t.Fatalf("second AccessToken err = %v, want ErrUpstreamAuth", err)
+	}
+
+	logs := env.logs.String()
+	if !strings.Contains(logs, `"reason":"`+reasonTokenLost+`"`) {
+		t.Errorf("logs = %s, want reason %s", logs, reasonTokenLost)
+	}
+
+	if strings.Contains(logs, reasonTraktRevoked) {
+		t.Errorf("logs = %s, want no %s after a lost save", logs, reasonTraktRevoked)
+	}
+}
+
+// TestRefreshFailureKinds checks that a refresh Trakt could not answer maps
+// to the Kinds spec §8.6 gives texts for, not to an opaque internal error.
+func TestRefreshFailureKinds(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]struct {
+		token      func(w http.ResponseWriter, body map[string]string)
+		kind       Kind
+		wantStatus int
+	}{
+		"server error": {
+			token: func(w http.ResponseWriter, _ map[string]string) {
+				http.Error(w, upSecretBody, http.StatusBadGateway)
+			},
+			kind: KindServer, wantStatus: http.StatusBadGateway,
+		},
+		"connection dropped": {
+			token: func(w http.ResponseWriter, _ map[string]string) {
+				hj, ok := w.(http.Hijacker)
+				if !ok {
+					t.Error("no hijacker")
+					return
+				}
+
+				conn, _, err := hj.Hijack()
+				if err != nil {
+					t.Errorf("Hijack: %v", err)
+					return
+				}
+
+				_ = conn.Close()
+			},
+			kind: KindUnreachable,
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			env := newUpEnv(t, true)
+			env.fake.setToken(c.token)
+
+			_, err := env.source(t).AccessToken(context.Background())
+
+			te, ok := errors.AsType[*Error](err)
+			if !ok || te.Kind != c.kind || te.Status != c.wantStatus {
+				t.Fatalf("err = %v (%+v), want Kind %s status %d", err, te, c.kind, c.wantStatus)
+			}
+
+			if strings.Contains(err.Error(), upSecretBody) {
+				t.Errorf("err leaks body: %v", err)
+			}
+		})
+	}
+}

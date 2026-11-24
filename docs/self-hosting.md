@@ -37,6 +37,11 @@ No prebuilt binary or Docker image is published today: build with `go install` o
 
 Flags come before positional arguments, for example `trakt-mcp disconnect --db-path /data/trakt-mcp.db 1234567`. Prefer the numeric Trakt id: a slug can change, and `disconnect` prints the Trakt id, slug and internal user id it matched.
 
+## Deploys and shutdown
+
+- Stop the old instance before you start the new one. Token refreshes are coordinated inside one process only: two processes on one database can race on a user's single-use Trakt refresh token, and the loser deletes that user, who must reconnect. Most PaaS hosts overlap old and new instances during a deploy by default; switch that off (stop-then-start, or a single-instance deploy strategy).
+- Give the process a kill grace period of at least 50 seconds after `SIGTERM`. On shutdown the server drains requests for up to 15 seconds, then waits up to 35 seconds for token refreshes still running, so a rotated Trakt token is saved before the database closes. A shorter grace (Fly.io defaults to 5 s, Cloud Run to 10 s) can kill a refresh after Trakt has rotated the grant; that user must then reconnect.
+
 ## Configuration
 
 Every flag can also be set with an environment variable of the same name, uppercased, with dashes replaced by underscores (`--db-path` becomes `DB_PATH`). There is no prefix. When both are set, the flag wins. The two secrets, `TRAKT_CLIENT_SECRET` and `ENCRYPTION_KEYS`, can only be set in the environment, so they never appear in process listings.

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
@@ -43,16 +44,23 @@ const (
 	// used refresh token (RFC 6749 §5.2).
 	oauthErrInvalidGrant = "invalid_grant"
 	// reasonTraktRevoked is the "user disconnected" log reason when Trakt
-	// reports the grant revoked.
+	// refuses the stored refresh token and this process lost no save of it.
+	// Trakt answers invalid_grant both for a revoked grant and for a spent
+	// token, so a save lost in an earlier process still reads as revoked.
 	reasonTraktRevoked = "trakt_revoked"
+	// reasonTokenLost is the "user disconnected" log reason when Trakt refuses
+	// a refresh token this process had already spent: the rotated pair could
+	// not be saved, so Trakt revoked nothing.
+	reasonTokenLost = "rotated_token_lost"
 
 	// expiryMargin treats an access token as expired slightly early, so a call
 	// started just before expiry does not reach Trakt with a dead token.
 	expiryMargin = time.Minute
-	// refreshTimeout bounds one shared refresh, saves included. It runs
+	// RefreshTimeout bounds one shared refresh, saves included. It runs
 	// detached from the caller's context: once Trakt rotated the refresh
-	// token, the new one must be saved even if the caller gave up.
-	refreshTimeout = 30 * time.Second
+	// token, the new one must be saved even if the caller gave up. Shutdown
+	// waits at least this long in Wait before closing the store.
+	RefreshTimeout = 30 * time.Second
 	// maxRefreshAttempts allows one retry when a new consent replaced the
 	// grant mid-refresh; a second change in the same instant is not worth
 	// waiting for.
@@ -66,7 +74,7 @@ const (
 	// user, while SQLite failures are usually a brief lock or I/O hiccup.
 	maxSaveAttempts = 3
 	// saveRetryBackoff spaces save attempts enough to outlast a short SQLite
-	// lock while keeping the whole refresh well under refreshTimeout.
+	// lock while keeping the whole refresh well under RefreshTimeout.
 	saveRetryBackoff = 100 * time.Millisecond
 	// maxTokenBodyBytes bounds a token endpoint response; a real one is a few
 	// hundred bytes.
@@ -177,6 +185,66 @@ type Upstream struct {
 	// tokens are single-use, so two concurrent refreshes would make one fail
 	// and could lose the grant.
 	refreshes singleflight.Group
+	// flights counts refreshes still running, including those every caller
+	// abandoned, so shutdown can wait for their saves before closing the store.
+	flights flightTracker
+
+	// lostMu guards lost.
+	lostMu sync.Mutex
+	// lost maps a user id to the refresh token spent by a refresh whose
+	// rotated pair could not be saved; it only labels the later disconnect.
+	lost map[string]string
+}
+
+// flightTracker counts running refreshes. Unlike sync.WaitGroup, it allows a
+// flight to start while Wait is blocked: a request still draining at shutdown
+// may start one.
+type flightTracker struct {
+	mu     sync.Mutex
+	active int
+	// idle is closed when active drops to zero; nil while nobody waits.
+	idle chan struct{}
+}
+
+func (f *flightTracker) start() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.active++
+}
+
+func (f *flightTracker) done() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	f.active--
+	if f.active == 0 && f.idle != nil {
+		close(f.idle)
+		f.idle = nil
+	}
+}
+
+func (f *flightTracker) wait(ctx context.Context) error {
+	for {
+		f.mu.Lock()
+		if f.active == 0 {
+			f.mu.Unlock()
+			return nil
+		}
+
+		if f.idle == nil {
+			f.idle = make(chan struct{})
+		}
+
+		idle := f.idle
+		f.mu.Unlock()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-idle:
+		}
+	}
 }
 
 // NewUpstream returns an Upstream backed by st.
@@ -220,6 +288,7 @@ func newUpstream(cfg UpstreamConfig, st tokenStore) *Upstream {
 		api:          New(Config{BaseURL: cfg.APIBaseURL, APIKey: cfg.ClientID, UserAgent: ua, HTTP: cfg.HTTP}),
 		log:          log,
 		now:          time.Now,
+		lost:         map[string]string{},
 	}
 }
 
@@ -232,6 +301,16 @@ func (u *Upstream) String() string {
 // GoString implements fmt.GoStringer without the client secret, for %#v.
 func (u *Upstream) GoString() string {
 	return u.String()
+}
+
+// Wait blocks until every running token refresh has finished, including
+// refreshes whose callers already gave up, or until ctx is done. Call it after
+// the servers and jobs stopped and before closing the store: a refresh cut off
+// after Trakt rotated the grant loses the only valid refresh token, and the
+// user is disconnected on the next refresh. A process killed during the Trakt
+// round trip itself stays an inherent crash window.
+func (u *Upstream) Wait(ctx context.Context) error {
+	return u.flights.wait(ctx)
 }
 
 // NewCodeVerifier returns a PKCE code verifier: the base64url encoding,
@@ -397,7 +476,7 @@ func (u *Upstream) valid(t store.TraktToken) bool {
 // refresh token this attempt used, so a new consent that lands mid-refresh is
 // never overwritten or deleted; the next attempt then picks up the newer grant.
 func (u *Upstream) refresh(ctx context.Context, userID, rejected string) (store.TraktToken, error) {
-	ctx, cancel := context.WithTimeout(ctx, refreshTimeout)
+	ctx, cancel := context.WithTimeout(ctx, RefreshTimeout)
 	defer cancel()
 
 	for range maxRefreshAttempts {
@@ -431,7 +510,7 @@ func (u *Upstream) refreshOnce(ctx context.Context, userID, rejected string) (to
 	})
 	if err != nil {
 		if te, ok := errors.AsType[*tokenError](err); !ok || te.code != oauthErrInvalidGrant {
-			return store.TraktToken{}, true, fmt.Errorf("trakt token refresh: %w", err)
+			return store.TraktToken{}, true, fmt.Errorf("trakt token refresh: %w", refreshError(err))
 		}
 
 		return u.forgetRevoked(ctx, userID, stored.RefreshToken)
@@ -460,12 +539,16 @@ func (u *Upstream) forgetRevoked(ctx context.Context, userID, refresh string) (s
 		return store.TraktToken{}, true, errors.Join(ErrUpstreamAuth, err)
 	}
 
+	reason := reasonTraktRevoked
+	if u.takeLost(userID) == refresh {
+		reason = reasonTokenLost
+	}
+
 	if !deleted {
 		return store.TraktToken{}, false, nil
 	}
 
-	u.log.InfoContext(ctx, "user disconnected",
-		slog.String("user_id", userID), slog.String("reason", reasonTraktRevoked))
+	u.log.InfoContext(ctx, "user disconnected", slog.String("user_id", userID), slog.String("reason", reason))
 
 	return store.TraktToken{}, true, ErrUpstreamAuth
 }
@@ -484,7 +567,7 @@ func (u *Upstream) saveRotated(ctx context.Context, userID, oldRefresh string, f
 			case <-ctx.Done():
 				lastErr = errors.Join(lastErr, ctx.Err())
 
-				return false, u.saveFailed(ctx, userID, lastErr)
+				return false, u.saveFailed(ctx, userID, oldRefresh, lastErr)
 			case <-time.After(saveRetryBackoff):
 			}
 		}
@@ -497,15 +580,55 @@ func (u *Upstream) saveRotated(ctx context.Context, userID, oldRefresh string, f
 		lastErr = err
 	}
 
-	return false, u.saveFailed(ctx, userID, lastErr)
+	return false, u.saveFailed(ctx, userID, oldRefresh, lastErr)
 }
 
-func (u *Upstream) saveFailed(ctx context.Context, userID string, err error) error {
+// takeLost returns and forgets the refresh token a lost save left spent for
+// userID, or "".
+func (u *Upstream) takeLost(userID string) string {
+	u.lostMu.Lock()
+	defer u.lostMu.Unlock()
+
+	spent := u.lost[userID]
+	delete(u.lost, userID)
+
+	return spent
+}
+
+func (u *Upstream) saveFailed(ctx context.Context, userID, spent string, err error) error {
+	u.lostMu.Lock()
+	u.lost[userID] = spent
+	u.lostMu.Unlock()
+
 	u.log.ErrorContext(ctx, "trakt token save failed after refresh; user must reconnect",
 		slog.String("user_id", userID))
 
 	return fmt.Errorf("trakt token refresh: save rotated token: %w", err)
 }
+
+// refreshError gives a refresh that got no usable answer the Kind the tools
+// word per spec §8.6: a 5xx is KindServer and a missing response is
+// KindUnreachable. Other failures stay as they are and read as internal.
+func refreshError(err error) error {
+	if te, ok := errors.AsType[*tokenError](err); ok && te.status >= http.StatusInternalServerError {
+		return &Error{Status: te.status, Kind: KindServer, Message: defaultMessages[KindServer]}
+	}
+
+	if tf, ok := errors.AsType[*noResponseError](err); ok {
+		return &Error{Kind: KindUnreachable, Message: defaultMessages[KindUnreachable], cause: tf.cause}
+	}
+
+	return err
+}
+
+// noResponseError is a token or revoke request that got no response.
+type noResponseError struct {
+	cause error
+}
+
+func (e *noResponseError) Error() string { return "request failed: " + e.cause.Error() }
+
+func (e *noResponseError) Unwrap() error { return e.cause }
 
 // tokenError is a token endpoint refusal. It keeps the status and the OAuth
 // error code only, never the body, which can echo request values.
@@ -610,7 +733,7 @@ func (u *Upstream) postJSON(ctx context.Context, target string, body map[string]
 
 	resp, err := u.http.Do(req) //nolint:gosec // G704: target is a configured endpoint
 	if err != nil {
-		return 0, nil, fmt.Errorf("request failed: %w", redactURLError(err))
+		return 0, nil, &noResponseError{cause: redactURLError(err)}
 	}
 
 	raw, readErr := io.ReadAll(io.LimitReader(resp.Body, maxTokenBodyBytes))
@@ -683,6 +806,9 @@ func (s *userTokenSource) shared(ctx context.Context, rejected string) (string, 
 	detached := context.WithoutCancel(ctx)
 
 	ch := s.up.refreshes.DoChan(s.userID, func() (any, error) {
+		s.up.flights.start()
+		defer s.up.flights.done()
+
 		return s.up.refresh(detached, s.userID, rejected)
 	})
 
