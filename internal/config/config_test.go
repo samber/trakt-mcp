@@ -685,3 +685,33 @@ func argsWithout(drop string, extra ...string) []string {
 
 	return append(args, extra...)
 }
+
+// TestLoad_TraktCredentialsTrimmed checks that whitespace around the Trakt
+// client id and secret is dropped: a value read from a file often ends with a
+// newline, and Trakt then refuses every token exchange as invalid_client.
+func TestLoad_TraktCredentialsTrimmed(t *testing.T) {
+	t.Parallel()
+
+	secret := requiredEnv[envTraktClientSecret]
+
+	// requiredArgs without --trakt-client-id, so the id comes from the env.
+	cfg, err := Load(CmdServe, requiredArgs[:2], envFunc(map[string]string{
+		EnvName(flagTraktClientID): " client-id\n",
+		envTraktClientSecret:       "\t" + secret + "\n",
+	}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if cfg.TraktClientID != "client-id" {
+		t.Errorf("TraktClientID = %q, want trimmed", cfg.TraktClientID)
+	}
+
+	if cfg.TraktClientSecret != secret {
+		t.Errorf("TraktClientSecret = %q, want trimmed", cfg.TraktClientSecret)
+	}
+
+	if _, err := Load(CmdServe, withArgs(), envFunc(map[string]string{envTraktClientSecret: " \n"})); err == nil {
+		t.Error("whitespace-only secret: err = nil, want missing-secret error")
+	}
+}

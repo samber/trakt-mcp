@@ -284,7 +284,7 @@ func Load(cmd string, args []string, getenv func(string) string) (Config, error)
 		Listen:            r.listen,
 		DBPath:            r.dbPath,
 		TraktClientID:     strings.TrimSpace(r.traktClientID),
-		TraktClientSecret: getenv(envTraktClientSecret),
+		TraktClientSecret: strings.TrimSpace(getenv(envTraktClientSecret)),
 		EncryptionKeys:    getenv(envEncryptionKeys),
 		EnableDCR:         r.enableDCR,
 		Metrics:           r.metrics,
