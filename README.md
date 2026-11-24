@@ -4,6 +4,8 @@ Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assist
 
 `trakt-mcp` is a **remote** [MCP](https://modelcontextprotocol.io) server. One instance serves many Trakt accounts, each isolated from the others. See the [landing page](https://trakt-mcp.samber.dev) to join.
 
+> Trakt MCP uses the Trakt API but is not affiliated with, endorsed by, or certified by Trakt. "Trakt" is a trademark of its owner.
+
 <img width="1904" height="640" alt="image" src="https://github.com/user-attachments/assets/be54f31a-3799-4491-9de7-41982a38b3c7" />
 
 ## 🛠️ Tools
