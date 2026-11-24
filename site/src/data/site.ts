@@ -172,8 +172,7 @@ export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; descriptio
  */
 export const STORED: readonly string[] = [
   'Your Trakt user id and username slug',
-  'Your Trakt access and refresh tokens, encrypted',
-  'A fingerprint of the pass your assistant uses, never the pass itself',
+  'Your Trakt access and tokens, encrypted',
   'Which assistant apps connected, such as Claude or ChatGPT',
 ];
 
