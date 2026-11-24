@@ -1,0 +1,22 @@
+{
+  "name": "Keanu Reeves",
+  "ids": {
+    "trakt": 3,
+    "slug": "keanu-reeves",
+    "imdb": "nm0000206",
+    "tmdb": 6384
+  },
+  "social_ids": {
+    "twitter": "keanu",
+    "facebook": null,
+    "instagram": "keanu_ig",
+    "wikipedia": "Keanu_Reeves"
+  },
+  "biography": "Canadian actor.",
+  "birthday": "1964-09-02",
+  "death": null,
+  "birthplace": "Beirut, Lebanon",
+  "homepage": "https://keanu.example",
+  "known_for_department": "Acting",
+  "gender": "male"
+}

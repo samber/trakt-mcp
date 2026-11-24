@@ -1,0 +1,45 @@
+{
+  "cast": [
+    {
+      "character": "Walter White",
+      "characters": [
+        "Walter White"
+      ],
+      "episode_count": 62,
+      "series_regular": true,
+      "show": {
+        "title": "Breaking Bad",
+        "year": 2008,
+        "ids": {
+          "trakt": 1388,
+          "slug": "breaking-bad",
+          "imdb": "tt0903747",
+          "tmdb": 1396,
+          "tvdb": 81189
+        }
+      }
+    }
+  ],
+  "crew": {
+    "directing": [
+      {
+        "job": "Director",
+        "jobs": [
+          "Director"
+        ],
+        "episode_count": 3,
+        "show": {
+          "title": "Breaking Bad",
+          "year": 2008,
+          "ids": {
+            "trakt": 1388,
+            "slug": "breaking-bad",
+            "imdb": "tt0903747",
+            "tmdb": 1396,
+            "tvdb": 81189
+          }
+        }
+      }
+    ]
+  }
+}

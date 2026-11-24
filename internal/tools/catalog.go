@@ -6,6 +6,7 @@ package tools
 var catalog = []func(*Server){
 	registerMovieTools,
 	registerMovieCatalogTools,
+	registerPeopleTools,
 	registerShowTools,
 	registerSeasonTools,
 	registerEpisodeTools,

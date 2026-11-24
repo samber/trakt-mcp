@@ -107,8 +107,8 @@ var movieCases = []catalogCase{
 	{
 		tool: toolFetchMoviePeople, args: movieRef(testMovieSlug), route: "GET " + routeMovieSlug + "/people", fixture: "movie_people", object: true,
 		want: map[string]any{
-			"cast.0.name": "Keanu Reeves", "cast.0.character": "Neo", "cast.0.ids.slug": "keanu-reeves",
-			"crew.0.department": "directing", "crew.0.members.0.name": "Lana Wachowski", "crew.0.members.0.job": "Director",
+			"cast.0.name": "Keanu Reeves", pathFirstCastChar: "Neo", "cast.0.ids.slug": "keanu-reeves",
+			"crew.0.department": deptDirecting, "crew.0.members.0.name": "Lana Wachowski", "crew.0.members.0.job": jobDirector,
 			"crew.1.department": "writing", "crew.1.members.0.job": "Writer",
 		},
 		absent: []string{keyGuestStars},
