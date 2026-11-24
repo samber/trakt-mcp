@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -80,4 +81,33 @@ func TestSearchExtraArguments(t *testing.T) {
 	}
 
 	runArgCases(t, cases)
+}
+
+// TestSearchExtraTraktFailures covers the lookup and exact search endpoints.
+func TestSearchExtraTraktFailures(t *testing.T) {
+	t.Parallel()
+
+	const notAList = `{"not":"a list"}`
+
+	runUpstreamFailures(t, toolSearchByID, lookupArgs("imdb", testMovieIMDb, itemMovie), routeSearchIMDb, notAList)
+	runUpstreamFailures(t, toolSearchMoviesExct, map[string]any{fieldQuery: "matrix"}, "GET /search/movie/exact", notAList)
+	runUpstreamFailures(t, toolSearchShowsExct, map[string]any{fieldQuery: testShowTitle}, "GET /search/show/exact", notAList)
+}
+
+// TestSearchByIDTextIsBounded requires slug and IMDb id from Trakt to be cut.
+func TestSearchByIDTextIsBounded(t *testing.T) {
+	t.Parallel()
+
+	long := strings.Repeat("a", 2*maxIDLength)
+
+	h := newHarness(t)
+	h.trakt.respond(routeSearchIMDb, http.StatusOK, `[{"type":"movie","movie":{"title":"t","ids":{"trakt":1,"slug":"`+long+`","imdb":"`+long+`"}}}]`, nil)
+
+	var out Listing[IDMatch]
+
+	h.ok(toolSearchByID, lookupArgs("imdb", testMovieIMDb, ""), &out)
+
+	if ids := out.Items[0].IDs; len([]rune(ids.Slug)) > maxIDLength || len([]rune(ids.IMDb)) > maxIDLength {
+		t.Errorf("ids = %+v, want bounded text", ids)
+	}
 }

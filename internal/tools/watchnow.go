@@ -19,6 +19,18 @@ const fieldCountry = "country"
 // could change the request path.
 const countryPattern = `^[a-z]{2}$`
 
+const (
+	// maxPriceRunes bounds a price string such as "19.99": Trakt sends it as
+	// text, so a hostile value must not flood the model's context.
+	maxPriceRunes = 32
+	// maxCurrencyRunes bounds a currency code: ISO 4217 codes have 3 letters,
+	// the margin tolerates a symbol or a short variant.
+	maxCurrencyRunes = 8
+	// maxProviderTypeRunes bounds a provider offer type: the longest value
+	// the spec lists (tv_everywhere) has 13 characters.
+	maxProviderTypeRunes = 32
+)
+
 var countryRE = regexp.MustCompile(countryPattern)
 
 // countryArg validates a country code.
@@ -100,9 +112,9 @@ func trimWatchLink(l traktWatchLink) WatchLink {
 		Source:    boundText(l.Source, maxTitleRunes),
 		Link:      httpURLOrEmpty(l.Link),
 		UHD:       l.UHD,
-		Currency:  deref(l.Currency),
-		RentPrice: deref(l.Prices.Rent),
-		BuyPrice:  deref(l.Prices.Purchase),
+		Currency:  boundText(deref(l.Currency), maxCurrencyRunes),
+		RentPrice: boundText(deref(l.Prices.Rent), maxPriceRunes),
+		BuyPrice:  boundText(deref(l.Prices.Purchase), maxPriceRunes),
 	}
 }
 
@@ -188,7 +200,7 @@ func parseWatchSources(body []byte) (Listing[WatchSource], error) {
 			for _, s := range byGroup[group] {
 				items = append(items, WatchSource{
 					Group: boundText(group, maxTitleRunes), Source: boundText(s.Source, maxTitleRunes), Name: boundText(s.Name, maxTitleRunes),
-					Type: deref(s.Type), Free: s.Free, Cinema: s.Cinema, Amazon: s.Amazon, LinkCount: s.LinkCount,
+					Type: boundText(deref(s.Type), maxProviderTypeRunes), Free: s.Free, Cinema: s.Cinema, Amazon: s.Amazon, LinkCount: s.LinkCount,
 				})
 			}
 		}

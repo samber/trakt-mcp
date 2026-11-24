@@ -1,6 +1,10 @@
 package tools
 
-import "testing"
+import (
+	"net/http"
+	"strings"
+	"testing"
+)
 
 const (
 	toolMovieWatchNow   = "fetch_movie_watchnow"
@@ -72,11 +76,116 @@ func TestWatchNowArguments(t *testing.T) {
 			name: "season 0 is the specials", tool: toolEpisodeWatchNow, args: withCountry(episodeArgs(0, 1), testCountry),
 			route: "GET /shows/breaking-bad/seasons/0/episodes/1/watchnow/fr", body: emptyObject,
 		},
-		{
-			name: "other country in body", tool: toolMovieWatchNow, args: movie("de"), route: "GET " + routeMovieSlug + "/watchnow/de",
-			body: `{"fr":{"free":[{"source":"x","link":"https://example.com","uhd":false,"prices":{}}]}}`,
-		},
 	}
 
 	runArgCases(t, cases)
+}
+
+// TestWatchNowOtherCountryIsEmpty requires a body that holds only another
+// country to give empty lists, never that country's links.
+func TestWatchNowOtherCountryIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.trakt.respond("GET "+routeMovieSlug+"/watchnow/de", http.StatusOK, `{"fr":{"free":[{"source":"x","link":"https://example.com","uhd":false,"prices":{}}]}}`, nil)
+
+	var out map[string]any
+
+	h.ok(toolMovieWatchNow, withCountry(movieRef(testMovieSlug), "de"), &out)
+
+	for _, group := range []string{"free", "subscription", "purchase", "cable", "cinema"} {
+		if got, ok := out[group].([]any); !ok || len(got) != 0 {
+			t.Errorf("%s = %v, want an empty list", group, out[group])
+		}
+	}
+}
+
+// upstreamFailure is a Trakt answer and the tool error it must become.
+type upstreamFailure struct {
+	name   string
+	status int
+	body   string
+	want   string
+}
+
+// upstreamFailures lists the failures every read endpoint must map the same
+// way; malformed is a 200 body the tool's decoder cannot read. No Trakt text
+// may reach the tool error or the logs.
+func upstreamFailures(malformed string) []upstreamFailure {
+	body := `{"error_description":"` + injectionMarker + `"}`
+
+	return []upstreamFailure{
+		{"not found", http.StatusNotFound, body, msgNotFound},
+		{"unauthorized", http.StatusUnauthorized, body, msgUpstreamAuth},
+		{"rate limited", http.StatusTooManyRequests, body, msgRateLimitedNoDelay},
+		{"server error", http.StatusInternalServerError, body, "Trakt returned an error (status 500)"},
+		{"bad gateway", http.StatusBadGateway, ``, "Trakt returned an error (status 502)"},
+		{"malformed body", http.StatusOK, malformed, msgInternal},
+	}
+}
+
+func runUpstreamFailures(t *testing.T, tool string, args map[string]any, route, malformed string) {
+	t.Helper()
+
+	for _, f := range upstreamFailures(malformed) {
+		t.Run(tool+"/"+f.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.trakt.respond(route, f.status, f.body, nil)
+			h.fail(tool, args, f.want)
+
+			if strings.Contains(h.logs.String(), injectionMarker) {
+				t.Error("Trakt's message reached the logs")
+			}
+		})
+	}
+}
+
+// TestWatchNowTraktFailures covers the four where-to-watch endpoints,
+// including the hand-written decoders of the country and sources bodies.
+func TestWatchNowTraktFailures(t *testing.T) {
+	t.Parallel()
+
+	const (
+		notAnObject = `[1]`
+		notAList    = `{"not":"a list"}`
+	)
+
+	runUpstreamFailures(t, toolMovieWatchNow, withCountry(movieRef(testMovieSlug), testCountry), "GET "+routeMovieSlug+"/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolShowWatchNow, withCountry(showShow(testShowSlug), testCountry), "GET /shows/breaking-bad/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolEpisodeWatchNow, withCountry(episodeArgs(1, 2), testCountry), "GET /shows/breaking-bad/seasons/1/episodes/2/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolWatchNowSources, map[string]any{}, routeWatchNowSrc, notAList)
+}
+
+// TestWatchNowTextIsBounded requires prices, currency and offer type from
+// Trakt to be cut.
+func TestWatchNowTextIsBounded(t *testing.T) {
+	t.Parallel()
+
+	long := strings.Repeat("9", 5*maxPriceRunes)
+
+	h := newHarness(t)
+	h.trakt.respond("GET "+routeMovieSlug+"/watchnow/fr", http.StatusOK,
+		`{"fr":{"purchase":[{"source":"s","link":"https://example.com","uhd":false,"currency":"`+long+`","prices":{"purchase":"`+long+`","rent":"`+long+`"}}]}}`, nil)
+
+	var out WatchNow
+
+	h.ok(toolMovieWatchNow, withCountry(movieRef(testMovieSlug), testCountry), &out)
+
+	l := out.Purchase[0]
+	if len([]rune(l.BuyPrice)) > maxPriceRunes || len([]rune(l.RentPrice)) > maxPriceRunes || len([]rune(l.Currency)) > maxCurrencyRunes {
+		t.Errorf("link = %+v, want bounded text", l)
+	}
+
+	h = newHarness(t)
+	h.trakt.respond(routeWatchNowSrc, http.StatusOK, `[{"fr":[{"source":"s","name":"n","type":"`+long+`"}]}]`, nil)
+
+	var srcs Listing[WatchSource]
+
+	h.ok(toolWatchNowSources, map[string]any{}, &srcs)
+
+	if len([]rune(srcs.Items[0].Type)) > maxProviderTypeRunes {
+		t.Errorf("type = %q, want it cut", srcs.Items[0].Type)
+	}
 }

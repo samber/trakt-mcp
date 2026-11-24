@@ -114,7 +114,7 @@ func trimLookupHit(h traktLookupHit) IDMatch {
 	out.Season = deref(e.Season)
 	out.Episode = deref(e.Number)
 	out.IDs = SearchIDs{
-		Trakt: e.IDs.Trakt, Slug: deref(e.IDs.Slug), IMDb: deref(e.IDs.IMDb),
+		Trakt: e.IDs.Trakt, Slug: boundText(deref(e.IDs.Slug), maxIDLength), IMDb: boundText(deref(e.IDs.IMDb), maxIDLength),
 		TMDB: deref(e.IDs.TMDB), TVDB: deref(e.IDs.TVDB),
 	}
 
