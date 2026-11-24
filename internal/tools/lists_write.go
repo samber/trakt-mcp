@@ -23,17 +23,17 @@ const (
 )
 
 const (
-	// maxListNameRunes bounds a list name. UNVERIFIED: the filtered spec states
-	// no limit; this reuses the title bound so a mistaken call stays small.
+	// maxListNameRunes bounds a list name. UNVERIFIED: not documented by
+	// Trakt (the filtered spec states no limit); this reuses the title bound so a mistaken call stays small.
 	maxListNameRunes = maxTitleRunes
-	// maxListDescriptionRunes bounds a list description. UNVERIFIED: the
-	// filtered spec states no limit; a generous bound that keeps a mistaken
+	// maxListDescriptionRunes bounds a list description. UNVERIFIED: not
+	// documented by Trakt (the filtered spec states no limit); a generous bound that keeps a mistaken
 	// call small without cutting a realistic description.
 	maxListDescriptionRunes = 1000
 )
 
-// listPrivacies are the visibility values of a custom list (spec §8.4).
-var listPrivacies = []string{"private", "friends", "public"}
+// listPrivacies are the visibility values of a custom list; link means anyone with the share link.
+var listPrivacies = []string{"private", "link", "friends", "public"}
 
 // listSortBys are the default sorts of a list. UNVERIFIED for custom lists:
 // the filtered spec leaves sort_by free text, so this is the set the list
@@ -44,7 +44,7 @@ var listSortBys = listItemSorts
 type CreateListArgs struct {
 	Name           string `json:"name"                      jsonschema:"list name, at most 200 characters"`
 	Description    string `json:"description,omitempty"     jsonschema:"list description, at most 1000 characters"`
-	Privacy        string `json:"privacy,omitempty"         jsonschema:"private, friends or public (Trakt's default is private)"`
+	Privacy        string `json:"privacy,omitempty"         jsonschema:"private, link, friends or public (Trakt's default is private)"`
 	DisplayNumbers *bool  `json:"display_numbers,omitempty" jsonschema:"show the rank of each item"`
 	AllowComments  *bool  `json:"allow_comments,omitempty"  jsonschema:"let people comment on the list"`
 	SortBy         string `json:"sort_by,omitempty"         jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes"`
@@ -57,7 +57,7 @@ type UpdateListArgs struct {
 	ListID         string  `json:"list_id"                   jsonschema:"slug or numeric Trakt id of one of the user's own lists"`
 	Name           *string `json:"name,omitempty"            jsonschema:"new name, at most 200 characters"`
 	Description    *string `json:"description,omitempty"     jsonschema:"new description, at most 1000 characters; empty clears it"`
-	Privacy        string  `json:"privacy,omitempty"         jsonschema:"private, friends or public"`
+	Privacy        string  `json:"privacy,omitempty"         jsonschema:"private, link, friends or public"`
 	DisplayNumbers *bool   `json:"display_numbers,omitempty" jsonschema:"show the rank of each item"`
 	AllowComments  *bool   `json:"allow_comments,omitempty"  jsonschema:"let people comment on the list"`
 	SortBy         string  `json:"sort_by,omitempty"         jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes"`
@@ -107,7 +107,7 @@ type updateListBody struct {
 func registerListWriteTools(s *Server) {
 	Register(s, Spec{
 		Name: "create_list", Title: "Create list", Access: Write,
-		Description: "Create a custom list on the user's Trakt account, with an optional description, privacy (private, friends or public), item ranks, comments and default sort. " +
+		Description: "Create a custom list on the user's Trakt account, with an optional description, privacy (private, link, friends or public), item ranks, comments and default sort. " +
 			"Returns the new list, whose id the other list tools take. Trakt caps the number of lists per account." + untrustedNote,
 	}, createList)
 	Register(s, Spec{

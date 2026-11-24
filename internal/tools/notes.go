@@ -285,7 +285,7 @@ func fetchNote(ctx context.Context, c *trakt.UserClient, in NoteRefArgs) (Note, 
 	return fetchParsed(func() (*http.Response, error) { return c.API().GetNotesSummary(ctx, id) }, parseNote)
 }
 
-// noteTypes are the type filters of the user notes path. UNVERIFIED: the
+// noteTypes are the type filters of the user notes path. UNVERIFIED: not documented by Trakt; the
 // filtered spec leaves the path's type free text and lists singular values
 // only for the response; this is the plural set the sibling user paths take.
 var noteTypes = listItemTypes

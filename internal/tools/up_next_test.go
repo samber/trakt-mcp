@@ -311,7 +311,7 @@ func TestUpNextDescriptions(t *testing.T) {
 		}
 	}
 
-	if d := tools[toolFetchUpNext].Description; !strings.Contains(d, "until items is empty") {
+	if d := tools[toolFetchUpNext].Description; !strings.Contains(d, "until items is empty") || !strings.Contains(d, "page.page_count and page.item_count are 0") {
 		t.Errorf("fetch_up_next description %q does not say to page until empty", d)
 	}
 }

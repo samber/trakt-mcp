@@ -14,10 +14,13 @@ import (
 const (
 	fieldListItemID = "list_item_id"
 	fieldRank       = "rank"
+	// fieldNotesOrRank names the pair of arguments of update_favorite of which
+	// at least one is required.
+	fieldNotesOrRank = "notes or rank"
 )
 
-// maxReorderIDs bounds the ids of one reorder call. UNVERIFIED: the filtered
-// spec states no limit; this keeps a mistaken call small while exceeding
+// maxReorderIDs bounds the ids of one reorder call. UNVERIFIED: not documented by
+// Trakt, the filtered spec states no limit; this keeps a mistaken call small while exceeding
 // any watchlist size Trakt is known to allow.
 const maxReorderIDs = 1000
 
@@ -52,8 +55,18 @@ type ReorderWatchlistResult struct {
 
 func (r ReorderWatchlistResult) resultCount() int { return r.Updated }
 
+// notesOrNull is the wire value of a note: Trakt documents null (not "") as
+// the way to clear a note on the update routes.
+func notesOrNull(notes string) any {
+	if notes == "" {
+		return nil
+	}
+
+	return notes
+}
+
 type updateWatchlistItemBody struct {
-	Notes string `json:"notes"`
+	Notes any `json:"notes"` // nil is sent as JSON null to clear the note
 }
 
 type reorderWatchlistBody struct {
@@ -76,8 +89,8 @@ func registerWatchlistEditTools(s *Server) {
 	}, updateWatchlistItem)
 	Register(s, Spec{
 		Name: "reorder_watchlist", Title: "Reorder watchlist", Access: Write,
-		Description: "Reorder the user's whole watchlist by sending list_item_id values from fetch_watchlist in the wanted order. " +
-			"Returns how many entries moved and which ids Trakt skipped. " + vipNotesNote,
+		Description: "Reorder the user's watchlist by sending list_item_id values from fetch_watchlist in the wanted order. " +
+			"Returns how many entries moved and which ids Trakt skipped.",
 	}, reorderWatchlist)
 }
 
@@ -90,7 +103,7 @@ func updateWatchlistItem(ctx context.Context, c *trakt.UserClient, in UpdateWatc
 		return UpdateWatchlistItemResult{}, invalidArgument(fieldNotes)
 	}
 
-	if _, err := sendJSON(updateWatchlistItemBody{Notes: in.Notes}, func(b io.Reader) (*http.Response, error) {
+	if _, err := sendJSON(updateWatchlistItemBody{Notes: notesOrNull(in.Notes)}, func(b io.Reader) (*http.Response, error) {
 		return c.API().PutSyncWatchlistUpdateItemWithBody(ctx, strconv.Itoa(in.ListItemID), jsonContentType, b)
 	}); err != nil {
 		return UpdateWatchlistItemResult{}, err

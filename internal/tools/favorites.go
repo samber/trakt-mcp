@@ -11,12 +11,8 @@ import (
 	"github.com/samber/trakt-mcp/internal/trakt/api"
 )
 
-var (
-	// favoriteTypes are the media types Trakt favorites hold: movies and shows only.
-	favoriteTypes = []string{mediaAll, mediaMovies, mediaShows}
-	// favoriteSorts are the sort fields of the favorites route, the same as the watchlist's.
-	favoriteSorts = watchlistSorts
-)
+// favoriteTypes are the media types Trakt favorites hold: movies and shows only.
+var favoriteTypes = []string{mediaAll, mediaMovies, mediaShows}
 
 // favoritesNature is the description sentence shared by every favorites tool.
 const favoritesNature = "The favorites are the user's own top list on Trakt (like a desert-island list) of movies and TV shows, not a sync with other platforms. "
@@ -79,10 +75,9 @@ type ReorderFavoritesResult struct {
 
 func (r ReorderFavoritesResult) resultCount() int { return r.Updated }
 
-type updateFavoriteBody struct {
-	Notes *string `json:"notes,omitempty"`
-	Rank  *int    `json:"rank,omitempty"`
-}
+// updateFavoriteBody is built as a map so that an absent field is left out
+// while a cleared note is sent as JSON null.
+type updateFavoriteBody map[string]any
 
 func registerFavoriteTools(s *Server) {
 	Register(s, Spec{
@@ -98,12 +93,12 @@ func registerFavoriteTools(s *Server) {
 	}, addToFavorites)
 	Register(s, Spec{
 		Name: "update_favorite", Title: "Update favorite", Access: Write,
-		Description: favoritesNature + "Set or clear the note and/or move to a new rank one favorite, addressed by the list_item_id that fetch_favorites returns. " +
+		Description: favoritesNature + "Update one favorite: set or clear its note and/or move it to a new rank. It is addressed by the list_item_id that fetch_favorites returns. " +
 			"Give at least one of notes and rank.",
 	}, updateFavorite)
 	Register(s, Spec{
 		Name: "reorder_favorites", Title: "Reorder favorites", Access: Write,
-		Description: favoritesNature + "Reorder the user's whole favorites list by sending list_item_id values from fetch_favorites in the wanted order. " +
+		Description: favoritesNature + "Reorder favorites by sending list_item_id values from fetch_favorites in the wanted order. " +
 			"Returns how many entries moved and which ids Trakt skipped.",
 	}, reorderFavorites)
 	Register(s, Spec{
@@ -175,7 +170,7 @@ func updateFavorite(ctx context.Context, c *trakt.UserClient, in UpdateFavoriteA
 	}
 
 	if in.Notes == nil && in.Rank == nil {
-		return UpdateFavoriteResult{}, invalidArgument(fieldNotes)
+		return UpdateFavoriteResult{}, invalidArgument(fieldNotesOrRank)
 	}
 
 	if in.Notes != nil && (!utf8.ValidString(*in.Notes) || utf8.RuneCountInString(*in.Notes) > maxNotesRunes) {
@@ -186,7 +181,16 @@ func updateFavorite(ctx context.Context, c *trakt.UserClient, in UpdateFavoriteA
 		return UpdateFavoriteResult{}, invalidArgument(fieldRank)
 	}
 
-	if _, err := sendJSON(updateFavoriteBody{Notes: in.Notes, Rank: in.Rank}, func(b io.Reader) (*http.Response, error) {
+	body := updateFavoriteBody{}
+	if in.Notes != nil {
+		body[fieldNotes] = notesOrNull(*in.Notes)
+	}
+
+	if in.Rank != nil {
+		body[fieldRank] = *in.Rank
+	}
+
+	if _, err := sendJSON(body, func(b io.Reader) (*http.Response, error) {
 		return c.API().PutSyncFavoritesUpdateItemWithBody(ctx, strconv.Itoa(in.ListItemID), jsonContentType, b)
 	}); err != nil {
 		return UpdateFavoriteResult{}, err

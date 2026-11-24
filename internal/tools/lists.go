@@ -62,7 +62,7 @@ type PopularListsArgs struct {
 // owner are third-party text.
 type ListDetail struct {
 	TraktList
-	Privacy        string `json:"privacy,omitempty"         jsonschema:"private, friends or public"`
+	Privacy        string `json:"privacy,omitempty"         jsonschema:"private, link, friends or public"`
 	Type           string `json:"type,omitempty"            jsonschema:"personal or official"`
 	SortBy         string `json:"sort_by,omitempty"         jsonschema:"how the list is sorted by default"`
 	SortHow        string `json:"sort_how,omitempty"        jsonschema:"asc or desc"`

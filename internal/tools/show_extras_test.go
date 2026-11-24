@@ -145,6 +145,52 @@ func TestShowEpisodeWithoutAnswer(t *testing.T) {
 	}
 }
 
+// TestShowEpisodeEmptyOrSpecialBody covers a 200 that carries no episode
+// (null, {}, no Trakt id: an empty object comes back) and a special, whose
+// season 0 must be kept.
+func TestShowEpisodeEmptyOrSpecialBody(t *testing.T) {
+	t.Parallel()
+
+	const special = `{"season":0,"number":3,"title":"Special","ids":{"trakt":77}}`
+
+	for _, tool := range []struct{ name, route string }{
+		{toolShowNextEpisode, showExtraRoute("/next_episode")},
+		{toolShowLastEpisode, showExtraRoute("/last_episode")},
+	} {
+		for _, body := range []string{"null", emptyObject, `{"season":1,"number":2,"title":"No id"}`} {
+			t.Run(tool.name+" "+body, func(t *testing.T) {
+				t.Parallel()
+
+				h := newHarness(t)
+				h.trakt.respond(tool.route, http.StatusOK, body, nil)
+
+				var out map[string]any
+
+				h.ok(tool.name, showShow(testShowSlug), &out)
+
+				if len(out) != 0 {
+					t.Errorf("result = %v, want an empty object", out)
+				}
+			})
+		}
+
+		t.Run(tool.name+" special", func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.trakt.respond(tool.route, http.StatusOK, special, nil)
+
+			var out map[string]any
+
+			h.ok(tool.name, showShow(testShowSlug), &out)
+
+			if s, ok := out["season"]; !ok || s != 0.0 || out["number"] != 3.0 {
+				t.Errorf("result = %v, want season 0 and number 3", out)
+			}
+		})
+	}
+}
+
 // TestShowExtraTraktFailures covers every endpoint of the group: each Trakt
 // failure maps to its own message and never echoes Trakt's text.
 func TestShowExtraTraktFailures(t *testing.T) {
@@ -166,6 +212,23 @@ func TestShowExtraTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolShowNextEpisode, args, showExtraRoute("/next_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowLastEpisode, args, showExtraRoute("/last_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowCertifications, args, showExtraRoute("/certifications"), notAList)
+}
+
+// TestShowListOwnerIsBounded requires the owner name of a list to be cut.
+func TestShowListOwnerIsBounded(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	h.trakt.respond(showExtraRoute(pathShowListsAll), http.StatusOK,
+		`[{"name":"n","user":{"username":"`+strings.Repeat("x", 5*maxReleaseNoteRunes)+`"}}]`, nil)
+
+	var lists Listing[TraktList]
+
+	h.ok(toolShowLists, showShow(testShowSlug), &lists)
+
+	if o := lists.Items[0].Owner; len([]rune(o)) > maxTitleRunes {
+		t.Errorf("owner has %d runes, want at most %d", len([]rune(o)), maxTitleRunes)
+	}
 }
 
 // TestShowExtraTextIsBounded requires third-party text (list names, studio

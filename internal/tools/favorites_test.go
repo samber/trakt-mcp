@@ -83,7 +83,7 @@ func TestFavoriteFetchArguments(t *testing.T) {
 
 	cases := []argCase{}
 
-	for _, sort := range favoriteSorts {
+	for _, sort := range watchlistSorts {
 		path := "/sync/favorites/all/" + sort + "/asc"
 		cases = append(cases, argCase{
 			name: "sort " + sort, tool: toolFetchFavorites, args: map[string]any{fieldSort: sort},
@@ -150,7 +150,7 @@ func TestFavoriteUpdateArguments(t *testing.T) {
 	}
 
 	cases := []argCase{
-		{name: "neither notes nor rank", tool: toolUpdateFavorite, args: update(testFavoriteID, nil), wantErr: invalid(fieldNotes)},
+		{name: "neither notes nor rank", tool: toolUpdateFavorite, args: update(testFavoriteID, nil), wantErr: invalid(fieldNotesOrRank)},
 		{name: "id zero", tool: toolUpdateFavorite, args: update(0, map[string]any{argNotes: "x"}), wantErr: invalid(fieldListItemID)},
 		{name: "id negative", tool: toolUpdateFavorite, args: update(-1, map[string]any{argNotes: "x"}), wantErr: invalid(fieldListItemID)},
 		{name: "notes over limit", tool: toolUpdateFavorite, args: update(testFavoriteID, map[string]any{argNotes: strings.Repeat("a", maxNotesRunes+1)}), wantErr: invalid(fieldNotes)},
@@ -215,8 +215,8 @@ func TestFavoriteUpdateBodies(t *testing.T) {
 		t.Parallel()
 
 		got := recorded(t, toolUpdateFavorite, map[string]any{argListItemID: testFavoriteID, argNotes: ""}, routeFavoriteUpdate, http.StatusNoContent, "")
-		if v, ok := got[argNotes]; !ok || v != "" {
-			t.Errorf("body = %v, want notes \"\" sent", got)
+		if v, ok := got[argNotes]; !ok || v != nil {
+			t.Errorf("body = %v, want notes null sent", got)
 		}
 	})
 }

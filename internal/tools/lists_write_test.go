@@ -249,6 +249,9 @@ func TestListWriteArguments(t *testing.T) {
 		cases = append(cases, argCase{
 			name: "create privacy " + p, tool: toolCreateList, args: map[string]any{argName: "x", argPrivacy: p},
 			route: "POST " + routeMeLists, body: fixture(t, testListFixture),
+		}, argCase{
+			name: "update privacy " + p, tool: toolUpdateList, args: map[string]any{argListID: testListSlug, argPrivacy: p},
+			route: "PUT " + routeMeList + "/", body: fixture(t, testListFixture),
 		})
 	}
 

@@ -14,8 +14,8 @@ const (
 	maxCountryFieldRunes = 8
 	// maxCertificationRunes bounds a certification such as "PG-13" or "TV-MA".
 	maxCertificationRunes = 32
-	// maxReleaseTypeRunes bounds a release type: the longest Trakt value
-	// (theatrical_limited) has 18 characters.
+	// maxReleaseTypeRunes bounds a release type: the longest documented value
+	// (theatrical) has 10 characters, the margin tolerates a new value.
 	maxReleaseTypeRunes = 32
 	// maxReleaseDateRunes bounds a release date: YYYY-MM-DD has 10 characters,
 	// the margin tolerates a timestamp.
@@ -99,7 +99,7 @@ type Release struct {
 	Country       string `json:"country"`
 	Certification string `json:"certification,omitempty"`
 	ReleaseDate   string `json:"release_date" jsonschema:"YYYY-MM-DD"`
-	ReleaseType   string `json:"release_type,omitempty" jsonschema:"premiere, limited, theatrical, digital, physical or tv"`
+	ReleaseType   string `json:"release_type,omitempty" jsonschema:"unknown, premiere, limited, theatrical, digital, physical or tv"`
 	Note          string `json:"note,omitempty"`
 }
 
@@ -148,7 +148,7 @@ func registerMovieExtraTools(s *Server) {
 	}, fetchMovieLists)
 	Register(s, Spec{
 		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
-		Description: "List a movie's releases in a country: date, type (premiere, limited, theatrical, digital, physical, tv), certification and note.",
+		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note.",
 	}, fetchMovieReleases)
 }
 

@@ -60,18 +60,26 @@ type MaybeEpisode struct {
 func (MaybeEpisode) resultCount() int { return 1 }
 
 // parseMaybeEpisode reads the body of the next and last episode endpoints.
-// Trakt answers 204 with no body when the show has no such episode.
+// Trakt answers 204 with no body when the show has no such episode; a 200
+// whose body is null, {} or an episode without a Trakt id means the same.
 func parseMaybeEpisode(body []byte) (MaybeEpisode, error) {
 	if len(bytes.TrimSpace(body)) == 0 {
 		return MaybeEpisode{}, nil
 	}
 
 	ep, err := parseEpisode(body)
+	if err != nil {
+		return MaybeEpisode{}, err
+	}
+
+	if ep.IDs.Trakt == 0 {
+		return MaybeEpisode{}, nil
+	}
 
 	return MaybeEpisode{
 		Season: &ep.Season, Number: &ep.Number, Title: ep.Title, Overview: ep.Overview, Rating: ep.Rating, Votes: ep.Votes,
 		Runtime: ep.Runtime, FirstAired: ep.FirstAired, EpisodeType: ep.EpisodeType, IDs: &ep.IDs,
-	}, err
+	}, nil
 }
 
 func registerShowExtraTools(s *Server) {

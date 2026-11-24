@@ -205,7 +205,7 @@ func trimList(l traktList) TraktList {
 		Name:         boundText(l.Name, maxTitleRunes),
 		Description:  boundText(deref(l.Description), maxListOverviewRunes),
 		IDs:          ListIDs{Trakt: l.IDs.Trakt, Slug: l.IDs.Slug},
-		Owner:        l.User.Username,
+		Owner:        boundText(l.User.Username, maxTitleRunes),
 		ItemCount:    l.ItemCount,
 		Likes:        l.Likes,
 		CommentCount: l.CommentCount,

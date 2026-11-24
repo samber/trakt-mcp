@@ -13,7 +13,8 @@ import (
 
 const (
 	// maxSortByLen bounds sort_by: Trakt's OpenAPI file documents no values,
-	// so the argument is passed through as a short token (unverified).
+	// so the argument is passed through as a short token. UNVERIFIED: not
+	// documented by Trakt.
 	maxSortByLen = 32
 	// hiddenTypeShow is the only type GET /users/hidden/progress_watched
 	// accepts (enum show in Trakt's OpenAPI file).
@@ -25,7 +26,7 @@ const (
 	// they never touch what the user watched.
 	progressViewNote = " This only changes what the user's TV show progress views display: it never edits watch history."
 	// upNextPagingNote tells the caller that Trakt does not count up next pages.
-	upNextPagingNote = " Trakt does not count the pages of this list: page_count and item_count are 0, so keep " +
+	upNextPagingNote = " Trakt does not report totals for this list: page.page_count and page.item_count are 0, which means unknown, so keep " +
 		"requesting the next page until items is empty."
 )
 
@@ -40,8 +41,8 @@ var hiddenTypes = []string{hiddenTypeShow}
 type UpNextArgs struct {
 	PageArgs
 
-	SortBy       string `json:"sort_by,omitempty"       jsonschema:"how Trakt orders the list, as a lowercase token (for example last_watched); Trakt documents no values, omit it for Trakt's default"`
-	SortHow      string `json:"sort_how,omitempty"      jsonschema:"asc or desc (Trakt's default is asc)"`
+	SortBy       string `json:"sort_by,omitempty"       jsonschema:"a Trakt sort field, as a lowercase token; values are not documented, omit it for Trakt's default"`
+	SortHow      string `json:"sort_how,omitempty"      jsonschema:"asc or desc; omit it for Trakt's default"`
 	IncludeStats *bool  `json:"include_stats,omitempty" jsonschema:"include minutes watched, minutes left and play count of each show"`
 }
 
@@ -153,7 +154,7 @@ func registerUpNextTools(s *Server) {
 	}, fetchUpNext)
 	Register(s, Spec{
 		Name: "fetch_hidden_progress", Title: "Fetch hidden progress", Access: Read,
-		Description: "List the TV shows the user hid from their watched progress. type is show, the only value Trakt accepts.",
+		Description: "List the hidden entries of the user's watched progress: they are hidden TV shows and may include hidden seasons. type is show, the only value Trakt accepts.",
 	}, fetchHiddenProgress)
 	Register(s, Spec{
 		Name: "hide_from_progress", Title: "Hide from progress", Access: Write,

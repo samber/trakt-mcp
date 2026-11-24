@@ -677,7 +677,7 @@ func registerShowTools(s *Server) {
 	}, fetchShowVideos)
 	Register(s, Spec{
 		Name: "fetch_related_shows", Title: "Fetch related shows", Access: Read,
-		Description: "List TV shows related to a TV show." + pageNote,
+		Description: "List TV shows related to this one." + pageNote,
 	}, fetchRelatedShows)
 	Register(s, Spec{
 		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,

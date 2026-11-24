@@ -6,8 +6,9 @@ import (
 	"testing"
 )
 
-// Case names of the Trakt failure matrix not already named elsewhere.
+// Names of the Trakt failure cases shared by tool tests.
 const (
+	testCaseLocked       = "account locked"
 	testCaseAccountLimit = "account limit"
 	testCaseVIPRequired  = "vip required"
 )
@@ -39,6 +40,7 @@ func runTraktFailureMatrix(t *testing.T, tools []failureTool) {
 		{testCaseUnauthorized, http.StatusUnauthorized, hostile, msgUpstreamAuth},
 		{testCaseAccountLimit, statusTraktAccountLimit, hostile, msgAccountLimit},
 		{testCaseVIPRequired, http.StatusUpgradeRequired, hostile, msgVIPRequired},
+		{testCaseLocked, http.StatusLocked, hostile, msgLocked},
 		{testCaseServerError, http.StatusInternalServerError, hostile, testMsgServerError},
 		{testCaseBadGateway, http.StatusBadGateway, ``, testMsgBadGateway},
 	}

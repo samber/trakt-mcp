@@ -60,12 +60,12 @@ func TestWatchlistEditBodies(t *testing.T) {
 		}
 	})
 
-	t.Run("empty notes clear the note", func(t *testing.T) {
+	t.Run("empty notes clear the note with null", func(t *testing.T) {
 		t.Parallel()
 
 		got := recorded(t, toolUpdateWatchlistItem, map[string]any{argListItemID: testListItemID, argNotes: ""}, testItemRoute, http.StatusNoContent, "")
-		if v, ok := got[argNotes]; !ok || v != "" {
-			t.Errorf("body = %v, want notes \"\" sent", got)
+		if v, ok := got[argNotes]; !ok || v != nil {
+			t.Errorf("body = %v, want notes null sent", got)
 		}
 	})
 
@@ -141,7 +141,7 @@ func TestWatchlistEditDescriptionsMentionVIP(t *testing.T) {
 
 	tools := listTools(t, NewServer(offlineDeps()))
 
-	for _, name := range []string{toolUpdateWatchlistItem, toolReorderWatchlist} {
+	for _, name := range []string{toolUpdateWatchlistItem} {
 		if d := tools[name].Description; !strings.Contains(d, "VIP") {
 			t.Errorf("%s description %q does not mention Trakt VIP", name, d)
 		}

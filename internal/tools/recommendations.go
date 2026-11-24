@@ -48,7 +48,7 @@ func registerRecommendationTools(s *Server) {
 		Name:  "fetch_show_recommendations",
 		Title: "Fetch show recommendations",
 		Description: "List TV shows Trakt recommends to the user from their watching history, optionally leaving out " +
-			"collected or watchlisted TV shows. Takes limit (no page: Trakt returns one list).",
+			"ones the user already collected or watchlisted. Takes limit (no page: Trakt returns one list).",
 		Access: Read,
 	}, fetchShowRecommendations)
 	Register(s, Spec{
