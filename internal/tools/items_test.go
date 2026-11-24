@@ -632,9 +632,9 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 func TestRegistryHas79Tools(t *testing.T) {
 	t.Parallel()
 
-	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2
+	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2 + 3
 
-	const want = 2 + 12 + 3 + 5 + 30 + accountTools + 7 + 7 + 7 + 9 + 5
+	const want = 2 + 12 + 3 + 5 + 30 + accountTools + 7 + 7 + 7 + 9 + 5 + 2
 
 	if got := len(NewServer(offlineDeps()).Specs()); got != want {
 		t.Errorf("registered tools = %d, want %d", got, want)

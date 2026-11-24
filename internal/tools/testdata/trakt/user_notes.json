@@ -1,0 +1,14 @@
+[
+  {
+    "type": "movie",
+    "attached_to": {"type": "history", "id": 777, "watched_at": "2024-03-01T20:00:00.000Z"},
+    "note": {"id": 4242, "notes": "Great opening scene", "privacy": "private", "spoiler": false, "created_at": "2024-02-01T10:00:00.000Z", "updated_at": "2024-02-02T11:00:00.000Z"},
+    "movie": {"title": "Heat", "year": 1995, "ids": {"trakt": 481, "slug": "heat-1995", "imdb": "tt0113277", "tmdb": 949}}
+  },
+  {
+    "type": "person",
+    "attached_to": {"type": "rating", "rating": 9, "rated_at": "2024-03-02T20:00:00.000Z"},
+    "note": {"id": 4243, "notes": "Master of the genre", "privacy": "public", "spoiler": false},
+    "person": {"name": "Michael Mann", "ids": {"trakt": 5, "slug": "michael-mann"}}
+  }
+]
