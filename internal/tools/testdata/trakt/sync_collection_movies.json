@@ -1,0 +1,5 @@
+[
+  {"collected_at": "2024-03-01T20:00:00.000Z", "updated_at": "2024-03-01T20:00:00.000Z",
+   "movie": {"title": "The Matrix", "year": 1999, "ids": {"trakt": 481, "slug": "the-matrix-1999"}},
+   "available_on": [{"name": "disc"}]}
+]

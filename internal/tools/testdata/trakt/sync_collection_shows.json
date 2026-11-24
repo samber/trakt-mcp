@@ -1,0 +1,8 @@
+[
+  {"last_collected_at": "2024-03-01T20:00:00.000Z", "last_updated_at": "2024-03-01T20:00:00.000Z",
+   "show": {"title": "Breaking Bad", "year": 2008, "ids": {"trakt": 1388, "slug": "breaking-bad"}},
+   "seasons": [
+     {"number": 1, "episodes": [{"number": 1, "collected_at": "2024-01-01T20:00:00.000Z"}, {"number": 2, "collected_at": "2024-01-01T20:00:00.000Z"}]},
+     {"number": 2, "episodes": [{"number": 1, "collected_at": "2024-03-01T20:00:00.000Z"}]}
+   ]}
+]

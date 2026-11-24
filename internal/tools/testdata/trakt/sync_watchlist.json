@@ -1,0 +1,10 @@
+[
+  {"rank": 1, "id": 101, "listed_at": "2024-03-01T20:00:00.000Z", "notes": "Watch with friends", "type": "movie",
+   "movie": {"title": "The Matrix", "year": 1999, "ids": {"trakt": 481, "slug": "the-matrix-1999"}}},
+  {"rank": 2, "id": 102, "listed_at": "2024-02-01T20:00:00.000Z", "notes": null, "type": "season",
+   "season": {"number": 1, "ids": {"trakt": 3572, "tvdb": 30272}},
+   "show": {"title": "Breaking Bad", "year": 2008, "ids": {"trakt": 1388, "slug": "breaking-bad"}}},
+  {"rank": 3, "id": 103, "listed_at": "2024-01-01T20:00:00.000Z", "type": "episode",
+   "episode": {"season": 1, "number": 1, "title": "Pilot", "ids": {"trakt": 73482}},
+   "show": {"title": "Breaking Bad", "year": 2008, "ids": {"trakt": 1388, "slug": "breaking-bad"}}}
+]
