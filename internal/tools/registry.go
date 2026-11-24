@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"net"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -69,8 +72,8 @@ const (
 	msgNotFound     = "not found"
 	msgConflict     = "conflict"
 	msgAccountLimit = "Trakt account limit reached; do not retry"
-	msgVIPRequired  = "Trakt VIP is required for this feature"
-	msgLocked       = "this Trakt account is locked"
+	msgVIPRequired  = "Trakt VIP is required for this feature; do not retry"
+	msgLocked       = "this Trakt account is locked; do not retry"
 	msgUpstreamAuth = "Trakt access was revoked; reconnect this connector"
 	// msgUnreachable covers timeouts, refused connections and DNS failures.
 	// After a timeout Trakt may already have applied a write, so callers must
@@ -83,6 +86,9 @@ const (
 	// the middleware logs the real cause.
 	msgInternal = "internal error"
 	msgNoUser   = "internal error: no authenticated user"
+	// msgInvalidInput is logged for a call the input schema refused; the
+	// client got go-sdk's own validation message.
+	msgInvalidInput = "invalid input"
 	// msgRateLimitedNoDelay answers a Trakt 429 without a usable Retry-After.
 	msgRateLimitedNoDelay = "rate limited, retry later"
 	// Prefixes completed with a field name, a delay or a status.
@@ -99,6 +105,28 @@ const (
 	statusError       = "error"
 	statusRateLimited = "rate_limited"
 	statusCanceled    = "canceled"
+	// statusInvalidInput marks a call the input schema refused before any
+	// handler ran.
+	statusInvalidInput = "invalid_input"
+)
+
+// keyErrorClass is the log key of a failed call's error class: one of the
+// errorClass* labels, never the raw error text, which may quote data.
+const keyErrorClass = "error_class"
+
+// Error classes of failed calls, in logs only.
+const (
+	errorClassPanic         = "panic"
+	errorClassInternal      = "internal"
+	errorClassNoUser        = "no_user"
+	errorClassTraktRejected = "trakt_rejected"
+	errorClassTraktKind     = "trakt_unexpected_kind"
+	// Unreachable classes, from the network cause.
+	errorClassTimeout     = "timeout"
+	errorClassDNS         = "dns"
+	errorClassRefused     = "connection_refused"
+	errorClassNetwork     = "network"
+	errorClassUnreachable = "unreachable"
 )
 
 // Rate-limit kinds of the rate_limited metric: the per-user read and write
@@ -117,11 +145,16 @@ const (
 // errors. The result carries structured content plus one text block with the
 // same JSON. Every call ends with one log line and one metric sample.
 //
-// Register panics on an invalid spec or an output type without a JSON
-// schema: both are programming errors caught by the registry tests.
+// Register panics on an invalid spec, a name already registered (go-sdk
+// would silently replace the earlier tool) or an output type without a JSON
+// schema: all are programming errors caught by the registry tests.
 func Register[In, Out any](s *Server, spec Spec, h func(ctx context.Context, c *trakt.UserClient, in In) (Out, error)) {
 	if spec.Name == "" || spec.Title == "" || spec.Description == "" || spec.Access < Read || spec.Access > Destroy {
 		panic(fmt.Sprintf("tools: invalid spec %+v", spec))
+	}
+
+	if s.registered(spec.Name) {
+		panic("tools: tool registered twice: " + spec.Name)
 	}
 
 	if spec.Access.writes() && !strings.Contains(spec.Description, writeWarning) {
@@ -159,6 +192,8 @@ func outputSchema[Out any]() *jsonschema.Schema {
 // handle wraps a tool body with the per-call middleware described on Register.
 func handle[In, Out any](deps Deps, spec Spec, h func(context.Context, *trakt.UserClient, In) (Out, error)) mcp.ToolHandlerFor[In, Out] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Out, error) {
+		markHandlerRan(ctx)
+
 		start := time.Now()
 		ctx, traktStatus := obs.WithCallRecorder(ctx)
 		userID, _ := oauth.UserID(ctx)
@@ -183,12 +218,32 @@ func handle[In, Out any](deps Deps, spec Spec, h func(context.Context, *trakt.Us
 }
 
 // runTool is the body of handle. Its errors are mapped by mapError but may
-// still carry an internal cause, which handle logs and strips.
-func runTool[In, Out any](ctx context.Context, deps Deps, userID string, access Access, h func(context.Context, *trakt.UserClient, In) (Out, error), in In) (*mcp.CallToolResult, Out, error) {
+// still carry an error class and a stack, which handle logs and strips.
+//
+// A panicking handler becomes msgInternal. go-sdk runs handlers on its own
+// goroutine and never recovers, so without this one nil dereference in any
+// tool would crash the instance for every user. The recover is deferred
+// first, so it runs last: the write lock is already released when it runs.
+func runTool[In, Out any](ctx context.Context, deps Deps, userID string, access Access, h func(context.Context, *trakt.UserClient, In) (Out, error), in In) (res *mcp.CallToolResult, out Out, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var zero Out
+
+			// Only the value's type is kept: its text may quote arguments
+			// or results.
+			res, out, err = nil, zero, &toolError{
+				msg:     msgInternal,
+				class:   errorClassPanic,
+				errType: fmt.Sprintf("%T", r),
+				stack:   string(debug.Stack()),
+			}
+		}
+	}()
+
 	var zero Out
 	if userID == "" {
 		// Unreachable behind RequireBearerToken with our verifier.
-		return nil, zero, &toolError{msg: msgNoUser, cause: errNoUser}
+		return nil, zero, &toolError{msg: msgNoUser, class: errorClassNoUser}
 	}
 
 	if err := deps.Store.TouchUser(ctx, userID); err != nil {
@@ -199,7 +254,8 @@ func runTool[In, Out any](ctx context.Context, deps Deps, userID string, access 
 
 	// Rate limits before the write lock, so a refused write never waits. The
 	// user's bucket comes first, so one user cannot drain the global budget
-	// with calls their own bucket refuses.
+	// with calls their own bucket refuses; the price is that a call the
+	// global bucket refuses has spent the user's token.
 	if allowed, retry := deps.Limiter.Allow(userID, access.writes()); !allowed {
 		kind := rateKindRead
 		if access.writes() {
@@ -224,7 +280,7 @@ func runTool[In, Out any](ctx context.Context, deps Deps, userID string, access 
 		return nil, zero, mapError(err)
 	}
 
-	out, err := h(ctx, c, in)
+	out, err = h(ctx, c, in)
 	if err != nil {
 		return nil, zero, mapError(err)
 	}
@@ -235,15 +291,11 @@ func runTool[In, Out any](ctx context.Context, deps Deps, userID string, access 
 	// of the SDK's fallback, which only applies while Content is nil.
 	data, err := json.Marshal(out)
 	if err != nil {
-		return nil, zero, &toolError{msg: msgInternal, cause: err}
+		return nil, zero, internalError(err)
 	}
 
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(data)}}}, out, nil
 }
-
-// errNoUser is the logged cause of a call that reached a tool without an
-// authenticated user.
-var errNoUser = errors.New("tools: call without authenticated user")
 
 // rateLimitedMessage tells the assistant how long to wait, in whole seconds
 // rounded up so it never retries too early.
@@ -266,38 +318,23 @@ type callRecord struct {
 	err          error
 }
 
-// finishCall logs the call and records its metrics. The info line holds
-// only metadata; arguments and results, which are personal data, are added
-// only when the logger is enabled at debug (spec §12).
+// finishCall writes the call's one log line and records its metrics. The
+// line holds only metadata; arguments and results, which are personal data,
+// are added only when the logger is enabled at debug (spec §12). A failure
+// with an error class raises the line to error, or to warn for an
+// unreachable Trakt (an outage to watch, not a bug in this server).
 func (d Deps) finishCall(ctx context.Context, rec callRecord) {
 	log := d.logger()
-	status, count := statusOK, resultCount(rec.out)
+	status, count := callStatus(rec), resultCount(rec.out)
 
-	te, isToolError := errors.AsType[*toolError](rec.err)
-
-	switch {
-	case isToolError && te.rateKind != "":
-		status, count = statusRateLimited, 0
-
-		d.Metrics.RateLimited(te.rateKind)
-	case isToolError && te.canceled:
-		status, count = statusCanceled, 0
-	case rec.err != nil:
-		status, count = statusError, 0
+	if status != statusOK {
+		count = 0
 	}
 
-	if isToolError && te.cause != nil {
-		// The cause comes from our code, a Trakt status or a network error
-		// stripped of its URL; never from tool arguments, a token or a Trakt
-		// response body. An unreachable Trakt is an outage to watch, not a
-		// bug in this server.
-		level := slog.LevelError
-		if te.unreachable {
-			level = slog.LevelWarn
+	if status == statusRateLimited {
+		if te, ok := errors.AsType[*toolError](rec.err); ok {
+			d.Metrics.RateLimited(te.rateKind)
 		}
-
-		log.Log(ctx, level, "tool call failed",
-			slog.String("tool", rec.tool), slog.String("user_id", rec.userID), slog.Any("error", te.cause))
 	}
 
 	attrs := []slog.Attr{
@@ -308,6 +345,10 @@ func (d Deps) finishCall(ctx context.Context, rec callRecord) {
 		slog.Int("trakt_status", rec.traktStatus),
 		slog.Int("result_count", count),
 	}
+
+	level, failure := failureAttrs(rec.err)
+	attrs = append(attrs, failure...)
+
 	if log.Enabled(ctx, slog.LevelDebug) {
 		attrs = append(attrs, slog.Any("args", rec.args))
 		if rec.err != nil {
@@ -317,9 +358,65 @@ func (d Deps) finishCall(ctx context.Context, rec callRecord) {
 		}
 	}
 
-	log.LogAttrs(ctx, slog.LevelInfo, "tool call", attrs...)
+	log.LogAttrs(ctx, level, msgToolCallLog, attrs...)
 	d.Metrics.ToolCall(rec.tool, status, rec.duration)
 }
+
+// callStatus is the status label of a finished call.
+func callStatus(rec callRecord) string {
+	te, isToolError := errors.AsType[*toolError](rec.err)
+
+	switch {
+	case rec.err == nil:
+		return statusOK
+	case isToolError && te.rateKind != "":
+		return statusRateLimited
+	case isToolError && te.canceled:
+		return statusCanceled
+	case isToolError && te.invalidInput:
+		return statusInvalidInput
+	}
+
+	return statusError
+}
+
+// failureAttrs returns the log level of a call that ended with err and the
+// attributes describing its failure: info and none for success and expected
+// outcomes, error (warn when Trakt is unreachable) with the error class, type
+// and stack otherwise.
+func failureAttrs(err error) (slog.Level, []slog.Attr) {
+	te, ok := errors.AsType[*toolError](err)
+	if !ok || te.class == "" {
+		return slog.LevelInfo, nil
+	}
+
+	level := slog.LevelError
+	if te.unreachable {
+		level = slog.LevelWarn
+	}
+
+	attrs := []slog.Attr{slog.String(keyErrorClass, te.class)}
+	if te.errType != "" {
+		attrs = append(attrs, slog.String(keyErrorType, te.errType))
+	}
+
+	if te.stack != "" {
+		attrs = append(attrs, slog.String(keyStack, te.stack))
+	}
+
+	return level, attrs
+}
+
+// msgToolCallLog is the message of the one log line each tool call writes.
+const msgToolCallLog = "tool call"
+
+// Log keys of a failed call besides keyErrorClass: the Go type of the
+// underlying error or panic value (bounded by the code, never data), and a
+// panic's stack trace (code locations only).
+const (
+	keyErrorType = "error_type"
+	keyStack     = "stack"
+)
 
 // resultCounter is implemented by tool outputs that report how many items
 // they return.
@@ -338,27 +435,40 @@ func resultCount(out any) int {
 // toolError is an error whose message is final and safe for the assistant.
 type toolError struct {
 	msg string
-	// cause is the internal error behind msg: logged, never shown.
-	cause error
+	// class labels a failure worth logging above info (errorClass*); empty
+	// for expected outcomes such as not found or a validation error.
+	class string
+	// errType is the Go type of the underlying error or panic value.
+	errType string
+	// stack is a panic's stack trace.
+	stack string
 	// rateKind is set when a rate limit refused the call.
 	rateKind string
 	// unreachable marks a call that got no answer from Trakt.
 	unreachable bool
 	// canceled marks a call whose context the client canceled.
 	canceled bool
+	// invalidInput marks a call the input schema refused.
+	invalidInput bool
 }
 
 func (e *toolError) Error() string { return e.msg }
 
 func newToolError(msg string) error { return &toolError{msg: msg} }
 
+// internalError hides err behind msgInternal, keeping only its type for the
+// log: its text may quote data.
+func internalError(err error) error {
+	return &toolError{msg: msgInternal, class: errorClassInternal, errType: fmt.Sprintf("%T", err)}
+}
+
 // invalidArgument names the rejected field without echoing its value.
 func invalidArgument(field string) error {
 	return newToolError(msgInvalidArgumentPrefix + field)
 }
 
-// publicError is err as the assistant sees it: a toolError without its
-// cause, or err itself.
+// publicError is err as the assistant sees it: a toolError without its log
+// details, or err itself.
 func publicError(err error) error {
 	if te, ok := errors.AsType[*toolError](err); ok {
 		return newToolError(te.msg)
@@ -369,8 +479,7 @@ func publicError(err error) error {
 
 // mapError turns any error of a tool call into the message the assistant
 // sees. Trakt failures are mapped by Kind only, never by their message.
-// Errors whose text was not built for the assistant become msgInternal,
-// keeping the original as cause for the log.
+// Errors whose text was not built for the assistant become msgInternal.
 func mapError(err error) error {
 	if te, ok := errors.AsType[*toolError](err); ok {
 		return te
@@ -385,9 +494,13 @@ func mapError(err error) error {
 		return newToolError(msgUpstreamAuth)
 	case errors.Is(err, context.Canceled):
 		return &toolError{msg: msgCanceled, canceled: true}
+	case errors.Is(err, context.DeadlineExceeded):
+		// A deadline on the call's context (Paginate checks it between
+		// pages) means Trakt answered too slowly.
+		return &toolError{msg: msgUnreachable, class: errorClassTimeout, unreachable: true}
 	}
 
-	return &toolError{msg: msgInternal, cause: err}
+	return internalError(err)
 }
 
 // fromTraktError maps a Trakt failure by its Kind (spec §8.6).
@@ -410,21 +523,36 @@ func fromTraktError(e *trakt.Error) error {
 	case trakt.KindServer:
 		return newToolError(fmt.Sprintf(msgServerFormat, e.Status))
 	case trakt.KindUnreachable:
-		// Unwrap gives the network cause without the url.Error wrapper, so
-		// the request URL never reaches the log.
-		cause := errors.Unwrap(e)
-		if cause == nil {
-			cause = errors.New(e.Kind.String())
-		}
-
-		return &toolError{msg: msgUnreachable, cause: cause, unreachable: true}
+		return &toolError{msg: msgUnreachable, class: networkClass(errors.Unwrap(e)), unreachable: true}
 	case trakt.KindCanceled:
 		return &toolError{msg: msgCanceled, canceled: true}
 	case trakt.KindUnknown:
-		// Usually a request this server built wrong: log the status only,
-		// since e.Message may quote Trakt's response body.
-		return &toolError{msg: fmt.Sprintf(msgUnknownFormat, e.Status), cause: fmt.Errorf("trakt status %d", e.Status)}
+		// Usually a request this server built wrong; the status is on the log
+		// line as trakt_status, and e.Message may quote Trakt's body.
+		return &toolError{msg: fmt.Sprintf(msgUnknownFormat, e.Status), class: errorClassTraktRejected}
 	}
 
-	return &toolError{msg: msgInternal, cause: fmt.Errorf("trakt kind %s, status %d", e.Kind, e.Status)}
+	return &toolError{msg: msgInternal, class: errorClassTraktKind}
+}
+
+// networkClass labels the network cause of an unreachable Trakt without its
+// text, which names hosts and addresses.
+func networkClass(cause error) string {
+	var (
+		netErr net.Error
+		dnsErr *net.DNSError
+	)
+
+	switch {
+	case cause == nil:
+		return errorClassUnreachable
+	case errors.As(cause, &dnsErr):
+		return errorClassDNS
+	case errors.Is(cause, context.DeadlineExceeded), errors.As(cause, &netErr) && netErr.Timeout():
+		return errorClassTimeout
+	case errors.Is(cause, syscall.ECONNREFUSED):
+		return errorClassRefused
+	}
+
+	return errorClassNetwork
 }

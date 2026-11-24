@@ -70,7 +70,7 @@ type traktMovie struct {
 	Released      *string  `json:"released"`
 }
 
-func (m traktMovie) trim() Movie {
+func (m traktMovie) trim(maxOverview int) Movie {
 	return Movie{
 		Title: m.Title,
 		Year:  deref(m.Year),
@@ -82,7 +82,7 @@ func (m traktMovie) trim() Movie {
 		},
 		Rating:        deref(m.Rating),
 		Votes:         deref(m.Votes),
-		Overview:      boundText(deref(m.Overview), maxOverviewRunes),
+		Overview:      boundText(deref(m.Overview), maxOverview),
 		Runtime:       deref(m.Runtime),
 		Certification: deref(m.Certification),
 		Genres:        NonNil(m.Genres),
@@ -139,7 +139,7 @@ func fetchTrendingMovies(ctx context.Context, c *trakt.UserClient, in TrendingMo
 
 		out := make([]TrendingMovie, 0, len(raw))
 		for _, r := range raw {
-			out = append(out, TrendingMovie{Watchers: r.Watchers, Movie: r.Movie.trim()})
+			out = append(out, TrendingMovie{Watchers: r.Watchers, Movie: r.Movie.trim(maxListOverviewRunes)})
 		}
 
 		return out, trakt.ParsePage(resp.HTTPResponse.Header), nil
@@ -169,5 +169,5 @@ func fetchMovieSummary(ctx context.Context, c *trakt.UserClient, in MovieSummary
 		return Movie{}, err
 	}
 
-	return raw.trim(), nil
+	return raw.trim(maxOverviewRunes), nil
 }

@@ -7,11 +7,15 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"slices"
+	"sync/atomic"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/samber/trakt-mcp/internal/limits"
+	"github.com/samber/trakt-mcp/internal/oauth"
 	"github.com/samber/trakt-mcp/internal/obs"
 	"github.com/samber/trakt-mcp/internal/trakt"
 )
@@ -93,11 +97,68 @@ func newServer(deps Deps, groups []func(*Server)) *Server {
 			},
 		}),
 	}
+	s.mcp.AddReceivingMiddleware(s.recordRejectedInput)
+
 	for _, register := range groups {
 		register(s)
 	}
 
 	return s
+}
+
+// methodToolsCall is the JSON-RPC method of a tool call.
+const methodToolsCall = "tools/call"
+
+// handlerRanKey keys, in a tools/call context, the flag handle sets when a
+// registered handler ran.
+type handlerRanKey struct{}
+
+// markHandlerRan tells recordRejectedInput that handle ran for this call.
+func markHandlerRan(ctx context.Context) {
+	if ran, ok := ctx.Value(handlerRanKey{}).(*atomic.Bool); ok {
+		ran.Store(true)
+	}
+}
+
+// recordRejectedInput gives a tool call that go-sdk refused against the
+// input schema, before any handler ran, the same one log line and metric
+// sample as other calls, with status invalid_input. Calls to unknown tools
+// are protocol errors and stay unrecorded, so a client cannot grow the tool
+// label with made-up names.
+func (s *Server) recordRejectedInput(next mcp.MethodHandler) mcp.MethodHandler {
+	return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+		if method != methodToolsCall {
+			return next(ctx, method, req)
+		}
+
+		start := time.Now()
+		ran := &atomic.Bool{}
+
+		res, err := next(context.WithValue(ctx, handlerRanKey{}, ran), method, req)
+		if err != nil || ran.Load() {
+			return res, err
+		}
+
+		result, isResult := res.(*mcp.CallToolResult)
+		call, isCall := req.(*mcp.CallToolRequest)
+
+		if isResult && isCall && result.IsError && call.Params != nil && s.registered(call.Params.Name) {
+			userID, _ := oauth.UserID(ctx)
+			s.deps.finishCall(ctx, callRecord{
+				tool:     call.Params.Name,
+				userID:   userID,
+				duration: time.Since(start),
+				err:      &toolError{msg: msgInvalidInput, invalidInput: true},
+			})
+		}
+
+		return res, nil
+	}
+}
+
+// registered reports whether a tool named name is registered.
+func (s *Server) registered(name string) bool {
+	return slices.ContainsFunc(s.specs, func(spec Spec) bool { return spec.Name == name })
 }
 
 // MCP returns the underlying go-sdk server.

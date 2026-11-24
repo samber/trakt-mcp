@@ -12,6 +12,10 @@ const (
 	// paragraphs answer any question, and a list of maxLimit items must not
 	// flood the model's context.
 	maxOverviewRunes = 600
+	// maxListOverviewRunes bounds overviews inside list items: a sentence or
+	// two tells movies apart, and a list of maxLimit items stays small; the
+	// summary tool gives the longer text.
+	maxListOverviewRunes = 200
 	// truncationMark ends a bounded text so the model knows it was cut.
 	truncationMark = "…"
 )

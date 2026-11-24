@@ -39,6 +39,8 @@ func TestParseID(t *testing.T) {
 		{"title id for a person", "tt0903747", Slug | Numeric | IMDbPerson, false},
 		{"slug not allowed", "breaking-bad", Numeric | IMDbTitle, false},
 		{"newline", "a\nb", all, false},
+		{"trailing newline", "slug\n", all, false},
+		{"trailing space", "slug ", all, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

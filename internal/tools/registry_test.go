@@ -379,17 +379,18 @@ func TestToolCallInternalErrorHidesCause(t *testing.T) {
 	h.clients.setErr(cause)
 	h.fail(toolMovieSummary, map[string]any{fieldMovieID: "secret-arg"}, msgInternal)
 
-	if rec := toolLine(t, h.logs, toolMovieSummary); rec[keyStatus] != statusError {
-		t.Errorf("status = %v, want error", rec[keyStatus])
+	rec := toolLine(t, h.logs, toolMovieSummary)
+	if rec[keyStatus] != statusError || rec["level"] != "ERROR" || rec[keyErrorClass] != errorClassInternal ||
+		rec[keyErrorType] != "*errors.errorString" {
+		t.Errorf("line = %v, want ERROR, class internal and the cause's type", rec)
 	}
 
-	failed := h.logs.lines(t, "tool call failed")
-	if len(failed) != 1 || failed[0]["level"] != "ERROR" || failed[0]["error"] != cause.Error() {
-		t.Fatalf("failure lines = %v, want one ERROR line with the cause", failed)
+	if logs := h.logs.String(); strings.Contains(logs, "secret-arg") || strings.Contains(logs, cause.Error()) {
+		t.Errorf("logs contain the tool argument or the raw cause:\n%s", logs)
 	}
 
-	if strings.Contains(h.logs.String(), "secret-arg") {
-		t.Errorf("logs contain the tool argument:\n%s", h.logs.String())
+	if n := len(h.logs.lines(t, msgToolCallLog)); n != 1 {
+		t.Errorf("log lines = %d, want 1", n)
 	}
 }
 
@@ -402,13 +403,10 @@ func TestToolCallUnreachableIsWarn(t *testing.T) {
 	h := newHarness(t, withAPIBaseURL(closed.URL))
 	h.fail(toolTrending, map[string]any{}, msgUnreachable)
 
-	if rec := toolLine(t, h.logs, toolTrending); rec[keyStatus] != statusError || rec["trakt_status"] != float64(0) {
-		t.Errorf("log line = %v, want error with trakt_status 0", rec)
-	}
-
-	failed := h.logs.lines(t, "tool call failed")
-	if len(failed) != 1 || failed[0]["level"] != "WARN" {
-		t.Fatalf("failure lines = %v, want one WARN line", failed)
+	rec := toolLine(t, h.logs, toolTrending)
+	if rec[keyStatus] != statusError || rec["trakt_status"] != float64(0) || rec["level"] != "WARN" ||
+		rec[keyErrorClass] != errorClassRefused {
+		t.Errorf("log line = %v, want WARN, error, trakt_status 0, class %s", rec, errorClassRefused)
 	}
 
 	if logs := h.logs.String(); strings.Contains(logs, "http://") || strings.Contains(logs, "/movies/trending") {
@@ -431,8 +429,8 @@ func TestToolCallCanceledIsInfo(t *testing.T) {
 		t.Errorf("line = %v, want INFO with status canceled", rec)
 	}
 
-	if failed := buf.lines(t, "tool call failed"); len(failed) != 0 {
-		t.Errorf("canceled call logged as a failure: %v", failed)
+	if _, ok := rec[keyErrorClass]; ok {
+		t.Errorf("canceled call logged as a failure: %v", rec)
 	}
 
 	if got := mapError(context.Canceled).Error(); got != msgCanceled {
