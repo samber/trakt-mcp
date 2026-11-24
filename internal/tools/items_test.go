@@ -628,13 +628,13 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 // the 34 account tools of the history, watchlist, watchlist edit, collection, rating,
 // check-in, recommendation, smart-list and custom list write groups, the 7 calendar tools and the 7
 // where-to-watch and search-by-id tools, the 7 movie extras, the 9 show extras, the 5 custom list read tools
-// the 5 favorites tools and the 3 show progress tools (counted in the account tools) and the 5
-// reference data tools.
+// the 5 favorites tools, the 3 show progress tools and the 4 up next and hidden progress tools (all
+// counted in the account tools) and the 5 reference data tools.
 // The name still says 79 until the last tool group lands.
 func TestRegistryHas79Tools(t *testing.T) {
 	t.Parallel()
 
-	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2 + 3 + 3 + 5
+	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2 + 3 + 3 + 5 + 4
 
 	const want = 2 + 12 + 3 + 5 + 30 + accountTools + 7 + 7 + 7 + 9 + 5 + 2 + 5
 

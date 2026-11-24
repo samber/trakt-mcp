@@ -1,0 +1,36 @@
+[
+  {
+    "hidden_at": "2024-03-01T20:00:00.000Z",
+    "type": "show",
+    "show": {
+      "title": "Breaking Bad",
+      "year": 2008,
+      "ids": {
+        "trakt": 1388,
+        "slug": "breaking-bad",
+        "tvdb": 81189,
+        "imdb": "tt0903747",
+        "tmdb": 1396
+      },
+      "overview": "A chemistry teacher turns to crime.",
+      "network": "AMC",
+      "genres": [
+        "drama"
+      ],
+      "homepage": "https://dropped.example"
+    }
+  },
+  {
+    "hidden_at": null,
+    "type": "show",
+    "show": {
+      "title": "Better Call Saul",
+      "year": 2015,
+      "ids": {
+        "trakt": 59660,
+        "slug": "better-call-saul"
+      },
+      "genres": null
+    }
+  }
+]
