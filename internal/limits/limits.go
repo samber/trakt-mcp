@@ -12,12 +12,6 @@ import (
 )
 
 const (
-	// burstDivisor makes the burst one sixth of the per-minute rate, i.e. ten
-	// seconds' worth of requests, so a client cannot spend a whole minute's
-	// budget in one spike.
-	burstDivisor = 6
-	// minBurst keeps low rates usable: rate.Limiter rejects everything at burst 0.
-	minBurst = 1
 	// idleTTL is how long a user's buckets survive without activity; a returning
 	// user after that gets fresh, full buckets, which is harmless at this scale.
 	idleTTL = 10 * time.Minute
@@ -27,6 +21,9 @@ const (
 
 // Limiter holds a read bucket, a write bucket and a write lock per user, plus
 // an optional application-wide bucket. It is safe for concurrent use.
+//
+// Every bucket's burst equals its per-minute count: Trakt counts requests per
+// window, so "N per minute" must allow N calls at once, not one every 60/N s.
 type Limiter struct {
 	readLimit  rate.Limit
 	writeLimit rate.Limit
@@ -68,8 +65,7 @@ type entry struct {
 type Option func(*Limiter)
 
 // WithGlobal adds an application-wide bucket allowing perMin requests per
-// minute across all users. Its burst equals perMin, so the whole per-minute
-// budget is usable at once, matching how the upstream counts its window.
+// minute across all users, with burst perMin like every other bucket.
 // perMin must be positive; a non-positive value panics in New.
 func WithGlobal(perMin int) Option {
 	return func(l *Limiter) {
@@ -93,8 +89,8 @@ func New(readsPerMin, writesPerMin int, opts ...Option) *Limiter {
 	l := &Limiter{
 		readLimit:  perMinute(readsPerMin),
 		writeLimit: perMinute(writesPerMin),
-		readBurst:  burstFor(readsPerMin),
-		writeBurst: burstFor(writesPerMin),
+		readBurst:  readsPerMin,
+		writeBurst: writesPerMin,
 		now:        time.Now,
 		users:      make(map[string]*entry),
 	}
@@ -107,10 +103,6 @@ func New(readsPerMin, writesPerMin int, opts ...Option) *Limiter {
 
 func perMinute(n int) rate.Limit {
 	return rate.Limit(float64(n) / time.Minute.Seconds())
-}
-
-func burstFor(perMin int) int {
-	return max(perMin/burstDivisor, minBurst)
 }
 
 // entryLocked returns the user's entry, creating it if needed, and marks it
@@ -150,7 +142,9 @@ func (l *Limiter) Allow(userID string, write bool) (ok bool, retryAfter time.Dur
 
 // AllowGlobal takes one token from the application-wide bucket. When the
 // bucket is empty it consumes nothing and returns the delay until the next
-// token. Without WithGlobal it always allows.
+// token. Without WithGlobal it always allows. Callers charge one token per
+// tool call: the Trakt client's retries (after a 401 or a 5xx) are extra
+// upstream requests this bucket does not count.
 func (l *Limiter) AllowGlobal() (ok bool, retryAfter time.Duration) {
 	if l.global == nil {
 		return true, 0

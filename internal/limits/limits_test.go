@@ -39,16 +39,50 @@ func newTestLimiter(readsPerMin, writesPerMin int, clock *fakeClock) *Limiter {
 	return l
 }
 
-func TestNew_BurstIsSixthOfPerMinuteWithFloorOfOne(t *testing.T) {
+// spend takes n tokens from the user's bucket, failing if any is rejected.
+func spend(t *testing.T, l *Limiter, userID string, write bool, n int) {
+	t.Helper()
+
+	for i := range n {
+		if ok, _ := l.Allow(userID, write); !ok {
+			t.Fatalf("%s call %d (write=%v) rejected within burst", userID, i, write)
+		}
+	}
+}
+
+func TestNew_BurstEqualsPerMinute(t *testing.T) {
 	t.Parallel()
 
 	l := New(120, 5)
-	if got := l.readBurst; got != 20 {
-		t.Errorf("readBurst = %d, want 20", got)
+	if got := l.readBurst; got != 120 {
+		t.Errorf("readBurst = %d, want 120", got)
 	}
 
-	if got := l.writeBurst; got != 1 {
-		t.Errorf("writeBurst = %d, want 1", got)
+	if got := l.writeBurst; got != 5 {
+		t.Errorf("writeBurst = %d, want 5", got)
+	}
+}
+
+// TestAllow_ThreePerMinuteMeansThreeNow guards against a burst below the
+// per-minute count, which would turn "3 per minute" into "1 per 20 s".
+func TestAllow_ThreePerMinuteMeansThreeNow(t *testing.T) {
+	t.Parallel()
+
+	clock := newFakeClock()
+	l := newTestLimiter(3, 3, clock)
+
+	for _, write := range []bool{false, true} {
+		spend(t, l, "u", write, 3)
+
+		ok, retry := l.Allow("u", write)
+		if ok {
+			t.Fatalf("4th call (write=%v) allowed at 3 per minute", write)
+		}
+
+		// 3 per minute refills one token every 20 s.
+		if retry != 20*time.Second {
+			t.Fatalf("retryAfter (write=%v) = %v, want 20s", write, retry)
+		}
 	}
 }
 
@@ -133,25 +167,20 @@ func TestAllow_SeparateBuckets(t *testing.T) {
 	t.Parallel()
 
 	clock := newFakeClock()
-	// 6 writes/min gives a write burst of 1; 60 reads/min gives a read burst of 10.
+	// 6 writes/min gives a write burst of 6; 60 reads/min gives a read burst of 60.
 	l := newTestLimiter(60, 6, clock)
 
-	if ok, _ := l.Allow("u", true); !ok {
-		t.Fatal("first write rejected")
-	}
+	spend(t, l, "u", true, 6)
 
 	if ok, _ := l.Allow("u", true); ok {
-		t.Fatal("second write allowed despite burst of 1")
+		t.Fatal("7th write allowed despite burst of 6")
 	}
 
-	for i := range 10 {
-		if ok, _ := l.Allow("u", false); !ok {
-			t.Fatalf("read %d rejected after write bucket was exhausted", i)
-		}
-	}
+	// Reads still have their whole burst after the write bucket is exhausted.
+	spend(t, l, "u", false, 60)
 
 	if ok, _ := l.Allow("u", false); ok {
-		t.Fatal("11th read allowed despite burst of 10")
+		t.Fatal("61st read allowed despite burst of 60")
 	}
 }
 
@@ -161,12 +190,10 @@ func TestAllow_PerUserIsolation(t *testing.T) {
 	clock := newFakeClock()
 	l := newTestLimiter(6, 6, clock)
 
-	if ok, _ := l.Allow("alice", true); !ok {
-		t.Fatal("alice first write rejected")
-	}
+	spend(t, l, "alice", true, 6)
 
 	if ok, _ := l.Allow("alice", true); ok {
-		t.Fatal("alice second write allowed")
+		t.Fatal("alice 7th write allowed")
 	}
 
 	if ok, _ := l.Allow("bob", true); !ok {
@@ -182,7 +209,7 @@ func TestAllow_RetryAfterPositive(t *testing.T) {
 	t.Parallel()
 
 	clock := newFakeClock()
-	// 6 writes/min: one token every 10 s, burst 1.
+	// 6 writes/min: one token every 10 s, burst 6.
 	l := newTestLimiter(60, 6, clock)
 
 	ok, retry := l.Allow("u", true)
@@ -190,9 +217,11 @@ func TestAllow_RetryAfterPositive(t *testing.T) {
 		t.Fatalf("first write: ok=%v retry=%v, want true 0", ok, retry)
 	}
 
+	spend(t, l, "u", true, 5)
+
 	ok, retry = l.Allow("u", true)
 	if ok {
-		t.Fatal("second write allowed")
+		t.Fatal("7th write allowed")
 	}
 
 	if retry <= 0 || retry > 10*time.Second {
@@ -223,7 +252,7 @@ func TestAllow_ConcurrentRejectionsLeaveNoDebt(t *testing.T) {
 	t.Parallel()
 
 	clock := newFakeClock()
-	// 6 writes/min: one token every 10 s, burst 1.
+	// 6 writes/min: one token every 10 s, burst 6.
 	l := newTestLimiter(60, 6, clock)
 
 	const (
@@ -232,9 +261,7 @@ func TestAllow_ConcurrentRejectionsLeaveNoDebt(t *testing.T) {
 		callsPerGoroutine = 50
 	)
 
-	if ok, _ := l.Allow("u", true); !ok {
-		t.Fatal("first write rejected")
-	}
+	spend(t, l, "u", true, 6)
 
 	var (
 		allowed atomic.Int32

@@ -20,12 +20,16 @@ const (
 	// maxMessageRunes bounds how much of Trakt's error_description reaches the
 	// assistant, so an upstream message cannot flood the tool result.
 	maxMessageRunes = 200
-	// maxErrorBodyBytes bounds how much of an error response is read to find
-	// error_description; Trakt error bodies are a few hundred bytes.
-	maxErrorBodyBytes = 64 << 10
+	// maxErrorBodyBytes bounds how much of an error response is read, for
+	// error_description and the kept 409 body; Trakt error bodies, including a
+	// check-in conflict, are well under 1 KiB.
+	maxErrorBodyBytes = 16 << 10
 	// maxRetryAfter clamps Retry-After so a bogus upstream value never tells
 	// the assistant to wait for days; Trakt's windows are at most minutes.
 	maxRetryAfter = time.Hour
+	// revokedMessage is the fixed text for a token Trakt still refuses after a
+	// refresh; it tells the user the one action that helps.
+	revokedMessage = "Trakt access was revoked; reconnect this connector"
 )
 
 // ErrUpstreamAuth means Trakt rejected the user's token even after one
@@ -83,7 +87,7 @@ var defaultMessages = map[Kind]string{
 	KindAccountLimit: "Trakt account limit reached",
 	KindLocked:       "this Trakt account is locked",
 	KindVIPRequired:  "Trakt VIP is required for this feature",
-	KindUnauthorized: ErrUpstreamAuth.Error(),
+	KindUnauthorized: revokedMessage,
 	KindServer:       "Trakt server error",
 	KindUnreachable:  "Trakt is unreachable, retry later",
 	KindCanceled:     "request canceled",
@@ -103,6 +107,20 @@ type Error struct {
 	// error (without the url.Error wrapper that carries the URL) for
 	// KindUnreachable and KindCanceled.
 	cause error
+	// conflictBody is the first maxErrorBodyBytes of a 409 response; nil for
+	// every other kind.
+	conflictBody []byte
+}
+
+// ConflictBody returns a copy of the 409 response body, at most
+// maxErrorBodyBytes, or nil for any other kind. It is untrusted Trakt JSON,
+// possibly cut at the cap: parse it defensively and never put it in logs.
+func (e *Error) ConflictBody() []byte {
+	if e.conflictBody == nil {
+		return nil
+	}
+
+	return append([]byte(nil), e.conflictBody...)
 }
 
 func (e *Error) Error() string {
@@ -148,8 +166,15 @@ func errorFromResponse(resp *http.Response, now time.Time) *Error {
 	kind := kindForStatus(resp.StatusCode)
 	e := &Error{Status: resp.StatusCode, Kind: kind, Message: defaultMessages[kind]}
 
-	if desc := readErrorDescription(resp.Body); desc != "" {
+	body := readErrorBody(resp.Body)
+	// A refused token always gets revokedMessage: Trakt's own wording would
+	// hide the one action that helps, reconnecting.
+	if desc := errorDescription(body); desc != "" && kind != KindUnauthorized {
 		e.Message = desc
+	}
+
+	if kind == KindConflict {
+		e.conflictBody = body
 	}
 
 	if kind == KindRateLimited {
@@ -163,17 +188,33 @@ func errorFromResponse(resp *http.Response, now time.Time) *Error {
 	return e
 }
 
-// readErrorDescription returns Trakt's error_description, truncated, or ""
-// when the body is absent, not JSON, or has no such field.
-func readErrorDescription(body io.Reader) string {
+// readErrorBody reads at most maxErrorBodyBytes. A read failure yields nil:
+// the status alone still describes the error, and a partial body is not
+// worth keeping.
+func readErrorBody(body io.Reader) []byte {
 	if body == nil {
+		return nil
+	}
+
+	b, err := io.ReadAll(io.LimitReader(body, maxErrorBodyBytes))
+	if err != nil {
+		return nil
+	}
+
+	return b
+}
+
+// errorDescription returns Trakt's error_description, truncated, or "" when
+// the body is empty, not JSON, or has no such field.
+func errorDescription(body []byte) string {
+	if len(body) == 0 {
 		return ""
 	}
 
 	var payload struct {
 		ErrorDescription string `json:"error_description"`
 	}
-	if err := json.NewDecoder(io.LimitReader(body, maxErrorBodyBytes)).Decode(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		return ""
 	}
 
@@ -211,8 +252,13 @@ func parseRetryAfter(v string, now time.Time) time.Duration {
 	return clampRetryAfter(t.Sub(now))
 }
 
-// secondsToDuration converts without overflowing time.Duration.
+// secondsToDuration converts without overflowing time.Duration in either
+// direction; zero and negative values give 0.
 func secondsToDuration(secs int64) time.Duration {
+	if secs <= 0 {
+		return 0
+	}
+
 	if secs > math.MaxInt64/int64(time.Second) {
 		return maxRetryAfter
 	}

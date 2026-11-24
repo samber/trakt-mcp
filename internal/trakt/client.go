@@ -56,8 +56,12 @@ type Config struct {
 type TokenSource interface {
 	// AccessToken returns the current access token, refreshing it if expired.
 	AccessToken(ctx context.Context) (string, error)
-	// Rejected tells the source Trakt refused rejected. It forces one refresh
-	// and returns the new access token.
+	// Rejected tells the source Trakt refused rejected and returns a token to
+	// retry with. It must be safe for concurrent use. When rejected is still
+	// the current token it forces one refresh; when it is no longer current
+	// (another call already refreshed) it returns the current token without
+	// refreshing. Concurrent callers share one refresh, because Trakt refresh
+	// tokens are single-use.
 	Rejected(ctx context.Context, rejected string) (string, error)
 }
 
@@ -83,10 +87,17 @@ func New(cfg Config) *Client {
 		ua = defaultUserAgent
 	}
 
-	hc := cfg.HTTP
-	if hc == nil {
-		hc = &http.Client{Timeout: defaultHTTPTimeout}
+	hc := &http.Client{Timeout: defaultHTTPTimeout}
+
+	if cfg.HTTP != nil {
+		// A shallow copy, so the policy below never changes the caller's client.
+		copied := *cfg.HTTP
+		hc = &copied
 	}
+	// Redirects are never followed: Go would turn a redirected POST into a
+	// body-less GET, and the Trakt headers would go to another host. The doer
+	// reports any 3xx as an *Error instead.
+	hc.CheckRedirect = noRedirect
 
 	return &Client{
 		// The generated client resolves operation paths against the server URL,
@@ -97,6 +108,10 @@ func New(cfg Config) *Client {
 		http:      hc,
 		now:       time.Now,
 	}
+}
+
+func noRedirect(*http.Request, []*http.Request) error {
+	return http.ErrUseLastResponse
 }
 
 // UserClient calls Trakt on behalf of one user.
@@ -169,7 +184,7 @@ func (d *doer) Do(req *http.Request) (*http.Response, error) {
 		}
 
 		switch {
-		case resp.StatusCode < http.StatusBadRequest:
+		case resp.StatusCode < http.StatusMultipleChoices:
 			return resp, nil
 		case resp.StatusCode == http.StatusUnauthorized && !refreshed:
 			discard(resp)

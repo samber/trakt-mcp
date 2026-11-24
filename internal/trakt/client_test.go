@@ -201,6 +201,7 @@ func TestRetryAfterParsed(t *testing.T) {
 		"http date":     {now.Add(90 * time.Second).Format(http.TimeFormat), 90 * time.Second},
 		"past date":     {now.Add(-time.Minute).Format(http.TimeFormat), 0},
 		"negative":      {"-5", 0},
+		"huge negative": {"-9223372037", 0},
 		"missing":       {"", 0},
 		"garbage":       {"soon", 0},
 		"zero":          {"0", 0},
@@ -451,6 +452,74 @@ func TestErrorMessageNeverContainsBody(t *testing.T) {
 	}
 }
 
+func TestConflictBodyKeptForConflictOnly(t *testing.T) {
+	t.Parallel()
+
+	const body = `{"expires_at":"2026-11-24T13:00:00.000Z"}`
+
+	tests := []struct {
+		status int
+		keep   bool
+	}{
+		{status: http.StatusConflict, keep: true},
+		{status: http.StatusNotFound},
+		{status: http.StatusInternalServerError},
+	}
+	for _, tt := range tests {
+		t.Run(strconv.Itoa(tt.status), func(t *testing.T) {
+			t.Parallel()
+
+			c, _, _ := newTestAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = io.WriteString(w, body)
+			})
+
+			te := asError(t, getTrending(t.Context(), c))
+
+			got := te.ConflictBody()
+			if tt.keep && string(got) != body {
+				t.Fatalf("ConflictBody = %q, want %q", got, body)
+			}
+
+			if !tt.keep && got != nil {
+				t.Fatalf("ConflictBody = %q for status %d, want nil", got, tt.status)
+			}
+		})
+	}
+}
+
+func TestConflictBodyBoundedAndNeverInMessage(t *testing.T) {
+	t.Parallel()
+
+	const secret = "planted-secret-in-conflict-body"
+
+	oversize := `{"secret":"` + secret + `","pad":"` + strings.Repeat("x", maxErrorBodyBytes) + `"}`
+
+	c, _, _ := newTestAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusConflict)
+		_, _ = io.WriteString(w, oversize)
+	})
+
+	err := getTrending(t.Context(), c)
+	te := asError(t, err)
+
+	if got := len(te.ConflictBody()); got != maxErrorBodyBytes {
+		t.Fatalf("ConflictBody length = %d, want %d", got, maxErrorBodyBytes)
+	}
+
+	for _, s := range []string{err.Error(), te.Message} {
+		if strings.Contains(s, secret) {
+			t.Fatalf("error text leaks the conflict body: %q", s)
+		}
+	}
+
+	// The accessor returns a copy: changing it does not change the error.
+	te.ConflictBody()[0] = 'X'
+	if te.ConflictBody()[0] != '{' {
+		t.Fatal("ConflictBody exposes the internal slice")
+	}
+}
+
 func TestErrorDescriptionTruncated(t *testing.T) {
 	t.Parallel()
 
@@ -547,6 +616,77 @@ func TestSlowResponseTimesOut(t *testing.T) {
 
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Fatalf("call took %v, timeout not applied", elapsed)
+	}
+}
+
+func TestSecond401KeepsFixedMessage(t *testing.T) {
+	t.Parallel()
+
+	c, _, _ := newTestAPI(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = io.WriteString(w, `{"error":"invalid_token","error_description":"upstream wording"}`)
+	})
+
+	err := getTrending(t.Context(), c)
+	if !errors.Is(err, ErrUpstreamAuth) {
+		t.Fatalf("err = %v, want ErrUpstreamAuth", err)
+	}
+
+	if te := asError(t, err); te.Message != revokedMessage {
+		t.Fatalf("Message = %q, want %q", te.Message, revokedMessage)
+	}
+}
+
+func TestRedirectIsErrorAndNotFollowed(t *testing.T) {
+	t.Parallel()
+
+	var targetCalls atomic.Int32
+
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		targetCalls.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(target.Close)
+
+	for _, status := range []int{http.StatusMovedPermanently, http.StatusFound, http.StatusTemporaryRedirect} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			t.Parallel()
+
+			c, _, _ := newTestAPI(t, func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, target.URL+"/elsewhere", status)
+			})
+
+			te := asError(t, postHistory(t.Context(), c, `{"movies":[]}`))
+			if te.Status != status {
+				t.Fatalf("status = %d, want %d", te.Status, status)
+			}
+
+			te = asError(t, getTrending(t.Context(), c))
+			if te.Status != status {
+				t.Fatalf("GET status = %d, want %d", te.Status, status)
+			}
+		})
+	}
+
+	// A caller-supplied client gets the same no-follow policy.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL, http.StatusFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	custom := &http.Client{Timeout: time.Second}
+
+	c := New(Config{BaseURL: srv.URL, APIKey: testAPIKey, HTTP: custom}).For(newFakeTokens()).API()
+	if te := asError(t, getTrending(t.Context(), c)); te.Status != http.StatusFound {
+		t.Fatalf("custom client status = %d, want %d", te.Status, http.StatusFound)
+	}
+
+	if custom.CheckRedirect != nil {
+		t.Error("New mutated the caller's http.Client")
+	}
+
+	if got := targetCalls.Load(); got != 0 {
+		t.Fatalf("redirect target called %d times, want 0", got)
 	}
 }
 
