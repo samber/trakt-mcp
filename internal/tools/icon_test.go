@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-
-	"github.com/samber/trakt-mcp/internal/limits"
 )
 
 const (
@@ -84,11 +82,11 @@ func TestIconSVGUsesBrandPalette(t *testing.T) {
 func TestServerAdvertisesIcon(t *testing.T) {
 	t.Parallel()
 
-	srv := NewServer(Deps{People: &fakeFactory{people: newFakePeople()}, Store: &fakeToucher{}, Limiter: limits.New(10, 10), Version: "test"})
+	srv := NewServer(offlineDeps())
 	st, ct := mcp.NewInMemoryTransports()
 	ctx := context.Background()
 
-	ss, err := srv.Connect(ctx, st, nil)
+	ss, err := srv.MCP().Connect(ctx, st, nil)
 	if err != nil {
 		t.Fatalf("server connect: %v", err)
 	}

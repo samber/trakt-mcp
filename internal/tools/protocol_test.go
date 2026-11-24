@@ -9,8 +9,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/samber/trakt-mcp/internal/contacts"
 )
 
 // methodRecorder wraps the handler and records the JSON-RPC method of every
@@ -51,69 +49,47 @@ func (m *methodRecorder) seen() []string {
 	return slices.Clone(m.methods)
 }
 
-// recordingHarness is a harness whose server records request methods.
-func recordingHarness(t *testing.T) (*harness, *methodRecorder) {
-	t.Helper()
-
-	rec := &methodRecorder{}
-	h := newHarnessWrapped(t, func(next http.Handler) http.Handler {
-		rec.next = next
-		return rec
-	})
-
-	return h, rec
-}
-
-func legacyRoundTrip(t *testing.T, version string) {
-	t.Helper()
-
-	h, rec := recordingHarness(t)
-	h.people.put(contacts.Contact{GivenName: testGivenName, Emails: []contacts.Typed{{Value: testEmail}}})
-
-	h.session = h.connect(version)
-	if got := h.session.InitializeResult().ProtocolVersion; got != version {
-		t.Fatalf("negotiated %q, want %q", got, version)
-	}
-
-	var out SearchOutput
-	h.ok(toolSearchContacts, map[string]any{argQuery: "ada"}, &out)
-
-	if len(out.Contacts) != 1 {
-		t.Errorf("contacts = %+v", out.Contacts)
-	}
-
-	if seen := rec.seen(); !slices.Contains(seen, "initialize") || !slices.Contains(seen, "tools/call") {
-		t.Errorf("methods = %v", seen)
-	}
-}
-
-func TestLegacyInitialize_20250618(t *testing.T) {
-	t.Parallel()
-	legacyRoundTrip(t, "2025-06-18")
-}
-
-func TestLegacyInitialize_20251125(t *testing.T) {
-	t.Parallel()
-	legacyRoundTrip(t, "2025-11-25")
-}
-
-func TestStateless_20260728(t *testing.T) {
+func TestLegacyInitializeBothVersions(t *testing.T) {
 	t.Parallel()
 
-	h, rec := recordingHarness(t)
-	h.people.put(contacts.Contact{GivenName: testGivenName})
-	h.session = h.connect("2026-07-28")
-
-	var out SearchOutput
-	h.ok(toolSearchContacts, map[string]any{argQuery: "ada"}, &out)
-
-	if len(out.Contacts) != 1 {
-		t.Errorf("contacts = %+v", out.Contacts)
+	cases := []struct {
+		version string
+		// initialize is whether the client opens with initialize: legacy
+		// versions do, the native stateless version does not.
+		initialize bool
+	}{
+		{"2025-06-18", true},
+		{"2025-11-25", true},
+		{"2026-07-28", false},
 	}
+	for _, c := range cases {
+		t.Run(c.version, func(t *testing.T) {
+			t.Parallel()
 
-	seen := rec.seen()
-	if slices.Contains(seen, "initialize") || !slices.Contains(seen, "tools/call") {
-		t.Errorf("methods = %v, want tools/call without initialize", seen)
+			rec := &methodRecorder{}
+			h := newHarness(t, withWrap(func(next http.Handler) http.Handler {
+				rec.next = next
+				return rec
+			}))
+			h.trakt.respond(trendingRoute, http.StatusOK, trendingJSON(), nil)
+
+			h.session = h.connect(c.version)
+			if got := h.session.InitializeResult().ProtocolVersion; got != c.version {
+				t.Fatalf("negotiated %q, want %q", got, c.version)
+			}
+
+			var out Listing[TrendingMovie]
+			h.ok(toolTrending, map[string]any{fieldLimit: 2}, &out)
+
+			if len(out.Items) != 2 {
+				t.Errorf("items = %+v, want 2", out.Items)
+			}
+
+			seen := rec.seen()
+			if slices.Contains(seen, "initialize") != c.initialize || !slices.Contains(seen, "tools/call") {
+				t.Errorf("methods = %v, want initialize %v and tools/call", seen, c.initialize)
+			}
+		})
 	}
 }
 
