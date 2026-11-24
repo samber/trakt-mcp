@@ -9,6 +9,10 @@
 - Tools accept only Trakt slugs (`^[a-z0-9-]+$`), numeric ids and IMDb ids (`^(tt|nm)[0-9]+$`), so no argument can inject a path or query into a Trakt call.
 - Comment text from other Trakt users is untrusted. Tool descriptions say so, and the output keeps it in a dedicated field.
 - The consent page shows the client's name and the host it will redirect you to, so a malicious client cannot pass itself off as Claude without you seeing where you will land.
+- The consent form and Trakt's callback are bound to the browser that started the sign-in by a random CSRF value, sent in a `Secure` cookie limited to the OAuth endpoints. A sign-in in progress expires after 10 minutes.
+- Endpoints open to anyone (client registration, client metadata fetch, sign-in start) are rate-limited and cap their request bodies at 64 KiB, so a flood cannot fill the database.
+- Users inactive for 180 days are purged daily: their rows are deleted first, then the Trakt grant is revoked. Clients unused for 180 days are purged too.
+- The HTTP server bounds header reads (10 s), whole requests (30 s) and idle connections (120 s).
 - Logs never contain tokens, codes, secrets, request URLs or Trakt responses. Metrics carry no user or client identifiers and sit behind basic authentication.
 - Per-user and application-wide rate limits keep one user from spending the instance's Trakt budget.
 - Write tools change your real Trakt account. Clients see removal tools flagged as destructive and the read tools flagged as read-only.

@@ -89,8 +89,21 @@ Trakt sends no granular scopes: a connected user grants full access to their acc
 3. Run `trakt-mcp rekey` against the live database. It re-encrypts every Trakt token with the new key.
 4. Keep the old key listed for 180 days. The tokens the server issues to assistants are signed with a secret derived from the keys, so removing the old key early forces every user to reconnect.
 
+## What the server stores
+
+- The Trakt user id and slug, the date the user connected and the date of their last use.
+- The Trakt access and refresh tokens, encrypted with AES-256-GCM.
+- Signatures of the tokens issued to assistants, and the assistants' client registrations.
+- Sign-ins in progress. They expire after 10 minutes and are deleted within the hour.
+
+The server never stores watch history, watchlist, ratings, collection, comments, or the arguments and results of tool calls: every tool call reads or writes Trakt live.
+
+**Erasing a user.** A user disconnects the connector in their assistant and revokes the application in their Trakt settings. The server deletes their rows on their next failed Trakt call, or after 180 days without use (daily purge). Run `trakt-mcp disconnect` to delete at once. Clients unused for 180 days, or never used within 24 hours of registering, are purged too.
+
+The database lives on your volume, so your backups hold this data until they expire.
+
 ## Website
 
-`GET /` redirects to `--site-url`. The `site/` directory holds the Astro site of the hosted instance (landing page, privacy policy, terms), which you can adapt. Publish your own privacy policy: it must match what the server stores (see the README).
+`GET /` redirects to `--site-url`. The `site/` directory holds the Astro site of the hosted instance (landing page, privacy policy, terms), which you can adapt. Publish your own privacy policy: it must match what the server stores (see [What the server stores](#what-the-server-stores)).
 
 Once the server runs, connect your assistant as described in [Connect Claude and ChatGPT](../README.md#1-connect-claude-and-chatgpt).

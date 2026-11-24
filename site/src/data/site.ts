@@ -168,7 +168,7 @@ export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; descriptio
 
 /**
  * What the server keeps, in plain words for non-technical visitors. Same facts as README
- * "What is stored" and the privacy policy, which give the technical detail.
+ * the privacy policy, which give the technical detail.
  */
 export const STORED: readonly string[] = [
   'Your Trakt user id and username slug',
@@ -176,7 +176,7 @@ export const STORED: readonly string[] = [
   'Which assistant apps connected, such as Claude or ChatGPT',
 ];
 
-/** What the server never keeps. Mirrors README "What is stored" and the privacy policy. */
+/** What the server never keeps. Mirrors the privacy policy and docs/self-hosting.md "What the server stores". */
 export const NEVER_STORED: readonly string[] = [
   'Your watch history, watchlist, ratings and collection',
   'Comments, and the tool inputs and outputs exchanged with your assistant',

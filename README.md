@@ -159,19 +159,6 @@ Available plans change often: check OpenAI's documentation before you start.
 - "Which shows am I behind on? Show the next episode for each."
 - "Recommend three movies like Arrival that I have not seen."
 
-## 🗄️ What is stored
-
-The server keeps only what it needs to connect you:
-
-- your Trakt user id and slug, when you connected and when you last used it;
-- your Trakt access and refresh tokens, encrypted with AES-256-GCM;
-- signatures of the tokens it gives your assistant, and the assistant's client registration;
-- sign-ins in progress, which expire after 10 minutes and are deleted within the hour.
-
-It never stores your watch history, watchlist, ratings, collection, comments, or the arguments and results of tool calls. Every tool call reads or writes Trakt live.
-
-To erase everything: disconnect the connector in your assistant and revoke the application in your Trakt settings, in the connected apps section (check Trakt's current UI for the exact path). The server deletes your rows on your next tool call, or after 180 days without use. On a self-hosted instance, the operator can delete at once with `trakt-mcp disconnect <trakt-slug-or-id>`.
-
 ## 😰 Known limits
 
 - **Trakt account limits.** Free accounts have list, watchlist and collection caps. Over a cap, the tool returns "Trakt account limit reached". VIP-only features return "Trakt VIP is required for this feature".
@@ -186,47 +173,7 @@ Design and protections (OAuth 2.1, token handling, encryption, SSRF guards) are 
 
 A hosted instance is available at `https://mcp.trakt-mcp.samber.dev/mcp`.
 
-You can also run your own: a single Go binary with one SQLite file. Create a Trakt API application at [trakt.tv/oauth/applications](https://trakt.tv/oauth/applications) with the redirect URI `https://<host>/oauth/trakt/callback`, then:
-
-```sh
-go install github.com/samber/trakt-mcp/cmd/trakt-mcp@latest
-
-export ENCRYPTION_KEYS="$(trakt-mcp genkey)"
-export TRAKT_CLIENT_SECRET="<your Trakt client secret>"
-
-trakt-mcp serve \
-  --base-url https://<host> \
-  --site-url https://<your website> \
-  --trakt-client-id "<your Trakt client id>"
-```
-
-### Configuration
-
-Each flag also reads the environment variable of the same name, uppercased, with dashes replaced by underscores (`--db-path` reads `DB_PATH`). No prefix. The flag wins. Secrets are environment only.
-
-| Flag / env var                                      | Default                                                 | Purpose                                                    |
-| --------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------- |
-| `--base-url` / `BASE_URL`                           | required                                                | Public HTTPS URL; also the OAuth issuer                    |
-| `--site-url` / `SITE_URL`                           | required for `serve`                                    | Where `GET /` redirects (your website)                     |
-| `--listen` / `LISTEN`                               | `127.0.0.1:8080`, or `0.0.0.0:$PORT` when `PORT` is set | Listen address                                             |
-| `--db-path` / `DB_PATH`                             | `./data/trakt-mcp.db`                                   | SQLite file                                                |
-| `--trakt-client-id` / `TRAKT_CLIENT_ID`             | required                                                | Trakt application client id (also sent as `trakt-api-key`) |
-| `TRAKT_CLIENT_SECRET` (env only)                    | required                                                | Trakt application client secret                            |
-| `ENCRYPTION_KEYS` (env only)                        | required                                                | `keyid:base64` list from `genkey`, first active            |
-| `--enable-dcr` / `ENABLE_DCR`                       | `true`                                                  | Keep Dynamic Client Registration                           |
-| `--log-level` / `LOG_LEVEL`                         | `info`                                                  | `debug`, `info`, `warn`, `error`                           |
-| `--metrics` / `METRICS`                             | `false`                                                 | Enable the Prometheus endpoint                             |
-| `--metrics-path` / `METRICS_PATH`                   | `/metrics`                                              | Metrics endpoint path                                      |
-| `--metrics-listen` / `METRICS_LISTEN`               | main listener                                           | Optional separate address                                  |
-| `--metrics-user` / `METRICS_USER`                   | none                                                    | Basic-auth user, required with `--metrics`                 |
-| `--metrics-password` / `METRICS_PASSWORD`           | none                                                    | 16+ characters, required unless the file flag is set       |
-| `--metrics-password-file` / `METRICS_PASSWORD_FILE` | none                                                    | Safer alternative to the CLI password                      |
-| `--rate-limit-reads` / `RATE_LIMIT_READS`           | `120`                                                   | Per-user reads per minute                                  |
-| `--rate-limit-writes` / `RATE_LIMIT_WRITES`         | `30`                                                    | Per-user writes per minute                                 |
-| `--rate-limit-global` / `RATE_LIMIT_GLOBAL`         | `1200`                                                  | Trakt requests per minute across all users                 |
-| `--openai-apps-challenge` / `OPENAI_APPS_CHALLENGE` | none                                                    | Serves `/.well-known/openai-apps-challenge`                |
-
-Details, key rotation and deployment notes: [Self-hosting](docs/self-hosting.md).
+You can also run your own: it is a single Go binary with one SQLite file, see [Self-hosting](docs/self-hosting.md).
 
 ## 🤝 Contributing
 

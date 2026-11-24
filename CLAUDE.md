@@ -87,7 +87,7 @@ Other `make` targets: `build`, `coverage` (writes `cover.out`, `cover.html`), `b
 - Never ignore error. Structured `slog` logging.
 - User deletion runs explicit `deleteUserChildren` list (`internal/store/users.go`); add every new per-user table to it.
 - Every tool needs a `title` and explicit `readOnlyHint`, `destructiveHint`, `openWorldHint`: Claude's and OpenAI's directories reject tools without them (`TestToolAnnotations`).
-- Flags must stay in sync with the configuration table in `docs/self-hosting.md`, `README.md` and spec section 13.
+- Flags must stay in sync with the configuration table in `docs/self-hosting.md` and spec section 13.
 - Conventional Commits.
 
 ## References
