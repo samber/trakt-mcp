@@ -245,7 +245,7 @@ var commandSpecs = map[string]commandSpec{
 	CmdDisconnect: {
 		required:  []string{reqDBPath, reqEncryptionKeys, reqTraktClientID, reqTraktClientSecret},
 		nargs:     1,
-		argsUsage: "<trakt-slug>",
+		argsUsage: "<trakt-slug-or-id>",
 	},
 }
 

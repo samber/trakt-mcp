@@ -552,8 +552,9 @@ func TestLoad_DisconnectRequiresOneArg(t *testing.T) {
 	}
 	flags := []string{"--db-path=/tmp/x.db", "--trakt-client-id=cid"}
 
-	if _, err := Load(CmdDisconnect, flags, env); err == nil {
-		t.Error("0 args: err = nil, want error")
+	if _, err := Load(CmdDisconnect, flags, env); err == nil ||
+		!strings.Contains(err.Error(), "<trakt-slug-or-id>") {
+		t.Errorf("0 args: err = %v, want error naming <trakt-slug-or-id>", err)
 	}
 
 	cfg, err := Load(CmdDisconnect, append(append([]string{}, flags...), "a@b.c"), env)
