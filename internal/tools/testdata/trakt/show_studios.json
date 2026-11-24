@@ -1,0 +1,4 @@
+[
+  {"name": "Warner Bros.", "country": "us", "ids": {"trakt": 12, "slug": "warner-bros", "tmdb": 174}, "updated_at": "dropped"},
+  {"name": "Village Roadshow", "country": null, "ids": {"trakt": 13, "slug": "village-roadshow", "tmdb": null}}
+]
