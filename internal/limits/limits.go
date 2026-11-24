@@ -1,5 +1,5 @@
-// Package limits enforces per-user request rates and serializes each user's
-// write operations.
+// Package limits enforces per-user request rates, the application-wide Trakt
+// request budget, and serializes each user's write operations.
 package limits
 
 import (
@@ -25,13 +25,20 @@ const (
 	janitorInterval = time.Minute
 )
 
-// Limiter holds a read bucket, a write bucket and a write lock per user.
-// It is safe for concurrent use.
+// Limiter holds a read bucket, a write bucket and a write lock per user, plus
+// an optional application-wide bucket. It is safe for concurrent use.
 type Limiter struct {
 	readLimit  rate.Limit
 	writeLimit rate.Limit
 	readBurst  int
 	writeBurst int
+	// globalBurst is zero when no global bucket is configured.
+	globalBurst int
+	// globalMu makes each reserve-then-cancel pair on global atomic, for the
+	// same reason as entry.bucketMu.
+	globalMu sync.Mutex
+	// global is nil when no global bucket is configured.
+	global *rate.Limiter
 	// now is replaceable so tests can drive the buckets and eviction without sleeping.
 	now func() time.Time
 
@@ -57,15 +64,33 @@ type entry struct {
 	lastSeen time.Time
 }
 
+// Option configures optional Limiter behavior.
+type Option func(*Limiter)
+
+// WithGlobal adds an application-wide bucket allowing perMin requests per
+// minute across all users. Its burst equals perMin, so the whole per-minute
+// budget is usable at once, matching how the upstream counts its window.
+// perMin must be positive; a non-positive value panics in New.
+func WithGlobal(perMin int) Option {
+	return func(l *Limiter) {
+		if perMin <= 0 {
+			panic(fmt.Sprintf("limits: global rate must be positive, got %d", perMin))
+		}
+
+		l.globalBurst = perMin
+		l.global = rate.NewLimiter(perMinute(perMin), perMin)
+	}
+}
+
 // New builds a Limiter allowing readsPerMin reads and writesPerMin writes per
 // user per minute. Both must be positive; config validates them, so a
 // non-positive value is a programming error and panics.
-func New(readsPerMin, writesPerMin int) *Limiter {
+func New(readsPerMin, writesPerMin int, opts ...Option) *Limiter {
 	if readsPerMin <= 0 || writesPerMin <= 0 {
 		panic(fmt.Sprintf("limits: rates must be positive, got reads=%d writes=%d", readsPerMin, writesPerMin))
 	}
 
-	return &Limiter{
+	l := &Limiter{
 		readLimit:  perMinute(readsPerMin),
 		writeLimit: perMinute(writesPerMin),
 		readBurst:  burstFor(readsPerMin),
@@ -73,6 +98,11 @@ func New(readsPerMin, writesPerMin int) *Limiter {
 		now:        time.Now,
 		users:      make(map[string]*entry),
 	}
+	for _, opt := range opts {
+		opt(l)
+	}
+
+	return l
 }
 
 func perMinute(n int) rate.Limit {
@@ -114,6 +144,27 @@ func (l *Limiter) Allow(userID string, write bool) (ok bool, retryAfter time.Dur
 
 	e.bucketMu.Lock()
 	defer e.bucketMu.Unlock()
+
+	return l.take(bucket)
+}
+
+// AllowGlobal takes one token from the application-wide bucket. When the
+// bucket is empty it consumes nothing and returns the delay until the next
+// token. Without WithGlobal it always allows.
+func (l *Limiter) AllowGlobal() (ok bool, retryAfter time.Duration) {
+	if l.global == nil {
+		return true, 0
+	}
+
+	l.globalMu.Lock()
+	defer l.globalMu.Unlock()
+
+	return l.take(l.global)
+}
+
+// take reserves one token from bucket, or cancels the reservation and returns
+// the wait when none is available. Callers must hold the bucket's mutex.
+func (l *Limiter) take(bucket *rate.Limiter) (ok bool, retryAfter time.Duration) {
 	// now is read inside the critical section so reservations stay in time order.
 	now := l.now()
 	// A reservation always succeeds for n=1 because burst >= 1; it reports the

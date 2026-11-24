@@ -52,6 +52,65 @@ func TestNew_BurstIsSixthOfPerMinuteWithFloorOfOne(t *testing.T) {
 	}
 }
 
+func TestAllowGlobal_BurstEqualsPerMinute(t *testing.T) {
+	t.Parallel()
+
+	const globalPerMin = 30
+
+	clock := newFakeClock()
+	l := New(60, 6, WithGlobal(globalPerMin))
+	l.now = clock.Now
+
+	if got := l.globalBurst; got != globalPerMin {
+		t.Fatalf("globalBurst = %d, want %d", got, globalPerMin)
+	}
+
+	for i := range globalPerMin {
+		if ok, _ := l.AllowGlobal(); !ok {
+			t.Fatalf("global call %d rejected within burst", i)
+		}
+	}
+
+	ok, retry := l.AllowGlobal()
+	if ok {
+		t.Fatal("call past the per-minute burst allowed")
+	}
+
+	// 30 per minute refills one token every 2 s.
+	if retry != 2*time.Second {
+		t.Fatalf("retryAfter = %v, want 2s", retry)
+	}
+
+	clock.Advance(retry)
+
+	if ok, _ := l.AllowGlobal(); !ok {
+		t.Fatal("call rejected after waiting retryAfter")
+	}
+}
+
+func TestAllowGlobal_UnconfiguredAlwaysAllows(t *testing.T) {
+	t.Parallel()
+
+	l := New(60, 6)
+	for range 1000 {
+		if ok, retry := l.AllowGlobal(); !ok || retry != 0 {
+			t.Fatalf("unconfigured global bucket rejected: retry=%v", retry)
+		}
+	}
+}
+
+func TestWithGlobal_PanicsOnNonPositiveRate(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		if recover() == nil {
+			t.Error("New did not panic on a zero global rate")
+		}
+	}()
+
+	New(60, 6, WithGlobal(0))
+}
+
 func TestNew_PanicsOnNonPositiveRate(t *testing.T) {
 	t.Parallel()
 
