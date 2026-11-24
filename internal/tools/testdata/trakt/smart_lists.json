@@ -1,0 +1,9 @@
+[
+  {"name": "Crime thrillers", "privacy": "private", "created_at": "2024-02-01T10:00:00.000Z", "updated_at": "2024-03-01T10:00:00.000Z",
+   "ids": {"trakt": 4242, "slug": "crime-thrillers"}, "images": {"poster": ["media.trakt.tv/x.jpg"]},
+   "source": "movies", "media_type": "movies",
+   "filters": {"genres": ["crime", "thriller"], "genres_operator": "and", "years": [1990, 2020], "ignore_watched": true, "keywords": null}},
+  {"name": "Comfort shows", "privacy": "public", "created_at": "2024-01-01T10:00:00.000Z", "updated_at": "2024-01-02T10:00:00.000Z",
+   "ids": {"trakt": 4243, "slug": "comfort-shows"}, "images": {},
+   "source": "shows", "media_type": "shows", "filters": {}}
+]

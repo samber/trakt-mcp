@@ -16,7 +16,7 @@ The project ships as an open-source Go binary that anyone can self-host. A publi
 
 Goals:
 
-- 79 MCP tools covering the catalog reads and the user writes listed in section 8 (77 shipped; the 2 smart-list tools wait on the spike of section 17).
+- 79 MCP tools covering the catalog reads and the user writes listed in section 8.
 - Multi-tenant: one instance serves many Trakt accounts, isolated from each other.
 - Two consent screens to connect (ours, then Trakt's), no configuration on the user side.
 - Viewing history, watchlist, ratings and other Trakt data never touch disk.
@@ -155,7 +155,7 @@ Annotations: every tool has a `title` and explicit `readOnlyHint`, `destructiveH
 
 Identifiers: wherever a tool takes a show, movie or person id, it accepts the Trakt slug (`breaking-bad`), the numeric Trakt id, or an IMDb id (`tt0903747`, `nm0186505` for people). Values are validated against `^[a-z0-9-]+$`, `^[0-9]+$` and `^(tt|nm)[0-9]+$` before Trakt is called, so no path or query injection reaches the API. List tools take `limit` (default 10, max 100) and `page`; without `page` they auto-paginate up to `limit`, with `page` they return one page plus `{page, page_count, item_count}` taken from the `X-Pagination-*` headers.
 
-The tool names below follow the community Trakt MCP naming the user supplied. The user chose the full set; `fetch_person_lists` was later dropped (see 8.3), so the total is 79, or 77 if the smart-list tools are dropped.
+The tool names below follow the community Trakt MCP naming the user supplied. The user chose the full set; `fetch_person_lists` was later dropped (see 8.3), so the total is 79.
 
 ### 8.1 Catalog: shows (13)
 
@@ -192,7 +192,7 @@ Write tools (`add_to_history`, `remove_from_history`, `add_to_watchlist`, `remov
 
 The batch write tools take up to 50 items per call, plus an optional `watched_at` (ISO 8601, `unknown`, or `released` for episodes), `collected_at` or `rating` (1 to 10). The tool sends one Trakt request per call, never silently splitting a large batch.
 
-`fetch_smart_lists` lists the user's smart lists. Whether Trakt exposes that list through the smart-lists endpoints or through the user's lists endpoint is verified against the live API in the first implementation task (section 17).
+`fetch_smart_lists` lists a user's smart list definitions (default user `me`) through `GET /users/{id}/smart-lists`; `fetch_smart_list_items` resolves one list through `GET /smart-lists/{list_id}/items/{type}/{sort_by}/{sort_how}` (`type` all, movies or shows; `sort_by` rank, random, title, released, runtime, percentage, votes, imdb_rating, imdb_votes, tmdb_rating, tmdb_votes, rt_tomatometer, rt_audience, metascore, added; `sort_how` asc or desc; `limit`, `page`). Smart list items never go through the normal list endpoints. Finding: smart lists exist in the official API via `/users/{id}/smart-lists` and `/smart-lists/...`, verified from the OpenAPI spec; live behavior (`list_id` shape, private lists with our token) is unverified. Both endpoints are OAuth optional. Query filters would narrow a list on top of its own filters, and `watchnow` filters resolve against the list owner; the tool exposes none of them. `list_id` accepts the same bounded slug or numeric grammar as other ids.
 
 `checkin_to_movie` and `cancel_checkin` are additions to the supplied list: a check-in must be cancellable, and movies are in scope.
 
@@ -305,6 +305,6 @@ The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide 
 
 - Read Trakt's API use policy (`https://developer.trakt.tv/docs/api-use-policy`) and confirm that a public hosted multi-tenant app driven by an LLM is allowed, whether an app review is needed, and what the branding rules are. Blocks the public launch, not the build.
 - Verify Trakt's current rate limits and the exact account-limit status codes against the live documentation.
-- Smart lists spike (decided by the user): the first implementation task calls the live Trakt API with the user's own test app and account (client id and secret in a local, gitignored env file) to settle how a user's smart lists are listed. The spec is updated with the result. If the endpoint does not exist, the 2 smart-list tools are dropped (count 77) and tracked as an enhancement issue.
+- Smart lists: they exist in the official API via `/users/{id}/smart-lists` and `/smart-lists/...`, verified from the OpenAPI spec (both tools shipped, count 79). Live behavior is unverified: the shape of `list_id` (slug or numeric), and whether our token can read a private smart list.
 - Confirm the public hostname.
 - Test whether ChatGPT scheduled tasks can call developer-mode apps.

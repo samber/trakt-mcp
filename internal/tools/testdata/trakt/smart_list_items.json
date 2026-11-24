@@ -1,0 +1,4 @@
+[
+  {"rank": 1, "type": "movie", "movie": {"title": "The Matrix", "year": 1999, "ids": {"trakt": 481, "slug": "the-matrix-1999"}}},
+  {"rank": 2, "type": "show", "show": {"title": "Breaking Bad", "year": 2008, "ids": {"trakt": 1388, "slug": "breaking-bad"}}}
+]
