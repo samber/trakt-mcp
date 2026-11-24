@@ -16,4 +16,5 @@ var catalog = []func(*Server){
 	registerCollectionTools,
 	registerRatingTools,
 	registerCheckinTools,
+	registerRecommendationTools,
 }

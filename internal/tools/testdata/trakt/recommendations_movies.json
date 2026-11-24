@@ -1,0 +1,50 @@
+[
+  {
+    "title": "The Matrix",
+    "year": 1999,
+    "ids": {
+      "trakt": 481,
+      "slug": "the-matrix-1999",
+      "imdb": "tt0133093",
+      "tmdb": 603,
+      "plex": {
+        "guid": "dropped"
+      }
+    },
+    "overview": "A hacker learns the truth.",
+    "released": "1999-03-31",
+    "runtime": 136,
+    "certification": "R",
+    "rating": 8.7,
+    "votes": 60000,
+    "genres": [
+      "action",
+      "science-fiction"
+    ],
+    "favorited_by": [
+      {
+        "username": "dropped-user",
+        "private": false,
+        "deleted": false,
+        "name": "Dropped User",
+        "notes": "dropped",
+        "ids": {
+          "slug": "dropped-user",
+          "trakt": 7
+        }
+      }
+    ]
+  },
+  {
+    "title": "Untitled",
+    "year": null,
+    "ids": {
+      "trakt": 2,
+      "slug": "untitled",
+      "imdb": null,
+      "tmdb": null
+    },
+    "genres": null,
+    "favorited_by": []
+  }
+]
