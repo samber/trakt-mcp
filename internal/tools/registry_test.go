@@ -41,6 +41,7 @@ var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 var accessByPrefix = map[string]Access{
 	"fetch_": Read, "search_": Read,
 	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "reorder_": Write,
+	"reset_": Write, "undo_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
 

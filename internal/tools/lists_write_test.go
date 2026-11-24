@@ -301,8 +301,8 @@ func TestListWriteTraktFailures(t *testing.T) {
 	}{
 		{"not found", http.StatusNotFound, hostile, msgNotFound},
 		{"unauthorized", http.StatusUnauthorized, hostile, msgUpstreamAuth},
-		{"account limit", statusTraktAccountLimit, hostile, msgAccountLimit},
-		{"vip required", http.StatusUpgradeRequired, hostile, msgVIPRequired},
+		{testCaseAccountLimit, statusTraktAccountLimit, hostile, msgAccountLimit},
+		{testCaseVIPRequired, http.StatusUpgradeRequired, hostile, msgVIPRequired},
 		{"server error", http.StatusInternalServerError, hostile, "Trakt returned an error (status 500)"},
 		{"bad gateway", http.StatusBadGateway, ``, testMsgBadGateway},
 	}

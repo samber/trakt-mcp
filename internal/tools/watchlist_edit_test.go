@@ -130,69 +130,10 @@ func TestWatchlistEditPathCarriesTheID(t *testing.T) {
 func TestWatchlistEditTraktFailures(t *testing.T) {
 	t.Parallel()
 
-	tools := []struct {
-		tool  string
-		args  map[string]any
-		route string
-		// reads is true when the tool decodes a Trakt body.
-		reads bool
-	}{
+	runTraktFailureMatrix(t, []failureTool{
 		{toolUpdateWatchlistItem, map[string]any{argListItemID: testListItemID, argNotes: "x"}, testItemRoute, false},
 		{toolReorderWatchlist, map[string]any{argRank: []int{2, 1}}, testReorderRoute, true},
-	}
-
-	hostile := `{"error_description":"` + injectionMarker + `"}`
-	failures := []struct {
-		name   string
-		status int
-		body   string
-		want   string
-	}{
-		{msgNotFound, http.StatusNotFound, hostile, msgNotFound},
-		{testCaseUnauthorized, http.StatusUnauthorized, hostile, msgUpstreamAuth},
-		{"account limit", statusTraktAccountLimit, hostile, msgAccountLimit},
-		{"vip required", http.StatusUpgradeRequired, hostile, msgVIPRequired},
-		{testCaseServerError, http.StatusInternalServerError, hostile, testMsgServerError},
-		{testCaseBadGateway, http.StatusBadGateway, ``, testMsgBadGateway},
-	}
-
-	for _, tl := range tools {
-		for _, f := range failures {
-			t.Run(tl.tool+"/"+f.name, func(t *testing.T) {
-				t.Parallel()
-
-				h := newHarness(t)
-				h.trakt.respond(tl.route, f.status, f.body, nil)
-				h.fail(tl.tool, tl.args, f.want)
-
-				if strings.Contains(h.logs.String(), injectionMarker) {
-					t.Error("Trakt's message reached the logs")
-				}
-			})
-		}
-
-		t.Run(tl.tool+"/rate limited", func(t *testing.T) {
-			t.Parallel()
-
-			h := newHarness(t)
-			h.trakt.respond(tl.route, testStatusRateLimited, hostile, nil)
-
-			res := h.call(tl.tool, tl.args)
-			if !res.IsError || !strings.Contains(resultText(res), "rate limited") || strings.Contains(resultText(res), injectionMarker) {
-				t.Errorf("result = %v %q, want a rate limit error without Trakt text", res.IsError, resultText(res))
-			}
-		})
-
-		if tl.reads {
-			t.Run(tl.tool+"/malformed body", func(t *testing.T) {
-				t.Parallel()
-
-				h := newHarness(t)
-				h.trakt.respond(tl.route, http.StatusOK, `{"not": "closed"`, nil)
-				h.fail(tl.tool, tl.args, msgInternal)
-			})
-		}
-	}
+	})
 }
 
 func TestWatchlistEditDescriptionsMentionVIP(t *testing.T) {

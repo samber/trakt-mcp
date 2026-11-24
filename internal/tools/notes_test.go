@@ -189,8 +189,8 @@ func TestNoteTraktFailures(t *testing.T) {
 	}{
 		{testCaseNotFound, http.StatusNotFound, msgNotFound},
 		{testCaseUnauthorized, http.StatusUnauthorized, msgUpstreamAuth},
-		{"account limit", statusTraktAccountLimit, msgAccountLimit},
-		{"vip required", http.StatusUpgradeRequired, msgVIPRequired},
+		{testCaseAccountLimit, statusTraktAccountLimit, msgAccountLimit},
+		{testCaseVIPRequired, http.StatusUpgradeRequired, msgVIPRequired},
 		{testCaseServerError, http.StatusInternalServerError, testMsgServerError},
 		{testCaseBadGateway, http.StatusBadGateway, testMsgBadGateway},
 	}
