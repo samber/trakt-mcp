@@ -1,0 +1,98 @@
+{
+  "cast": [
+    {
+      "character": "Walter White",
+      "characters": [
+        "Walter White"
+      ],
+      "episode_count": 62,
+      "person": {
+        "name": "Bryan Cranston",
+        "ids": {
+          "trakt": 1,
+          "slug": "bryan-cranston",
+          "imdb": "nm0000001",
+          "tmdb": 1,
+          "tvdb": null
+        },
+        "biography": "dropped",
+        "images": {
+          "headshot": [
+            "dropped"
+          ]
+        }
+      }
+    },
+    {
+      "character": null,
+      "characters": [],
+      "episode_count": null,
+      "person": {
+        "name": "Aaron Paul",
+        "ids": {
+          "trakt": 2,
+          "slug": "aaron-paul",
+          "imdb": "nm0000002",
+          "tmdb": 2,
+          "tvdb": null
+        },
+        "biography": "dropped",
+        "images": {
+          "headshot": [
+            "dropped"
+          ]
+        }
+      }
+    }
+  ],
+  "crew": {
+    "writing": [
+      {
+        "job": "Creator",
+        "jobs": [
+          "Creator"
+        ],
+        "person": {
+          "name": "Vince Gilligan",
+          "ids": {
+            "trakt": 3,
+            "slug": "vince-gilligan",
+            "imdb": "nm0000003",
+            "tmdb": 3,
+            "tvdb": null
+          },
+          "biography": "dropped",
+          "images": {
+            "headshot": [
+              "dropped"
+            ]
+          }
+        }
+      }
+    ],
+    "directing": [
+      {
+        "job": "Director",
+        "jobs": [
+          "Director"
+        ],
+        "person": {
+          "name": "Vince Gilligan",
+          "ids": {
+            "trakt": 3,
+            "slug": "vince-gilligan",
+            "imdb": "nm0000003",
+            "tmdb": 3,
+            "tvdb": null
+          },
+          "biography": "dropped",
+          "images": {
+            "headshot": [
+              "dropped"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

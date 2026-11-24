@@ -25,6 +25,12 @@ const (
 )
 
 const (
+	traversalID               = "../x"
+	personIMDb                = "nm0186505"
+	testFirstAired            = "2008-01-20T02:00:00.000Z"
+	keyRating                 = "rating"
+	keyVotes                  = "votes"
+	pathSecondTitle           = "items.1.title"
 	testShowTitle             = "Breaking Bad"
 	testShowIMDb              = "tt0903747"
 	queryExtended             = "extended"
@@ -66,7 +72,10 @@ type catalogCase struct {
 	// want maps dotted output paths (pathFirstShowTitle) to expected values,
 	// compared by their printed form.
 	want map[string]any
-	// object is true when the tool's output and Trakt body are objects, not
+	// absent lists output paths that must not exist: fields Trakt sends that
+	// the tool drops, and fields it omits when Trakt had no value.
+	absent []string
+	// object is true when the Trakt body is an object, not
 	// lists, which picks the empty bodies the nil-array test sends.
 	object bool
 }
@@ -182,7 +191,7 @@ var showCases = []catalogCase{
 		tool: toolFetchPopularShows, args: map[string]any{}, route: "GET /shows/popular", fixture: "show_popular",
 		wantQuery: map[string]string{queryExtended: extendedFull},
 		want: map[string]any{
-			pathFirstTitle: testShowTitle, "items.0.ids.slug": testShowSlug, "items.0.first_aired": "2008-01-20T02:00:00.000Z",
+			pathFirstTitle: testShowTitle, "items.0.ids.slug": testShowSlug, "items.0.first_aired": testFirstAired,
 			"items.0.runtime": 45, "items.0.certification": "TV-MA", "items.0.aired_episodes": 62, pathSecondGenres: []any{},
 		},
 	},
@@ -215,7 +224,7 @@ var showCases = []catalogCase{
 	},
 	{
 		tool: toolFetchShowRatings, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/ratings", fixture: "show_ratings", object: true,
-		want: map[string]any{"rating": 9.3, "votes": 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
+		want: map[string]any{keyRating: 9.3, keyVotes: 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
 	},
 	{
 		tool: toolFetchShowSummary, args: showShow(testShowSlug), route: "GET /shows/breaking-bad", fixture: "show_summary", object: true,
@@ -231,19 +240,19 @@ var showCases = []catalogCase{
 			pathFirstTitle: "Official [Trailer]", "items.0.type": "trailer", "items.0.site": "youtube",
 			"items.0.url": "https://www.youtube.com/watch?v=abc", "items.0.published_at": "2008-01-01T00:00:00.000Z",
 			"items.0.markdown": `[Official \[Trailer\]](https://www.youtube.com/watch?v=abc)`,
-			"items.1.title":    "Clip (1)", "items.1.markdown": `[Clip (1)](https://vimeo.com/a%28b%29)`,
+			pathSecondTitle:    "Clip (1)", "items.1.markdown": `[Clip (1)](https://vimeo.com/a%28b%29)`,
 		},
 	},
 	{
 		tool: toolFetchRelatedShows, args: merge(showShow(testShowSlug), pagedArgs), route: "GET /shows/breaking-bad/related", fixture: "show_related", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
-		want:      map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, "items.1.title": testShowTitle, "page.page_count": 3},
+		want:      map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, pathSecondTitle: testShowTitle, "page.page_count": 3},
 	},
 	{
 		tool: toolFetchShowSeasons, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/seasons", fixture: "show_seasons",
 		want: map[string]any{
 			"items.0.number": 0, pathFirstTitle: "Specials", "items.0.episode_count": 9, "items.0.ids.trakt": 3960,
-			"items.1.number": 1, "items.1.overview": "The first season.", "items.1.rating": 8.9, "items.1.ids.tvdb": 30272, "items.1.first_aired": "2008-01-20T02:00:00.000Z",
+			"items.1.number": 1, "items.1.overview": "The first season.", "items.1.rating": 8.9, "items.1.ids.tvdb": 30272, "items.1.first_aired": testFirstAired,
 		},
 	},
 	{
@@ -281,6 +290,12 @@ func TestShowToolsOutputs(t *testing.T) {
 
 				if fmt.Sprint(got) != fmt.Sprint(want) {
 					t.Errorf("%s: %s = %v, want %v", tc.tool, path, got, want)
+				}
+			}
+
+			for _, path := range tc.absent {
+				if got, ok := lookup(out, path); ok {
+					t.Errorf("%s: field %q = %v, want it absent in %s", tc.tool, path, got, resultText(res))
 				}
 			}
 
@@ -451,7 +466,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "period all", tool: toolFetchWatchedShows, args: map[string]any{fieldPeriod: periodAll}, route: "GET /shows/watched/all", body: emptyList},
 		{name: "period unknown", tool: toolFetchPlayedShows, args: map[string]any{fieldPeriod: "hourly"}, wantErr: invalid(fieldPeriod)},
 		{name: "period wrong case", tool: toolFetchFavoritedShows, args: map[string]any{fieldPeriod: "Weekly"}, wantErr: invalid(fieldPeriod)},
-		{name: "period path injection", tool: toolFetchWatchedShows, args: map[string]any{fieldPeriod: "../x"}, wantErr: invalid(fieldPeriod)},
+		{name: "period path injection", tool: toolFetchWatchedShows, args: map[string]any{fieldPeriod: traversalID}, wantErr: invalid(fieldPeriod)},
 		{name: "limit 0 is the default", tool: toolFetchPopularShows, args: map[string]any{fieldLimit: 0}, route: "GET /shows/popular", body: emptyList, wantQuery: map[string]string{"limit": "10"}},
 		{name: "limit 101", tool: toolFetchPopularShows, args: map[string]any{fieldLimit: 101}, wantErr: invalid(fieldLimit)},
 		{name: "limit negative", tool: toolFetchPopularShows, args: map[string]any{fieldLimit: -1}, wantErr: invalid(fieldLimit)},
@@ -459,8 +474,8 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "id slug", tool: toolFetchShowSummary, args: showShow("breaking-bad"), route: "GET /shows/breaking-bad", body: emptyObject, wantPath: "/shows/breaking-bad"},
 		{name: "id numeric", tool: toolFetchShowSummary, args: showShow("1388"), route: "GET /shows/1388", body: emptyObject, wantPath: "/shows/1388"},
 		{name: "id imdb", tool: toolFetchShowSummary, args: showShow(testShowIMDb), route: "GET /shows/tt0903747", body: emptyObject, wantPath: "/shows/tt0903747"},
-		{name: "id person imdb", tool: toolFetchShowSummary, args: showShow("nm0186505"), wantErr: invalid(fieldShowID)},
-		{name: "id path traversal", tool: toolFetchShowSummary, args: showShow("../x"), wantErr: invalid(fieldShowID)},
+		{name: "id person imdb", tool: toolFetchShowSummary, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
+		{name: "id path traversal", tool: toolFetchShowSummary, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
 		{name: "id slash", tool: toolFetchShowRatings, args: showShow("a/b"), wantErr: invalid(fieldShowID)},
 		{name: "id query injection", tool: toolFetchShowPeople, args: showShow("x?extended=full"), wantErr: invalid(fieldShowID)},
 		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},

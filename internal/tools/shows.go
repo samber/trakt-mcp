@@ -301,11 +301,13 @@ type traktSeason struct {
 	} `json:"ids"`
 }
 
-func trimSeason(s traktSeason) Season {
+func trimSeason(s traktSeason) Season { return s.trim(maxListOverviewRunes) }
+
+func (s traktSeason) trim(maxOverview int) Season {
 	return Season{
 		Number:        s.Number,
 		Title:         boundText(deref(s.Title), maxTitleRunes),
-		Overview:      boundText(deref(s.Overview), maxListOverviewRunes),
+		Overview:      boundText(deref(s.Overview), maxOverview),
 		Rating:        deref(s.Rating),
 		Votes:         deref(s.Votes),
 		EpisodeCount:  deref(s.EpisodeCount),
