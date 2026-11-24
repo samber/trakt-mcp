@@ -200,15 +200,15 @@ func registerCommentTools(s *Server) {
 	}, fetchMovieComments)
 	Register(s, Spec{
 		Name: "fetch_show_comments", Title: "Fetch show comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a show, with likes, replies, rating, review flag and author." + listNote + commentNote,
+		Description: "List the comments Trakt users wrote about a TV show, with likes, replies, rating, review flag and author." + listNote + commentNote,
 	}, fetchShowComments)
 	Register(s, Spec{
 		Name: "fetch_season_comments", Title: "Fetch season comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a season, with likes, replies, rating, review flag and author." + listNote + commentNote,
+		Description: "List the comments Trakt users wrote about a TV show season, with likes, replies, rating, review flag and author." + listNote + commentNote,
 	}, fetchSeasonComments)
 	Register(s, Spec{
 		Name: "fetch_episode_comments", Title: "Fetch episode comments", Access: Read,
-		Description: "List the comments Trakt users wrote about an episode, with likes, replies, rating, review flag and author." + listNote + commentNote,
+		Description: "List the comments Trakt users wrote about a TV show episode, with likes, replies, rating, review flag and author." + listNote + commentNote,
 	}, fetchEpisodeComments)
 	Register(s, Spec{
 		Name: "fetch_comment", Title: "Fetch comment", Access: Read,

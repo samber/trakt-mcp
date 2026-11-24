@@ -79,7 +79,7 @@ func registerCheckinTools(s *Server) {
 	Register(s, Spec{
 		Name:  "checkin_to_show",
 		Title: "Check in to an episode",
-		Description: "Tell Trakt the user is watching an episode now, by show_id or by show_title and show_year, plus season and episode. " +
+		Description: "Tell Trakt the user is watching an episode of a TV show now, by show_id or by show_title and show_year, plus season and episode. " +
 			"If a check-in is already active, returns already_checked_in with its expiry instead of failing.",
 		Access: Write,
 	}, checkinToShow)

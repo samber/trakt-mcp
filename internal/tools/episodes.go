@@ -61,35 +61,35 @@ type EpisodeListsArgs struct {
 func registerEpisodeTools(s *Server) {
 	Register(s, Spec{
 		Name: "fetch_episode_summary", Title: "Fetch episode summary", Access: Read,
-		Description: "Get one episode's details: title, overview, rating, runtime, air date, episode type and ids.",
+		Description: "Get one TV show episode's details: title, overview, rating, runtime, air date, episode type and ids.",
 	}, fetchEpisodeSummary)
 	Register(s, Spec{
 		Name: "fetch_episode_ratings", Title: "Fetch episode ratings", Access: Read,
-		Description: "Get an episode's average rating, vote count and the number of votes for each rating from 1 to 10.",
+		Description: "Get a TV show episode's average rating, vote count and the number of votes for each rating from 1 to 10.",
 	}, fetchEpisodeRatings)
 	Register(s, Spec{
 		Name: "fetch_episode_stats", Title: "Fetch episode stats", Access: Read,
-		Description: "Get an episode's counters: watchers, plays, collectors, comments, lists and votes.",
+		Description: "Get a TV show episode's counters: watchers, plays, collectors, comments, lists and votes.",
 	}, fetchEpisodeStats)
 	Register(s, Spec{
 		Name: "fetch_episode_people", Title: "Fetch episode people", Access: Read,
-		Description: "Get an episode's cast (name, character) and crew grouped by department. Long credit lists are cut.",
+		Description: "Get a TV show episode's cast (name, character) and crew grouped by department. Long credit lists are cut.",
 	}, fetchEpisodePeople)
 	Register(s, Spec{
 		Name: "fetch_episode_videos", Title: "Fetch episode videos", Access: Read,
-		Description: "List an episode's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
+		Description: "List a TV show episode's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
 	}, fetchEpisodeVideos)
 	Register(s, Spec{
 		Name: "fetch_episode_watching", Title: "Fetch episode watchers", Access: Read,
-		Description: "Count the users watching an episode right now and list their usernames, up to 50. Private accounts are counted, not listed.",
+		Description: "Count the users watching a TV show episode right now and list their usernames, up to 50. Private accounts are counted, not listed.",
 	}, fetchEpisodeWatching)
 	Register(s, Spec{
 		Name: "fetch_episode_translations", Title: "Fetch episode translations", Access: Read,
-		Description: "Get an episode's title and overview in one language (two-letter code) or in every language.",
+		Description: "Get a TV show episode's title and overview in one language (two-letter code) or in every language.",
 	}, fetchEpisodeTranslations)
 	Register(s, Spec{
 		Name: "fetch_episode_lists", Title: "Fetch lists with an episode", Access: Read,
-		Description: "List the Trakt lists that contain an episode, by list type and sort. Takes limit and page." + untrustedNote,
+		Description: "List the Trakt lists that contain a TV show episode, by list type and sort. Takes limit and page." + untrustedNote,
 	}, fetchEpisodeLists)
 }
 

@@ -317,39 +317,39 @@ type SeasonListsArgs struct {
 func registerSeasonTools(s *Server) {
 	Register(s, Spec{
 		Name: "fetch_season_info", Title: "Fetch season info", Access: Read,
-		Description: "Get one season's details: number, title, overview, rating, episode count and first air date. Season 0 is the specials.",
+		Description: "Get one TV show season's details: number, title, overview, rating, episode count and first air date. Season 0 is the specials.",
 	}, fetchSeasonInfo)
 	Register(s, Spec{
 		Name: "fetch_season_episodes", Title: "Fetch season episodes", Access: Read,
-		Description: "List the episodes of a season with number, title, overview, rating, runtime and air date.",
+		Description: "List the episodes of a TV show season with number, title, overview, rating, runtime and air date.",
 	}, fetchSeasonEpisodes)
 	Register(s, Spec{
 		Name: "fetch_season_ratings", Title: "Fetch season ratings", Access: Read,
-		Description: "Get a season's average rating, vote count and the number of votes for each rating from 1 to 10.",
+		Description: "Get a TV show season's average rating, vote count and the number of votes for each rating from 1 to 10.",
 	}, fetchSeasonRatings)
 	Register(s, Spec{
 		Name: "fetch_season_stats", Title: "Fetch season stats", Access: Read,
-		Description: "Get a season's counters: watchers, plays, collectors, comments, lists and votes.",
+		Description: "Get a TV show season's counters: watchers, plays, collectors, comments, lists and votes.",
 	}, fetchSeasonStats)
 	Register(s, Spec{
 		Name: "fetch_season_people", Title: "Fetch season people", Access: Read,
-		Description: "Get a season's cast (name, character) and crew grouped by department. Long credit lists are cut.",
+		Description: "Get a TV show season's cast (name, character) and crew grouped by department. Long credit lists are cut.",
 	}, fetchSeasonPeople)
 	Register(s, Spec{
 		Name: "fetch_season_videos", Title: "Fetch season videos", Access: Read,
-		Description: "List a season's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
+		Description: "List a TV show season's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
 	}, fetchSeasonVideos)
 	Register(s, Spec{
 		Name: "fetch_season_watching", Title: "Fetch season watchers", Access: Read,
-		Description: "Count the users watching a season right now and list their usernames, up to 50. Private accounts are counted, not listed.",
+		Description: "Count the users watching a TV show season right now and list their usernames, up to 50. Private accounts are counted, not listed.",
 	}, fetchSeasonWatching)
 	Register(s, Spec{
 		Name: "fetch_season_translations", Title: "Fetch season translations", Access: Read,
-		Description: "Get a season's title and overview in one language (two-letter code) or in every language.",
+		Description: "Get a TV show season's title and overview in one language (two-letter code) or in every language.",
 	}, fetchSeasonTranslations)
 	Register(s, Spec{
 		Name: "fetch_season_lists", Title: "Fetch lists with a season", Access: Read,
-		Description: "List the Trakt lists that contain a season, by list type and sort. Takes limit and page." + untrustedNote,
+		Description: "List the Trakt lists that contain a TV show season, by list type and sort. Takes limit and page." + untrustedNote,
 	}, fetchSeasonLists)
 }
 

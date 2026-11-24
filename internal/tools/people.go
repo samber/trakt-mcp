@@ -299,7 +299,7 @@ func registerPeopleTools(s *Server) {
 	}, fetchPersonMovies)
 	Register(s, Spec{
 		Name: "fetch_person_shows", Title: "Fetch person shows", Access: Read,
-		Description: "List the shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
+		Description: "List the TV shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
 	}, fetchPersonShows)
 }
 

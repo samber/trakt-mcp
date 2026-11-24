@@ -32,6 +32,32 @@ const (
 	trendingRoute = "GET /movies/trending"
 )
 
+// TestShowToolDescriptionsSayTVShow keeps the word "show" from reading as a
+// movie: every tool about shows, seasons or episodes must say TV show/series.
+func TestShowToolDescriptionsSayTVShow(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(offlineDeps())
+	checked := 0
+
+	for _, spec := range srv.Specs() {
+		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") {
+			continue
+		}
+
+		checked++
+		desc := strings.ToLower(spec.Description)
+
+		if !strings.Contains(desc, "tv show") && !strings.Contains(desc, "tv series") {
+			t.Errorf("%s: description must say TV show or TV series: %q", spec.Name, spec.Description)
+		}
+	}
+
+	if checked == 0 {
+		t.Fatal("no show, season or episode tool found")
+	}
+}
+
 // destroyPrefixes are the tool name prefixes that must be Destroy (spec §8).
 var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 
