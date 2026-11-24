@@ -106,6 +106,7 @@ const image = new URL(ogImage, SITE_URL).href;
         posthog.init(posthogKey, {
           api_host: posthogHost,
           disable_session_recording: true,
+          persistence: 'cookie',
         });
       }
       function loadScript(src,attrs,onload){var el=document.createElement('script');el.async=true;el.src=src;el.onload=onload;for(var name in attrs)el.setAttribute(name,attrs[name]);document.head.appendChild(el)}function loadAnalytics(){window.dataLayer=window.dataLayer||[];window.dataLayer.push({'gtm.start':Date.now(),event:'gtm.js'});loadScript(gtmSrc);loadScript(posthogHost+'/static/array.js',0,initPostHog);loadScript(ahrefsSrc,{'data-key':ahrefsKey})}function whenIdle(){'requestIdleCallback'in window?requestIdleCallback(loadAnalytics):setTimeout(loadAnalytics,0)}if(enabled)document.readyState==='complete'?whenIdle():addEventListener('load',whenIdle)
