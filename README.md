@@ -6,6 +6,8 @@ Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assist
 
 This project is not affiliated with or endorsed by Trakt.
 
+<img width="1904" height="640" alt="image" src="https://github.com/user-attachments/assets/be54f31a-3799-4491-9de7-41982a38b3c7" />
+
 ## 🛠️ Tools
 
 79 tools. Every id argument accepts a Trakt slug (`breaking-bad`), a numeric Trakt id or an IMDb id (`tt0903747`, `nm0186505` for people). List tools take `limit` (default 10, max 100) and an optional `page`; recommendation list tools take `limit` only. Write tools change your real Trakt account and say so in their description.
