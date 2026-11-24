@@ -1,0 +1,9 @@
+{
+  "us": [
+    { "name": "PG-13", "slug": "pg-13", "description": "Parents strongly cautioned" },
+    { "name": "R", "slug": "r", "description": "Restricted" }
+  ],
+  "fr": [
+    { "name": "U", "slug": "u", "description": "All audiences" }
+  ]
+}

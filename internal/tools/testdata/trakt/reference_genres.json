@@ -1,0 +1,4 @@
+[
+  { "name": "Horror", "slug": "horror" },
+  { "name": "Western", "slug": "western", "subgenres": [{ "name": "Dystopia", "slug": "dystopia" }] }
+]
