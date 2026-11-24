@@ -95,39 +95,76 @@ func trimWatchlistItem(w traktWatchlistItem) WatchlistItem {
 	}
 }
 
+// syncListQuery is the validated path of a sync list route.
+type syncListQuery struct{ typ, sortBy, sortHow string }
+
+// parseSyncListQuery validates the type, sort field and direction of a sync
+// list route (watchlist, favorites) against the types that list accepts.
+func parseSyncListQuery(types []string, typ, sortBy, sortHow string) (syncListQuery, error) {
+	var (
+		q   syncListQuery
+		err error
+	)
+
+	if q.typ, err = oneOf(fieldType, typ, mediaAll, types); err != nil {
+		return q, err
+	}
+
+	if q.sortBy, err = oneOf(fieldSort, sortBy, watchlistSortRank, watchlistSorts); err != nil {
+		return q, err
+	}
+
+	q.sortHow, err = oneOf(fieldSortHow, sortHow, sortHowAsc, sortHows)
+
+	return q, err
+}
+
+// parseNotedItems validates a batch of items with parse and stamps notes on
+// each of them.
+func parseNotedItems(args []ItemArg, notes string, parse func([]ItemArg) ([]Item, error)) ([]Item, error) {
+	items, err := parse(args)
+	if err != nil {
+		return nil, err
+	}
+
+	if !utf8.ValidString(notes) || utf8.RuneCountInString(notes) > maxNotesRunes {
+		return nil, invalidArgument(fieldNotes)
+	}
+
+	for i := range items {
+		items[i].Notes = notes
+	}
+
+	return items, nil
+}
+
+// fetchSyncList validates the route path of a sync list, then pages through
+// get's answer and trims each entry. Watchlist and favorites share it.
+func fetchSyncList[T any](
+	ctx context.Context,
+	pages PageArgs, types []string, typ, sortBy, sortHow string, trim func(traktWatchlistItem) T,
+	get func(q syncListQuery, page, limit int) (*http.Response, error),
+) (Listing[T], error) {
+	q, err := parseSyncListQuery(types, typ, sortBy, sortHow)
+	if err != nil {
+		return Listing[T]{}, err
+	}
+
+	return paginateDecoded(ctx, pages, trim, func(page, limit int) (*http.Response, error) {
+		return get(q, page, limit)
+	})
+}
+
 func fetchWatchlist(ctx context.Context, c *trakt.UserClient, in WatchlistArgs) (Listing[WatchlistItem], error) {
-	typ, err := oneOf(fieldType, in.Type, mediaAll, watchlistTypes)
-	if err != nil {
-		return Listing[WatchlistItem]{}, err
-	}
-
-	sortBy, err := oneOf(fieldSort, in.Sort, watchlistSortRank, watchlistSorts)
-	if err != nil {
-		return Listing[WatchlistItem]{}, err
-	}
-
-	sortHow, err := oneOf(fieldSortHow, in.SortHow, sortHowAsc, sortHows)
-	if err != nil {
-		return Listing[WatchlistItem]{}, err
-	}
-
-	return paginateDecoded(ctx, in.PageArgs, trimWatchlistItem, func(page, limit int) (*http.Response, error) {
-		return c.API().GetSyncWatchlistGet(ctx, typ, sortBy, sortHow, &api.GetSyncWatchlistGetParams{Page: &page, Limit: &limit})
+	return fetchSyncList(ctx, in.PageArgs, watchlistTypes, in.Type, in.Sort, in.SortHow, trimWatchlistItem, func(q syncListQuery, page, limit int) (*http.Response, error) {
+		return c.API().GetSyncWatchlistGet(ctx, q.typ, q.sortBy, q.sortHow, &api.GetSyncWatchlistGetParams{Page: &page, Limit: &limit})
 	})
 }
 
 func addToWatchlist(ctx context.Context, c *trakt.UserClient, in AddWatchlistArgs) (WriteResult, error) {
-	items, err := parseItems(in.Items)
+	items, err := parseNotedItems(in.Items, in.Notes, parseItems)
 	if err != nil {
 		return WriteResult{}, err
-	}
-
-	if !utf8.ValidString(in.Notes) || utf8.RuneCountInString(in.Notes) > maxNotesRunes {
-		return WriteResult{}, invalidArgument(fieldNotes)
-	}
-
-	for i := range items {
-		items[i].Notes = in.Notes
 	}
 
 	return writeItems(items, func(body io.Reader) (*http.Response, error) {

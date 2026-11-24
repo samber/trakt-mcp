@@ -100,13 +100,22 @@ func updateWatchlistItem(ctx context.Context, c *trakt.UserClient, in UpdateWatc
 }
 
 func reorderWatchlist(ctx context.Context, c *trakt.UserClient, in ReorderWatchlistArgs) (ReorderWatchlistResult, error) {
-	if len(in.Rank) == 0 || len(in.Rank) > maxReorderIDs {
+	return sendReorder(in.Rank, func(b io.Reader) (*http.Response, error) {
+		return c.API().PostSyncWatchlistReorderWithBody(ctx, jsonContentType, b)
+	})
+}
+
+// sendReorder validates the list item ids of a reorder (1 to maxReorderIDs,
+// positive, distinct), posts them in order with send and decodes Trakt's
+// outcome. Watchlist and favorites share it.
+func sendReorder(ids []int, send func(io.Reader) (*http.Response, error)) (ReorderWatchlistResult, error) {
+	if len(ids) == 0 || len(ids) > maxReorderIDs {
 		return ReorderWatchlistResult{}, invalidArgument(fieldRank)
 	}
 
-	seen := make(map[int]struct{}, len(in.Rank))
+	seen := make(map[int]struct{}, len(ids))
 
-	for _, id := range in.Rank {
+	for _, id := range ids {
 		if _, dup := seen[id]; dup || id <= 0 {
 			return ReorderWatchlistResult{}, invalidArgument(fieldRank)
 		}
@@ -114,9 +123,7 @@ func reorderWatchlist(ctx context.Context, c *trakt.UserClient, in ReorderWatchl
 		seen[id] = struct{}{}
 	}
 
-	r, err := sendJSON(reorderWatchlistBody(in), func(b io.Reader) (*http.Response, error) {
-		return c.API().PostSyncWatchlistReorderWithBody(ctx, jsonContentType, b)
-	})
+	r, err := sendJSON(reorderWatchlistBody{Rank: ids}, send)
 	if err != nil {
 		return ReorderWatchlistResult{}, err
 	}
