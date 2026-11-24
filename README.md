@@ -167,11 +167,11 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | `search_by_id`         | Finds movies, shows, episodes and people from a Trakt, IMDb, TMDB or TVDB id. |
 | `search_movies_exact`  | Searches movies by exact title.                                               |
 | `search_shows_exact`   | Searches shows by exact title.                                                |
-| `fetch_genres`         | Genres Trakt uses for movies or shows.                                        |
-| `fetch_countries`      | Countries Trakt uses.                                                         |
-| `fetch_languages`      | Languages Trakt uses.                                                         |
-| `fetch_certifications` | Age ratings by country.                                                       |
-| `fetch_networks`       | TV networks Trakt knows.                                                      |
+| `fetch_genres`         | Genres (name and slug) Trakt uses for movies or shows.                        |
+| `fetch_countries`      | Countries (name and code) Trakt uses for movies or shows.                     |
+| `fetch_languages`      | Languages (name and code) Trakt uses for movies or shows.                     |
+| `fetch_certifications` | Content ratings of every country for movies or shows.                         |
+| `fetch_networks`       | TV networks Trakt knows, with their country.                                  |
 
 ### Movie and show extras (16)
 
@@ -214,17 +214,17 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | Tool                    | What it does                                                            |
 | ----------------------- | ----------------------------------------------------------------------- |
 | `update_watchlist_item` | Sets or clears the note of a watchlist entry (VIP only).                |
-| `reorder_watchlist`     | Reorders your whole watchlist by `list_item_id` (VIP only).             |
+| `reorder_watchlist`     | Reorders your whole watchlist by `list_item_id`.                        |
 | `fetch_note`            | One of your notes (VIP only).                                           |
 | `fetch_user_notes`      | Your notes, optionally for one kind of item (VIP only).                 |
 | `create_note`           | Attaches a note to a movie, show, season, episode or person (VIP only). |
 | `update_note`           | Edits a note (VIP only).                                                |
 | `delete_note`           | Deletes a note (VIP only).                                              |
 | `fetch_favorites`       | Your favorite movies and shows.                                         |
-| `add_to_favorites`      | Adds items to your favorites.                                           |
-| `update_favorite`       | Changes the note on a favorite.                                         |
-| `reorder_favorites`     | Reorders your favorites.                                                |
-| `remove_from_favorites` | Removes items from your favorites.                                      |
+| `add_to_favorites`      | Adds up to 50 movies or shows to your favorites, with an optional note. |
+| `update_favorite`       | Sets or clears the note of a favorite, or moves it to a new rank.       |
+| `reorder_favorites`     | Reorders your favorites by `list_item_id`.                              |
+| `remove_from_favorites` | Removes up to 50 movies or shows from your favorites.                   |
 
 ### Progress and up next (7)
 
@@ -233,10 +233,10 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | `fetch_show_collection_progress` | How much of a show you collected: counts, percentage, next episode to collect. |
 | `reset_show_progress`            | Restarts a show's watch progress to rewatch it (VIP only).                     |
 | `undo_reset_show_progress`       | Undoes the last reset (VIP only).                                              |
-| `fetch_up_next`                  | The next episode to watch in each show you follow.                             |
-| `fetch_hidden_progress`          | Shows and seasons hidden from your progress.                                   |
-| `hide_from_progress`             | Hides a show or season from your progress.                                     |
-| `unhide_from_progress`           | Shows a hidden show or season again.                                           |
+| `fetch_up_next`                  | The TV shows you are watching, each with its next episode to watch.            |
+| `fetch_hidden_progress`          | TV shows and seasons hidden from your progress.                                |
+| `hide_from_progress`             | Hides TV shows or seasons from your progress and up next.                      |
+| `unhide_from_progress`           | Shows hidden TV shows or seasons in your progress again.                       |
 
 Notes, watchlist notes and show progress reset need Trakt VIP; other accounts get "Trakt VIP is required for this feature".
 

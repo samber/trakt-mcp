@@ -77,10 +77,10 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_show_collection_progress', summary: 'See how much of a show you have collected and what to collect next.', group: 'history' },
   { name: 'reset_show_progress', summary: 'Restart a show from now to rewatch it (Trakt VIP).', group: 'history' },
   { name: 'undo_reset_show_progress', summary: 'Undo the last reset of a show so earlier plays count again (Trakt VIP).', group: 'history' },
-  { name: 'fetch_up_next', summary: 'See the next episode to watch in each show you follow.', group: 'history' },
+  { name: 'fetch_up_next', summary: 'See the shows you are watching, each with its next episode to watch.', group: 'history' },
   { name: 'fetch_hidden_progress', summary: 'See the shows and seasons you hid from your progress.', group: 'history' },
-  { name: 'hide_from_progress', summary: 'Hide a show or season from your progress.', group: 'history' },
-  { name: 'unhide_from_progress', summary: 'Bring a hidden show or season back into your progress.', group: 'history' },
+  { name: 'hide_from_progress', summary: 'Hide shows or seasons from your progress and up next.', group: 'history' },
+  { name: 'unhide_from_progress', summary: 'Bring hidden shows or seasons back into your progress.', group: 'history' },
 
   // Watchlist, collection, ratings, smart lists.
   { name: 'fetch_watchlist', summary: 'Read your watchlist, filtered by type and sorted as you like.', group: 'library' },
@@ -95,7 +95,7 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_smart_lists', summary: 'Read your smart lists and the filters behind each.', group: 'library' },
   { name: 'fetch_smart_list_items', summary: 'See the movies and shows a smart list holds right now.', group: 'library' },
   { name: 'update_watchlist_item', summary: 'Set or clear the note on a watchlist entry (Trakt VIP).', group: 'library' },
-  { name: 'reorder_watchlist', summary: 'Put your watchlist in the order you want (Trakt VIP).', group: 'library' },
+  { name: 'reorder_watchlist', summary: 'Put your watchlist in the order you want.', group: 'library' },
 
   // Custom lists.
   { name: 'fetch_user_lists', summary: 'Read your custom lists, or the public lists of another user.', group: 'lists' },
@@ -116,8 +116,8 @@ export const TOOLS: readonly Tool[] = [
   { name: 'update_note', summary: 'Edit a note (Trakt VIP).', group: 'notes' },
   { name: 'delete_note', summary: 'Delete a note (Trakt VIP).', group: 'notes' },
   { name: 'fetch_favorites', summary: 'Read your favorite movies and shows.', group: 'notes' },
-  { name: 'add_to_favorites', summary: 'Add movies or shows to your favorites.', group: 'notes' },
-  { name: 'update_favorite', summary: 'Change the note on a favorite.', group: 'notes' },
+  { name: 'add_to_favorites', summary: 'Add movies or shows to your favorites, with an optional note.', group: 'notes' },
+  { name: 'update_favorite', summary: 'Set or clear the note on a favorite, or move it to a new rank.', group: 'notes' },
   { name: 'reorder_favorites', summary: 'Put your favorites in the order you want.', group: 'notes' },
   { name: 'remove_from_favorites', summary: 'Remove items from your favorites.', group: 'notes' },
 
@@ -149,10 +149,10 @@ export const TOOLS: readonly Tool[] = [
   { name: 'search_by_id', summary: 'Find a title or person from its Trakt, IMDb, TMDB or TVDB id.', group: 'lookup' },
   { name: 'search_movies_exact', summary: 'Find a movie by its exact title.', group: 'lookup' },
   { name: 'search_shows_exact', summary: 'Find a show by its exact title.', group: 'lookup' },
-  { name: 'fetch_genres', summary: 'List the genres Trakt uses for movies or shows.', group: 'lookup' },
-  { name: 'fetch_countries', summary: 'List the countries Trakt uses for movies or shows.', group: 'lookup' },
-  { name: 'fetch_languages', summary: 'List the languages Trakt uses for movies or shows.', group: 'lookup' },
-  { name: 'fetch_certifications', summary: 'List the age ratings Trakt uses, by country.', group: 'lookup' },
+  { name: 'fetch_genres', summary: 'List the genres (name and slug) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_countries', summary: 'List the countries (name and code) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_languages', summary: 'List the languages (name and code) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_certifications', summary: 'List the content ratings Trakt uses, for every country.', group: 'lookup' },
   { name: 'fetch_networks', summary: 'List the TV networks Trakt knows.', group: 'lookup' },
 
   // Catalog: shows.
