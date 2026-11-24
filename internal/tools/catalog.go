@@ -5,6 +5,7 @@ package tools
 // line here, and the registry tests pick it up without changes.
 var catalog = []func(*Server){
 	registerMovieTools,
+	registerMovieCatalogTools,
 	registerShowTools,
 	registerSeasonTools,
 	registerEpisodeTools,

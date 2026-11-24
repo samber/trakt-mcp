@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Official [Trailer]",
+    "url": "https://www.youtube.com/watch?v=abc",
+    "site": "youtube",
+    "type": "trailer",
+    "size": 1080,
+    "official": true,
+    "published_at": "1999-01-01T00:00:00.000Z",
+    "country": "us",
+    "language": "en"
+  },
+  {
+    "title": "Clip (1)",
+    "url": "https://vimeo.com/a(b)",
+    "site": "vimeo",
+    "type": "clip",
+    "published_at": "1999-02-01T00:00:00.000Z"
+  },
+  {
+    "title": "Bad scheme",
+    "url": "javascript:alert(1)",
+    "site": "x",
+    "type": "clip"
+  }
+]

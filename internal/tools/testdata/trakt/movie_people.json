@@ -1,0 +1,52 @@
+{
+  "cast": [
+    {
+      "character": "Neo",
+      "characters": [
+        "Neo"
+      ],
+      "person": {
+        "name": "Keanu Reeves",
+        "ids": {
+          "trakt": 3,
+          "slug": "keanu-reeves",
+          "imdb": "nm0000206",
+          "tmdb": 6384
+        }
+      }
+    }
+  ],
+  "crew": {
+    "directing": [
+      {
+        "job": "Director",
+        "jobs": [
+          "Director"
+        ],
+        "person": {
+          "name": "Lana Wachowski",
+          "ids": {
+            "trakt": 4,
+            "slug": "lana-wachowski",
+            "imdb": "nm0000206",
+            "tmdb": 6384
+          }
+        }
+      }
+    ],
+    "writing": [
+      {
+        "job": "Writer",
+        "person": {
+          "name": "Lilly Wachowski",
+          "ids": {
+            "trakt": 5,
+            "slug": "lilly-wachowski",
+            "imdb": "nm0000206",
+            "tmdb": 6384
+          }
+        }
+      }
+    ]
+  }
+}
