@@ -625,14 +625,15 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 
 // TestRegistryHas79Tools counts every registered tool: the 2 pilots, the 12
 // movie, 3 people and 5 comment tools, the 30 show, season and episode tools,
-// and the 27 account tools of the history, watchlist, collection, rating,
-// check-in, recommendation and smart-list groups.
+// the 27 account tools of the history, watchlist, collection, rating,
+// check-in, recommendation and smart-list groups, and the 7 calendar tools.
+// The name still says 79 until the last tool group lands.
 func TestRegistryHas79Tools(t *testing.T) {
 	t.Parallel()
 
 	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2
 
-	const want = 2 + 12 + 3 + 5 + 30 + accountTools
+	const want = 2 + 12 + 3 + 5 + 30 + accountTools + 7
 
 	if got := len(NewServer(offlineDeps()).Specs()); got != want {
 		t.Errorf("registered tools = %d, want %d", got, want)
