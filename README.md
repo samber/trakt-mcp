@@ -1,10 +1,19 @@
 # Trakt MCP
 
-Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assistant can then browse Trakt's catalog (trending, popular, search, details, people, comments) and manage your own data: watchlist, watch history, collection, ratings, check-ins, recommendations and smart lists.
+> Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assistant can then browse Trakt's catalog (trending, popular, search, details, people, comments) and manage your own data: watchlist, watch history, collection, ratings, check-ins, recommendations, smart lists...
+
+[![tag](https://img.shields.io/github/tag/samber/trakt-mcp.svg)](https://github.com/samber/trakt-mcp/releases)
+![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.26-%23007d9c)
+[![GoDoc](https://godoc.org/github.com/samber/trakt-mcp?status.svg)](https://pkg.go.dev/github.com/samber/trakt-mcp)
+![Build Status](https://github.com/samber/trakt-mcp/actions/workflows/test.yml/badge.svg)
+[![Go report](https://goreportcard.com/badge/github.com/samber/trakt-mcp)](https://goreportcard.com/report/github.com/samber/trakt-mcp)
+[![Coverage](https://img.shields.io/codecov/c/github/samber/trakt-mcp)](https://codecov.io/gh/samber/trakt-mcp)
+[![Contributors](https://img.shields.io/github/contributors/samber/trakt-mcp)](https://github.com/samber/trakt-mcp/graphs/contributors)
+[![License](https://img.shields.io/github/license/samber/trakt-mcp)](./LICENSE)
 
 `trakt-mcp` is a **remote** [MCP](https://modelcontextprotocol.io) server. One instance serves many Trakt accounts, each isolated from the others. See the [landing page](https://trakt-mcp.samber.dev) to join.
 
-> Trakt MCP uses the Trakt API but is not affiliated with, endorsed by, or certified by Trakt. "Trakt" is a trademark of its owner.
+Trakt MCP uses the Trakt API but is not affiliated with, endorsed by, or certified by Trakt. "Trakt" is a trademark of its owner.
 
 <img width="1904" height="640" alt="image" src="https://github.com/user-attachments/assets/be54f31a-3799-4491-9de7-41982a38b3c7" />
 
