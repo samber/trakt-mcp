@@ -180,7 +180,6 @@ export const STORED: readonly string[] = [
 export const NEVER_STORED: readonly string[] = [
   'Your watch history, watchlist, ratings and collection',
   'Comments, and the tool inputs and outputs exchanged with your assistant',
-  'Any token in clear',
   'Watch history, ratings, tool arguments or results in logs at the default log level',
 ];
 
