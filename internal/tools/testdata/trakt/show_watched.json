@@ -1,0 +1,77 @@
+[
+  {
+    "watcher_count": 80,
+    "play_count": 600,
+    "collected_count": 50,
+    "collector_count": 35,
+    "show": {
+      "title": "Breaking Bad",
+      "year": 2008,
+      "ids": {
+        "trakt": 1388,
+        "slug": "breaking-bad",
+        "tvdb": 81189,
+        "imdb": "tt0903747",
+        "tmdb": 1396,
+        "plex": {
+          "guid": "plex-guid",
+          "slug": "plex-slug"
+        }
+      },
+      "overview": "A chemistry teacher turns to crime.",
+      "first_aired": "2008-01-20T02:00:00.000Z",
+      "runtime": 45,
+      "certification": "TV-MA",
+      "network": "AMC",
+      "status": "ended",
+      "rating": 9.3,
+      "votes": 100000,
+      "aired_episodes": 62,
+      "genres": [
+        "drama",
+        "crime"
+      ],
+      "homepage": "https://dropped.example",
+      "images": {
+        "poster": [
+          "dropped.jpg"
+        ]
+      },
+      "tagline": "dropped"
+    }
+  },
+  {
+    "watcher_count": 2,
+    "play_count": 2,
+    "collected_count": 0,
+    "collector_count": 0,
+    "show": {
+      "title": "Better Call Saul",
+      "year": 2015,
+      "ids": {
+        "trakt": 59660,
+        "slug": "better-call-saul",
+        "imdb": null,
+        "tmdb": null,
+        "tvdb": null
+      },
+      "overview": null,
+      "first_aired": "2008-01-20T02:00:00.000Z",
+      "runtime": null,
+      "certification": null,
+      "network": null,
+      "status": "ended",
+      "rating": 9.3,
+      "votes": 100000,
+      "aired_episodes": 62,
+      "genres": null,
+      "homepage": "https://dropped.example",
+      "images": {
+        "poster": [
+          "dropped.jpg"
+        ]
+      },
+      "tagline": "dropped"
+    }
+  }
+]

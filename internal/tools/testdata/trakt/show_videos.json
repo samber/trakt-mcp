@@ -1,0 +1,35 @@
+[
+  {
+    "title": "Official [Trailer]",
+    "type": "trailer",
+    "site": "youtube",
+    "url": "https://www.youtube.com/watch?v=abc",
+    "published_at": "2008-01-01T00:00:00.000Z",
+    "size": 1080,
+    "official": true,
+    "country": "us",
+    "language": "en"
+  },
+  {
+    "title": "Teaser",
+    "type": "teaser",
+    "site": "youtube",
+    "url": "javascript:alert(1)",
+    "published_at": "2008-02-01T00:00:00.000Z",
+    "size": 720,
+    "official": true,
+    "country": "us",
+    "language": "en"
+  },
+  {
+    "title": "Clip (1)",
+    "type": "clip",
+    "site": "vimeo",
+    "url": "https://vimeo.com/a(b)",
+    "published_at": "2008-03-01T00:00:00.000Z",
+    "size": 720,
+    "official": false,
+    "country": "us",
+    "language": "en"
+  }
+]

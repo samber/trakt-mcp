@@ -1,0 +1,38 @@
+[
+  {
+    "number": 0,
+    "ids": {
+      "trakt": 3960,
+      "tvdb": null,
+      "tmdb": null
+    },
+    "title": "Specials",
+    "overview": null,
+    "rating": 8.1,
+    "votes": 10,
+    "episode_count": 9,
+    "aired_episodes": 9,
+    "first_aired": null,
+    "images": {
+      "poster": [
+        "dropped"
+      ]
+    }
+  },
+  {
+    "number": 1,
+    "ids": {
+      "trakt": 3961,
+      "tvdb": 30272,
+      "tmdb": 3572
+    },
+    "title": "Season 1",
+    "overview": "The first season.",
+    "rating": 8.9,
+    "votes": 500,
+    "episode_count": 7,
+    "aired_episodes": 7,
+    "first_aired": "2008-01-20T02:00:00.000Z",
+    "network": "AMC"
+  }
+]
