@@ -49,7 +49,7 @@ func init() {
 	accountAccess[toolCreateList] = Write
 	accountAccess[toolUpdateList] = Write
 	accountAccess[toolAddListItems] = Write
-	accountAccess[toolRemoveListItems] = Write
+	accountAccess[toolRemoveListItems] = Destroy
 	accountAccess[toolDeleteList] = Destroy
 }
 

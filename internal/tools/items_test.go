@@ -572,12 +572,6 @@ func TestAccountToolsNeverReturnNullArrays(t *testing.T) {
 	}
 }
 
-// mustBeDestructive reports whether a tool name promises a removal that the
-// spec table makes Destroy.
-func mustBeDestructive(name string) bool {
-	return (strings.HasPrefix(name, "remove_") || strings.HasPrefix(name, "cancel_")) && !reversibleRemoveTools[name]
-}
-
 // TestRemoveToolsAreDestructive checks every account tool's annotations and
 // requires every remove_ and cancel_ tool to be destructive.
 func TestRemoveToolsAreDestructive(t *testing.T) {
@@ -586,7 +580,8 @@ func TestRemoveToolsAreDestructive(t *testing.T) {
 	tools := listTools(t, NewServer(offlineDeps()))
 
 	for name, tool := range tools {
-		if mustBeDestructive(name) && (tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint) {
+		if (strings.HasPrefix(name, "remove_") || strings.HasPrefix(name, "cancel_")) &&
+			(tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint) {
 			t.Errorf("%s is not destructive", name)
 		}
 	}

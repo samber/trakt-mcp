@@ -44,11 +44,6 @@ var accessByPrefix = map[string]Access{
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
 
-// reversibleRemoveTools are remove_ tools the spec table makes Write rather
-// than Destroy: removing list items loses nothing that add_list_items cannot
-// restore.
-var reversibleRemoveTools = map[string]bool{"remove_list_items": true}
-
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
 var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists", "fetch_movie_lists", "fetch_show_lists", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists", "create_list", "update_list"}
@@ -112,7 +107,7 @@ func checkSpecConsistent(t *testing.T, spec Spec, tool *mcp.Tool) {
 	}
 
 	for _, p := range destroyPrefixes {
-		if strings.HasPrefix(spec.Name, p) && spec.Access != Destroy && !reversibleRemoveTools[spec.Name] {
+		if strings.HasPrefix(spec.Name, p) && spec.Access != Destroy {
 			t.Errorf("%s: name starts with %q, want Destroy access", spec.Name, p)
 		}
 	}
@@ -142,12 +137,6 @@ func checkAccessPrefix(t *testing.T, spec Spec) {
 	for p, want := range accessByPrefix {
 		if strings.HasPrefix(spec.Name, p) {
 			matched = true
-
-			if reversibleRemoveTools[spec.Name] {
-				// Listed in the spec as Write: the removal is undone by adding
-				// the items back.
-				want = Write
-			}
 
 			if spec.Access != want {
 				t.Errorf("%s: name starts with %q, access %d, want %d", spec.Name, p, spec.Access, want)

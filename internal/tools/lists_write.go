@@ -121,8 +121,8 @@ func registerListWriteTools(s *Server) {
 			"Returns how many were added or already there, and which items Trakt did not find. People cannot be added with this tool.",
 	}, addListItems)
 	Register(s, Spec{
-		Name: "remove_list_items", Title: "Remove list items", Access: Write,
-		Description: "Remove up to 50 movies, TV shows, seasons or episodes from one of the user's own custom lists. " +
+		Name: "remove_list_items", Title: "Remove list items", Access: Destroy,
+		Description: "Remove up to 50 movies, TV shows, seasons or episodes from one of the user's own custom lists; the entries, and any notes on them, are deleted from the list. " +
 			"Returns how many were removed and which items Trakt did not find.",
 	}, removeListItems)
 	Register(s, Spec{
