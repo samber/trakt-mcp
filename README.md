@@ -163,7 +163,8 @@ The server keeps only what it needs to connect you:
 
 - your Trakt user id and slug, when you connected and when you last used it;
 - your Trakt access and refresh tokens, encrypted with AES-256-GCM;
-- signatures of the tokens it gives your assistant, and the assistant's client registration.
+- signatures of the tokens it gives your assistant, and the assistant's client registration;
+- sign-ins in progress, which expire after 10 minutes and are deleted within the hour.
 
 It never stores your watch history, watchlist, ratings, collection, comments, or the arguments and results of tool calls. Every tool call reads or writes Trakt live.
 
