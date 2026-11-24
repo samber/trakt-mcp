@@ -89,7 +89,7 @@ func registerEpisodeTools(s *Server) {
 	}, fetchEpisodeTranslations)
 	Register(s, Spec{
 		Name: "fetch_episode_lists", Title: "Fetch lists with an episode", Access: Read,
-		Description: "List the Trakt lists that contain an episode, by list type and sort. Takes limit and page.",
+		Description: "List the Trakt lists that contain an episode, by list type and sort. Takes limit and page." + untrustedNote,
 	}, fetchEpisodeLists)
 }
 

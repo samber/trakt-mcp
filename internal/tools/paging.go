@@ -142,5 +142,11 @@ func singlePage[T any](page, limit int, fetch func(page, limit int) ([]T, trakt.
 		items = nil
 	}
 
+	// An endpoint that ignores limit and sends no pagination headers would
+	// otherwise return its whole list.
+	if len(items) > limit {
+		items = items[:limit]
+	}
+
 	return Listing[T]{Items: NonNil(items), Page: &meta}, nil
 }

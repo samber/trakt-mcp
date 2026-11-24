@@ -425,6 +425,11 @@ func localPage[T any](ctx context.Context, args PageArgs, items []T) (Listing[T]
 	return Paginate(ctx, args, func(page, limit int) ([]T, trakt.Page, error) {
 		meta := trakt.Page{Page: page, Limit: limit, ItemCount: len(items), PageCount: int(math.Ceil(float64(len(items)) / float64(limit)))}
 
+		// Compared by division first: (page-1)*limit overflows for a huge page.
+		if page-1 > len(items)/limit {
+			return []T{}, meta, nil
+		}
+
 		start := (page - 1) * limit
 		if start >= len(items) {
 			return []T{}, meta, nil

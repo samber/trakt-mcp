@@ -27,9 +27,12 @@ const (
 	// extendedNoSeasons drops the per-season, per-episode detail of watched
 	// shows, which for a long history is far larger than the answer needs.
 	extendedNoSeasons = "noseasons"
-	// dateLayout is a calendar date, the other form Trakt takes for
-	// start_at and end_at.
+	// dateLayout is a calendar date, the short form start_at and end_at
+	// accept; it is expanded to a timestamp before Trakt sees it.
 	dateLayout = "2006-01-02"
+	// lastMillisecondOfDay moves a date-only end_at to the end of its day, the
+	// finest step traktTimeLayout shows.
+	lastMillisecondOfDay = 24*time.Hour - time.Millisecond
 	// lastActivityAired and lastActivityWatched are the ways Trakt picks
 	// the next episode of a show's progress.
 	lastActivityAired   = "aired"
@@ -71,8 +74,8 @@ type WatchedItem struct {
 type HistoryArgs struct {
 	HistoryType string `json:"history_type,omitempty" jsonschema:"movies, shows, seasons or episodes; omit for every type"`
 	ItemID      string `json:"item_id,omitempty"      jsonschema:"numeric Trakt id of one movie, show, season or episode to list only its plays; requires history_type"`
-	StartAt     string `json:"start_at,omitempty"     jsonschema:"only plays at or after this time: ISO 8601 (2024-01-31T20:00:00.000Z) or a date (2024-01-31)"`
-	EndAt       string `json:"end_at,omitempty"       jsonschema:"only plays at or before this time: ISO 8601 or a date"`
+	StartAt     string `json:"start_at,omitempty"     jsonschema:"only plays at or after this time: ISO 8601 (2024-01-31T20:00:00.000Z) or a date (2024-01-31, from 00:00 UTC)"`
+	EndAt       string `json:"end_at,omitempty"       jsonschema:"only plays at or before this time: ISO 8601 or a date (whole day included, until 23:59:59.999 UTC)"`
 	PageArgs
 }
 
@@ -267,19 +270,21 @@ func trimHistory(h traktHistory) HistoryEntry {
 // historyRange is a validated start_at and end_at, nil when omitted.
 type historyRange struct{ start, end *string }
 
-// rangeBound validates one bound: a calendar date (sent as is) or an ISO
-// 8601 timestamp (sent in traktTimeLayout).
-func rangeBound(field, value string) (*string, time.Time, error) {
+// rangeBound validates one bound: a calendar date or an ISO 8601 timestamp,
+// sent in traktTimeLayout. A date is read in UTC as the start of that day, or
+// with endOfDay as its last millisecond, so "start_at=end_at=2024-01-31"
+// covers the whole day instead of the single instant at midnight.
+func rangeBound(field, value string, endOfDay bool) (*string, time.Time, error) {
 	if value == "" {
 		return nil, time.Time{}, nil
 	}
 
-	if t, err := time.Parse(dateLayout, value); err == nil {
-		return &value, t, nil
-	}
-
-	t, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil {
+	t, err := time.Parse(dateLayout, value)
+	if err == nil {
+		if endOfDay {
+			t = t.Add(lastMillisecondOfDay)
+		}
+	} else if t, err = time.Parse(time.RFC3339Nano, value); err != nil {
 		return nil, time.Time{}, invalidArgument(field)
 	}
 
@@ -289,12 +294,12 @@ func rangeBound(field, value string) (*string, time.Time, error) {
 }
 
 func parseRange(startAt, endAt string) (historyRange, error) {
-	start, startT, err := rangeBound(fieldStartAt, startAt)
+	start, startT, err := rangeBound(fieldStartAt, startAt, false)
 	if err != nil {
 		return historyRange{}, err
 	}
 
-	end, endT, err := rangeBound(fieldEndAt, endAt)
+	end, endT, err := rangeBound(fieldEndAt, endAt, true)
 	if err != nil {
 		return historyRange{}, err
 	}

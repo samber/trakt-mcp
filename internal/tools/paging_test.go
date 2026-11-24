@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/samber/trakt-mcp/internal/trakt"
@@ -231,5 +232,41 @@ func TestPaginateStopsOnErrorAndCancel(t *testing.T) {
 	})
 	if !errors.Is(err, context.Canceled) || calls != 1 {
 		t.Fatalf("err = %v after %d calls, want context.Canceled after 1", err, calls)
+	}
+}
+
+// TestPaginateSinglePageTruncatesToLimit covers an endpoint that ignores
+// limit and sends no pagination headers: a page request must still return at
+// most limit items.
+func TestPaginateSinglePageTruncatesToLimit(t *testing.T) {
+	t.Parallel()
+
+	f := &fakePages{total: 40, pageSize: 40}
+
+	got, err := Paginate(t.Context(), PageArgs{Limit: 5, Page: new(1)}, func(page, limit int) ([]int, trakt.Page, error) {
+		items, _, err := f.fetch(page, limit)
+		return items, trakt.Page{}, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got.Items) != 5 || got.Items[0] != 1 {
+		t.Fatalf("items = %v, want the first 5", got.Items)
+	}
+}
+
+// TestLocalPageHugePageIsEmpty checks that a page number whose offset
+// overflows int gives an empty list instead of a slice panic.
+func TestLocalPageHugePageIsEmpty(t *testing.T) {
+	t.Parallel()
+
+	got, err := localPage(t.Context(), PageArgs{Limit: maxLimit, Page: new(math.MaxInt)}, []int{1, 2, 3})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got.Items) != 0 {
+		t.Fatalf("items = %v, want none", got.Items)
 	}
 }

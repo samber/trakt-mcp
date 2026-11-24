@@ -3,6 +3,7 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"net/url"
@@ -550,7 +551,31 @@ func TestShowPeopleGuestStars(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
-	h.trakt.respond("GET /shows/breaking-bad/people", http.StatusOK, fixture(t, "show_people"), nil)
+	full := fixture(t, "show_people")
+
+	// Like Trakt, the fake sends guest_stars only for ?extended=guest_stars.
+	h.trakt.handle("GET /shows/breaking-bad/people", func(w http.ResponseWriter, r *http.Request) {
+		body := full
+
+		if r.URL.Query().Get("extended") != extendedGuestStars {
+			var m map[string]json.RawMessage
+			if err := json.Unmarshal([]byte(full), &m); err != nil {
+				t.Errorf("fixture: %v", err)
+			}
+
+			delete(m, "guest_stars")
+
+			b, err := json.Marshal(m)
+			if err != nil {
+				t.Errorf("marshal: %v", err)
+			}
+
+			body = string(b)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, body)
+	})
 
 	var without, with map[string]json.RawMessage
 

@@ -349,7 +349,7 @@ func registerSeasonTools(s *Server) {
 	}, fetchSeasonTranslations)
 	Register(s, Spec{
 		Name: "fetch_season_lists", Title: "Fetch lists with a season", Access: Read,
-		Description: "List the Trakt lists that contain a season, by list type and sort. Takes limit and page.",
+		Description: "List the Trakt lists that contain a season, by list type and sort. Takes limit and page." + untrustedNote,
 	}, fetchSeasonLists)
 }
 

@@ -866,7 +866,15 @@ func fetchShowPeople(ctx context.Context, c *trakt.UserClient, in ShowPeopleArgs
 		return People{}, err
 	}
 
-	r, err := readReply(func() (*http.Response, error) { return c.API().GetShowsPeople(ctx, id, &api.GetShowsPeopleParams{}) })
+	params := &api.GetShowsPeopleParams{}
+
+	if in.IncludeGuestStars {
+		// Trakt lists guest stars only when asked with this extended value.
+		guests := extendedGuestStars
+		params.Extended = &guests
+	}
+
+	r, err := readReply(func() (*http.Response, error) { return c.API().GetShowsPeople(ctx, id, params) })
 	if err != nil {
 		return People{}, err
 	}

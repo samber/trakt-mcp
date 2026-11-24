@@ -2,7 +2,6 @@ package tools
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strings"
 	"unicode/utf8"
@@ -15,12 +14,12 @@ import (
 // returns only title, year and ids.
 const extendedFull = "full"
 
+// extendedGuestStars asks Trakt to add guest_stars to a show's people, which
+// it omits otherwise.
+const extendedGuestStars = "guest_stars"
+
 // fieldMovieID names the movie argument in tool errors.
 const fieldMovieID = "movie_id"
-
-// errNoResponse is the cause of a 2xx answer without a parsed HTTP
-// response, which the generated client never produces.
-var errNoResponse = errors.New("trakt: response missing")
 
 // MovieIDs are the identifiers of a movie, enough to call any other tool or
 // link it elsewhere.
@@ -112,7 +111,7 @@ func registerMovieTools(s *Server) {
 	Register(s, Spec{
 		Name:        "fetch_trending_movies",
 		Title:       "Fetch trending movies",
-		Description: "List the movies most watched on Trakt right now, with how many people are watching each.",
+		Description: "List the movies most watched on Trakt right now, with how many people are watching each. Takes limit and page.",
 		Access:      Read,
 	}, fetchTrendingMovies)
 	Register(s, Spec{
@@ -124,33 +123,19 @@ func registerMovieTools(s *Server) {
 }
 
 func fetchTrendingMovies(ctx context.Context, c *trakt.UserClient, in TrendingMoviesArgs) (Listing[TrendingMovie], error) {
-	return Paginate(ctx, in.PageArgs, func(page, limit int) ([]TrendingMovie, trakt.Page, error) {
-		extended := extendedFull
+	trim := func(r trendingMovieEntry) TrendingMovie {
+		return TrendingMovie{Watchers: r.Watchers, Movie: r.Movie.trim(maxListOverviewRunes)}
+	}
 
-		resp, err := c.API().GetMoviesTrendingWithResponse(ctx, &api.GetMoviesTrendingParams{Extended: &extended, Page: &page, Limit: &limit})
-		if err != nil {
-			return nil, trakt.Page{}, err //nolint:wrapcheck // *trakt.Error is mapped by Kind
-		}
-
-		if resp.HTTPResponse == nil {
-			return nil, trakt.Page{}, errNoResponse
-		}
-
-		var raw []struct {
-			Watchers int        `json:"watchers"`
-			Movie    traktMovie `json:"movie"`
-		}
-		if err := decodeBody(resp.Body, &raw); err != nil {
-			return nil, trakt.Page{}, err
-		}
-
-		out := make([]TrendingMovie, 0, len(raw))
-		for _, r := range raw {
-			out = append(out, TrendingMovie{Watchers: r.Watchers, Movie: r.Movie.trim(maxListOverviewRunes)})
-		}
-
-		return out, trakt.ParsePage(resp.HTTPResponse.Header), nil
+	return paginateDecoded(ctx, in.PageArgs, trim, func(page, limit int) (*http.Response, error) {
+		return c.API().GetMoviesTrending(ctx, &api.GetMoviesTrendingParams{Extended: extendedFullPtr(), Page: &page, Limit: &limit})
 	})
+}
+
+// trendingMovieEntry is one element of Trakt's trending movies answer.
+type trendingMovieEntry struct {
+	Watchers int        `json:"watchers"`
+	Movie    traktMovie `json:"movie"`
 }
 
 func fetchMovieSummary(ctx context.Context, c *trakt.UserClient, in MovieSummaryArgs) (Movie, error) {
@@ -162,17 +147,16 @@ func fetchMovieSummary(ctx context.Context, c *trakt.UserClient, in MovieSummary
 	params := &api.GetMoviesSummaryParams{}
 
 	if in.Extended == nil || *in.Extended {
-		extended := extendedFull
-		params.Extended = &extended
+		params.Extended = extendedFullPtr()
 	}
 
-	resp, err := c.API().GetMoviesSummaryWithResponse(ctx, string(id), params)
+	r, err := readReply(func() (*http.Response, error) { return c.API().GetMoviesSummary(ctx, string(id), params) })
 	if err != nil {
-		return Movie{}, err //nolint:wrapcheck // *trakt.Error is mapped by Kind
+		return Movie{}, err
 	}
 
-	var raw traktMovie
-	if err := decodeBody(resp.Body, &raw); err != nil {
+	raw, err := decodeAs[traktMovie](r.body)
+	if err != nil {
 		return Movie{}, err
 	}
 

@@ -223,3 +223,24 @@ func moviesEqual(a, b Movie) bool {
 
 	return errA == nil && errB == nil && string(ra) == string(rb)
 }
+
+// TestMovieToolsCapReplySize checks that both movie pilot tools read Trakt's
+// answer through the shared maxReplyBytes cap: valid JSON padded past the cap
+// must be refused, not read whole into memory.
+func TestMovieToolsCapReplySize(t *testing.T) {
+	t.Parallel()
+
+	pad := strings.Repeat(" ", maxReplyBytes)
+
+	h := newHarness(t)
+	h.trakt.respond(trendingRoute, http.StatusOK, trendingJSON()+pad, nil)
+	h.trakt.respond("GET /movies/481", http.StatusOK, `{"title": "The Matrix", "ids": {"trakt": 481, "slug": "the-matrix-1999"}}`+pad, nil)
+
+	if res := h.call("fetch_trending_movies", map[string]any{fieldLimit: 3}); !res.IsError {
+		t.Error("fetch_trending_movies: oversized answer accepted")
+	}
+
+	if res := h.call("fetch_movie_summary", map[string]any{"movie_id": "481"}); !res.IsError {
+		t.Error("fetch_movie_summary: oversized answer accepted")
+	}
+}

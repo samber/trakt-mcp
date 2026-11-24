@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -336,5 +337,25 @@ func TestCleanFiltersCaps(t *testing.T) {
 		if got, want := depthOf(cleanFilters(nested(n))), min(n, maxFilterDepth); got != want {
 			t.Errorf("%d levels: kept %d, want %d", n, got, want)
 		}
+	}
+}
+
+// TestSmartListForbiddenLoggedAsRejected checks that a smart-list 403 says it
+// may also be Trakt refusing access (an invalid app key also gets 403), and is
+// logged like every other rejected Trakt call.
+func TestSmartListForbiddenLoggedAsRejected(t *testing.T) {
+	t.Parallel()
+
+	if !strings.Contains(msgSmartListForbidden, "or access denied by Trakt") {
+		t.Errorf("msgSmartListForbidden = %q, want the access-denied hedge", msgSmartListForbidden)
+	}
+
+	h := newHarness(t)
+	h.trakt.respond(routeSmartListsMe, http.StatusForbidden, `{}`, nil)
+	h.fail(toolFetchSmartLists, map[string]any{}, msgSmartListForbidden)
+
+	rec := toolLine(t, h.logs, toolFetchSmartLists)
+	if rec["level"] != slog.LevelError.String() || rec[keyErrorClass] != errorClassTraktRejected {
+		t.Errorf("line = %v, want ERROR with class %s", rec, errorClassTraktRejected)
 	}
 }

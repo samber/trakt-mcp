@@ -36,8 +36,9 @@ const (
 	maxFilterDepth = 3
 
 	// msgSmartListForbidden answers a Trakt 403 on a smart list read. Trakt
-	// sends 403 for a list the connected account may not see.
-	msgSmartListForbidden = "this smart list is private or not shared with the connected Trakt account"
+	// sends 403 for a list the connected account may not see, and also when it
+	// refuses this server's application key.
+	msgSmartListForbidden = "this smart list is private or not shared with the connected Trakt account, or access denied by Trakt"
 )
 
 var (
@@ -215,7 +216,9 @@ func cleanFilterValue(v any, depth int) any {
 // error goes on to the shared mapping.
 func smartListError(err error) error {
 	if te, ok := errors.AsType[*trakt.Error](err); ok && te.Kind == trakt.KindUnknown && te.Status == http.StatusForbidden {
-		return newToolError(msgSmartListForbidden)
+		// Same log class as other refused calls: a 403 may also be Trakt
+		// refusing this server's application key.
+		return &toolError{msg: msgSmartListForbidden, class: errorClassTraktRejected}
 	}
 
 	return err

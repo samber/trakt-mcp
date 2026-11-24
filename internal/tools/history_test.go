@@ -105,6 +105,13 @@ func TestHistoryUsesShortPathWhenUnfiltered(t *testing.T) {
 	})
 }
 
+// Expected start_at and end_at values sent to Trakt.
+const (
+	testJan1Start   = "2024-01-01T00:00:00.000Z"
+	testDateEnd     = "2024-01-31T23:59:59.999Z"
+	testDateEvening = "2024-01-31T20:00:00.000Z"
+)
+
 func TestHistoryDateRange(t *testing.T) {
 	t.Parallel()
 
@@ -112,14 +119,37 @@ func TestHistoryDateRange(t *testing.T) {
 
 	runArgCases(t, []argCase{
 		{
-			name: "iso range", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-01T00:00:00.000Z", argEndAt: "2024-01-31T23:00:00+01:00"},
-			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: "2024-01-01T00:00:00.000Z", argEndAt: "2024-01-31T22:00:00.000Z"},
+			name: "iso range", tool: toolFetchHistory, args: map[string]any{argStartAt: testJan1Start, argEndAt: "2024-01-31T23:00:00+01:00"},
+			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: testJan1Start, argEndAt: "2024-01-31T22:00:00.000Z"},
 		},
 		{
+			// A date-only start is the start of that day and a date-only end
+			// its last millisecond, so the end day's plays are included.
 			name: "dates", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-01", argEndAt: testDate},
-			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: "2024-01-01", argEndAt: testDate},
+			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: testJan1Start, argEndAt: testDateEnd},
 		},
-		{name: "start only", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-01"}, route: route, body: emptyList, noQuery: []string{argEndAt}},
+		{
+			name: "same date", tool: toolFetchHistory, args: map[string]any{argStartAt: testDate, argEndAt: testDate},
+			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: "2024-01-31T00:00:00.000Z", argEndAt: testDateEnd},
+		},
+		{
+			name: "timestamp start, end date of the same day", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-31T20:00:00Z", argEndAt: testDate},
+			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: testDateEvening, argEndAt: testDateEnd},
+		},
+		{
+			name: "timestamps within one day", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-31T08:00:00Z", argEndAt: "2024-01-31T09:30:00Z"},
+			route: route, body: emptyList, wantQuery: map[string]string{argStartAt: "2024-01-31T08:00:00.000Z", argEndAt: "2024-01-31T09:30:00.000Z"},
+		},
+		{
+			name: "start only", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-01"}, route: route, body: emptyList,
+			wantQuery: map[string]string{argStartAt: testJan1Start}, noQuery: []string{argEndAt},
+		},
+		{
+			name: "end date only", tool: toolFetchHistory, args: map[string]any{argEndAt: testDate}, route: route, body: emptyList,
+			wantQuery: map[string]string{argEndAt: testDateEnd}, noQuery: []string{argStartAt},
+		},
+		{name: "timestamps reversed within one day", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-01-31T09:30:00Z", argEndAt: "2024-01-31T08:00:00Z"}, wantErr: invalid(fieldEndAt)},
+		{name: "end date before timestamp start", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-02-01T00:00:00Z", argEndAt: testDate}, wantErr: invalid(fieldEndAt)},
 		{name: "no range", tool: toolFetchHistory, args: map[string]any{}, route: route, body: emptyList, noQuery: []string{argStartAt, argEndAt}},
 		{name: "end before start", tool: toolFetchHistory, args: map[string]any{argStartAt: "2024-02-01", argEndAt: testDate}, wantErr: invalid(fieldEndAt)},
 		{name: "garbage start", tool: toolFetchHistory, args: map[string]any{argStartAt: "last week"}, wantErr: invalid(fieldStartAt)},

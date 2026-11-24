@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,6 +34,19 @@ const (
 
 // destroyPrefixes are the tool name prefixes that must be Destroy (spec §8).
 var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
+
+// accessByPrefix pins every tool name prefix to its access level, so a new
+// tool cannot be mislabeled (a fetch_ tool marked Write, an add_ tool marked
+// Read) and a new prefix must be added here deliberately.
+var accessByPrefix = map[string]Access{
+	"fetch_": Read, "search_": Read,
+	"add_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write,
+	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
+}
+
+// untrustedTextTools return text written by Trakt users (list names and
+// descriptions), so their descriptions must carry untrustedNote.
+var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()
@@ -98,12 +112,40 @@ func checkSpecConsistent(t *testing.T, spec Spec, tool *mcp.Tool) {
 		}
 	}
 
+	checkAccessPrefix(t, spec)
+
+	if slices.Contains(untrustedTextTools, spec.Name) && !strings.Contains(tool.Description, untrustedNote) {
+		t.Errorf("%s: returns Trakt user text, description lacks untrustedNote", spec.Name)
+	}
+
 	if (spec.Access == Read) != tool.Annotations.ReadOnlyHint {
 		t.Errorf("%s: access %d but readOnlyHint %v", spec.Name, spec.Access, tool.Annotations.ReadOnlyHint)
 	}
 
 	if spec.Access != Read && !strings.Contains(tool.Description, writeWarning) {
 		t.Errorf("%s: write tool description lacks the account warning", spec.Name)
+	}
+}
+
+// checkAccessPrefix requires the spec's name prefix to be listed in
+// accessByPrefix with the spec's access level.
+func checkAccessPrefix(t *testing.T, spec Spec) {
+	t.Helper()
+
+	matched := false
+
+	for p, want := range accessByPrefix {
+		if strings.HasPrefix(spec.Name, p) {
+			matched = true
+
+			if spec.Access != want {
+				t.Errorf("%s: name starts with %q, access %d, want %d", spec.Name, p, spec.Access, want)
+			}
+		}
+	}
+
+	if !matched {
+		t.Errorf("%s: name prefix not in accessByPrefix", spec.Name)
 	}
 }
 
