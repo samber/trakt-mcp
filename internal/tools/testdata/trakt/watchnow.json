@@ -1,0 +1,16 @@
+{
+  "fr": {
+    "free": [
+      { "source": "arte", "link": "https://example.com/arte/matrix", "uhd": false, "currency": null, "prices": { "purchase": null, "rent": null } }
+    ],
+    "subscription": [
+      { "source": "netflix", "link": "https://example.com/netflix/matrix", "link_android": "dropped", "uhd": true, "currency": null, "prices": { "purchase": null, "rent": null } }
+    ],
+    "purchase": [
+      { "source": "apple_tv", "link": "javascript:alert(1)", "uhd": true, "currency": "EUR", "prices": { "purchase": "9.99", "rent": "3.99" } }
+    ],
+    "cable": [],
+    "cinema": [],
+    "streaming_ranks": { "netflix": 3 }
+  }
+}

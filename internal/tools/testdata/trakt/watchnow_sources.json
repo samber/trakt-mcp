@@ -1,0 +1,8 @@
+[
+  {
+    "fr": [
+      { "source": "netflix", "name": "Netflix", "free": false, "cinema": false, "amazon": false, "color": "#e50914", "link_count": 1200, "type": "subscription", "images": { "logo": "dropped", "channel": null } },
+      { "source": "arte", "name": "Arte", "free": true, "cinema": false, "amazon": false, "color": "#ffffff", "link_count": 10, "type": null, "images": { "logo": null, "channel": null } }
+    ]
+  }
+]
