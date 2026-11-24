@@ -572,6 +572,12 @@ func TestAccountToolsNeverReturnNullArrays(t *testing.T) {
 	}
 }
 
+// mustBeDestructive reports whether a tool name promises a removal that the
+// spec table makes Destroy.
+func mustBeDestructive(name string) bool {
+	return (strings.HasPrefix(name, "remove_") || strings.HasPrefix(name, "cancel_")) && !reversibleRemoveTools[name]
+}
+
 // TestRemoveToolsAreDestructive checks every account tool's annotations and
 // requires every remove_ and cancel_ tool to be destructive.
 func TestRemoveToolsAreDestructive(t *testing.T) {
@@ -580,8 +586,7 @@ func TestRemoveToolsAreDestructive(t *testing.T) {
 	tools := listTools(t, NewServer(offlineDeps()))
 
 	for name, tool := range tools {
-		if (strings.HasPrefix(name, "remove_") || strings.HasPrefix(name, "cancel_")) &&
-			(tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint) {
+		if mustBeDestructive(name) && (tool.Annotations.DestructiveHint == nil || !*tool.Annotations.DestructiveHint) {
 			t.Errorf("%s is not destructive", name)
 		}
 	}
@@ -625,14 +630,14 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 
 // TestRegistryHas79Tools counts every registered tool: the 2 pilots, the 12
 // movie, 3 people and 5 comment tools, the 30 show, season and episode tools,
-// the 27 account tools of the history, watchlist, collection, rating,
-// check-in, recommendation and smart-list groups, the 7 calendar tools and the 7
+// the 32 account tools of the history, watchlist, collection, rating,
+// check-in, recommendation, smart-list and custom list write groups, the 7 calendar tools and the 7
 // where-to-watch and search-by-id tools, the 7 movie extras, the 9 show extras and the 5 custom list read tools.
 // The name still says 79 until the last tool group lands.
 func TestRegistryHas79Tools(t *testing.T) {
 	t.Parallel()
 
-	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2
+	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5
 
 	const want = 2 + 12 + 3 + 5 + 30 + accountTools + 7 + 7 + 7 + 9 + 5
 
