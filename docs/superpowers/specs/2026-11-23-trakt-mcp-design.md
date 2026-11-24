@@ -270,7 +270,7 @@ Environment variables carry **no prefix**: each flag reads the env var of the sa
 | `--rate-limit-global` / `RATE_LIMIT_GLOBAL` | `1200` | Trakt requests per minute across all users |
 | `--openai-apps-challenge` / `OPENAI_APPS_CHALLENGE` | none | Serves `/.well-known/openai-apps-challenge` |
 
-Removed from the Google version: `--google-client-id`, `GCMCP_GOOGLE_CLIENT_SECRET`, `--allowed-domains` (Trakt has no organization domains), `--operator-name`, `--operator-email` (the site carries them). Subcommands: `serve` (default), `genkey`, `rekey`, `disconnect <trakt-slug>` (revokes at Trakt, deletes all rows), `version`.
+Removed from the Google version: `--google-client-id`, `GCMCP_GOOGLE_CLIENT_SECRET`, `--allowed-domains` (Trakt has no organization domains), `--operator-name`, `--operator-email` (the site carries them). Subcommands: `serve` (default), `genkey`, `rekey`, `disconnect <trakt-slug-or-id>` (revokes at Trakt, deletes all rows), `version`.
 
 The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide with variables set by a host or shell. `docs/self-hosting.md` states the full list so operators can check.
 
@@ -306,5 +306,6 @@ The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide 
 - Read Trakt's API use policy (`https://developer.trakt.tv/docs/api-use-policy`) and confirm that a public hosted multi-tenant app driven by an LLM is allowed, whether an app review is needed, and what the branding rules are. Blocks the public launch, not the build.
 - Verify Trakt's current rate limits and the exact account-limit status codes against the live documentation.
 - Smart lists: they exist in the official API via `/users/{id}/smart-lists` and `/smart-lists/...`, verified from the OpenAPI spec (both tools shipped, count 79). Live behavior is unverified: the shape of `list_id` (slug or numeric), and whether our token can read a private smart list.
+- Smart-list `list_id` grammar: the tool accepts a bounded slug or a numeric id, so a real smart-list slug containing `_` or `.` may be rejected before any Trakt call. Unverified live.
 - Confirm the public hostname.
 - Test whether ChatGPT scheduled tasks can call developer-mode apps.

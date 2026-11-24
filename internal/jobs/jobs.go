@@ -1,7 +1,8 @@
 // Package jobs runs the background cleanup of spec §10: hourly removal of
 // expired OAuth rows and pending authorizations, and a daily purge of
-// inactive users (Trakt grant revoked first) and unused clients. It also
-// flushes the batched last_seen_at updates every minute.
+// inactive users (user rows deleted first, then the Trakt grant revoked)
+// and unused clients. It also flushes the batched last_seen_at updates
+// every minute.
 package jobs
 
 import (

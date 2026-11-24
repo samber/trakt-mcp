@@ -75,7 +75,7 @@ Every flag can also be set with an environment variable of the same name, upperc
 
 Trakt sends no granular scopes: a connected user grants full access to their account. Read Trakt's API use policy before you open an instance to the public.
 
-**Rotating the Trakt client secret.** Regenerate the secret on the application page, set it in `TRAKT_CLIENT_SECRET`, and restart. Refreshes fail between the two steps, so do it during a quiet period.
+**Rotating the Trakt client secret.** Regenerate the secret on the application page, set it in `TRAKT_CLIENT_SECRET`, and restart. Trakt's behavior with two live secrets is not documented; verify before rotating. Assume refreshes fail between the two steps, so do it during a quiet period.
 
 **Rotating the encryption key.**
 

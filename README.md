@@ -1,6 +1,6 @@
 # Trakt MCP
 
-Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assistant can then browse Trakt's catalog (trending, popular, search, details, people, comments) and manage your own data: watchlist, watch history, collection, ratings, check-ins and recommendations.
+Connect Claude or ChatGPT to your [Trakt](https://trakt.tv) account. Your assistant can then browse Trakt's catalog (trending, popular, search, details, people, comments) and manage your own data: watchlist, watch history, collection, ratings, check-ins, recommendations and smart lists.
 
 `trakt-mcp` is a **remote** [MCP](https://modelcontextprotocol.io) server. One instance serves many Trakt accounts, each isolated from the others. See the [landing page](https://trakt-mcp.samber.dev) to join.
 
@@ -8,7 +8,7 @@ This project is not affiliated with or endorsed by Trakt.
 
 ## 🛠️ Tools
 
-77 tools. Every id argument accepts a Trakt slug (`breaking-bad`), a numeric Trakt id or an IMDb id (`tt0903747`, `nm0186505` for people). List tools take `limit` (default 10, max 100) and an optional `page`. Write tools change your real Trakt account and say so in their description.
+79 tools. Every id argument accepts a Trakt slug (`breaking-bad`), a numeric Trakt id or an IMDb id (`tt0903747`, `nm0186505` for people). List tools take `limit` (default 10, max 100) and an optional `page`; recommendation list tools take `limit` only. Write tools change your real Trakt account and say so in their description.
 
 ### Shows (13)
 
@@ -89,7 +89,7 @@ This project is not affiliated with or endorsed by Trakt.
 
 Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false). Comment text is untrusted third-party content.
 
-### Your account (19)
+### Your account (21)
 
 | Tool                      | What it does                                                           |
 | ------------------------- | ---------------------------------------------------------------------- |
@@ -112,10 +112,10 @@ Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spo
 | `checkin_to_show`         | Checks in to an episode (by `show_id`, or `show_title` + `show_year`). |
 | `checkin_to_movie`        | Checks in to a movie.                                                  |
 | `cancel_checkin`          | Cancels the active check-in.                                           |
+| `fetch_smart_lists`       | Your smart lists (or another user's), with the filters behind each.    |
+| `fetch_smart_list_items`  | Movies and shows a smart list resolves to (`type`, `sort_by`).         |
 
 Write tools take up to 50 items per call, each `{type, id}` with `type` one of `movie`, `show`, `season`, `episode`.
-
-Smart lists (`fetch_smart_lists`, `fetch_smart_list_items`) are pending a check against the live Trakt API and are not available yet.
 
 ### Recommendations (6)
 
@@ -167,7 +167,7 @@ The server keeps only what it needs to connect you:
 
 It never stores your watch history, watchlist, ratings, collection, comments, or the arguments and results of tool calls. Every tool call reads or writes Trakt live.
 
-To erase everything: disconnect the connector in your assistant and revoke the application in Trakt under **Settings > Connected Apps**. The server deletes your rows on your next tool call, or after 180 days without use. On a self-hosted instance, the operator can delete at once with `trakt-mcp disconnect <slug>`.
+To erase everything: disconnect the connector in your assistant and revoke the application in your Trakt settings, in the connected apps section (check Trakt's current UI for the exact path). The server deletes your rows on your next tool call, or after 180 days without use. On a self-hosted instance, the operator can delete at once with `trakt-mcp disconnect <trakt-slug-or-id>`.
 
 ## 😰 Known limits
 
