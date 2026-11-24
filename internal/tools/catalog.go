@@ -11,4 +11,5 @@ var catalog = []func(*Server){
 	registerShowTools,
 	registerSeasonTools,
 	registerEpisodeTools,
+	registerHistoryTools,
 }

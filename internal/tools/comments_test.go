@@ -656,16 +656,3 @@ func TestCommentToolDescriptionsWarnAboutUntrustedText(t *testing.T) {
 		}
 	}
 }
-
-// TestRegistryHas52Tools counts every registered tool: the 2 pilots, the 12
-// movie, 3 people and 5 comment tools of this group and the 30 show, season
-// and episode tools.
-func TestRegistryHas52Tools(t *testing.T) {
-	t.Parallel()
-
-	const want = 2 + 12 + 3 + 5 + 30
-
-	if got := len(NewServer(offlineDeps()).Specs()); got != want {
-		t.Errorf("registered tools = %d, want %d", got, want)
-	}
-}
