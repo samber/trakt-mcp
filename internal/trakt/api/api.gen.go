@@ -244,81 +244,6 @@ func (e GetMoviesRatingsParamsExtended) Valid() bool {
 	}
 }
 
-// Defines values for GetPeopleListsParamsType.
-const (
-	GetPeopleListsParamsTypeAll       GetPeopleListsParamsType = "all"
-	GetPeopleListsParamsTypeFavorites GetPeopleListsParamsType = "favorites"
-	GetPeopleListsParamsTypeOfficial  GetPeopleListsParamsType = "official"
-	GetPeopleListsParamsTypePersonal  GetPeopleListsParamsType = "personal"
-	GetPeopleListsParamsTypeWatchlist GetPeopleListsParamsType = "watchlist"
-)
-
-// Valid indicates whether the value is a known member of the GetPeopleListsParamsType enum.
-func (e GetPeopleListsParamsType) Valid() bool {
-	switch e {
-	case GetPeopleListsParamsTypeAll:
-		return true
-	case GetPeopleListsParamsTypeFavorites:
-		return true
-	case GetPeopleListsParamsTypeOfficial:
-		return true
-	case GetPeopleListsParamsTypePersonal:
-		return true
-	case GetPeopleListsParamsTypeWatchlist:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GetPeopleListsParamsSort.
-const (
-	GetPeopleListsParamsSortAdded    GetPeopleListsParamsSort = "added"
-	GetPeopleListsParamsSortComments GetPeopleListsParamsSort = "comments"
-	GetPeopleListsParamsSortItems    GetPeopleListsParamsSort = "items"
-	GetPeopleListsParamsSortLikes    GetPeopleListsParamsSort = "likes"
-	GetPeopleListsParamsSortPopular  GetPeopleListsParamsSort = "popular"
-	GetPeopleListsParamsSortUpdated  GetPeopleListsParamsSort = "updated"
-)
-
-// Valid indicates whether the value is a known member of the GetPeopleListsParamsSort enum.
-func (e GetPeopleListsParamsSort) Valid() bool {
-	switch e {
-	case GetPeopleListsParamsSortAdded:
-		return true
-	case GetPeopleListsParamsSortComments:
-		return true
-	case GetPeopleListsParamsSortItems:
-		return true
-	case GetPeopleListsParamsSortLikes:
-		return true
-	case GetPeopleListsParamsSortPopular:
-		return true
-	case GetPeopleListsParamsSortUpdated:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GetPeopleLists200JSONResponseBodySortHow.
-const (
-	GetPeopleLists200JSONResponseBodySortHowAsc  GetPeopleLists200JSONResponseBodySortHow = "asc"
-	GetPeopleLists200JSONResponseBodySortHowDesc GetPeopleLists200JSONResponseBodySortHow = "desc"
-)
-
-// Valid indicates whether the value is a known member of the GetPeopleLists200JSONResponseBodySortHow enum.
-func (e GetPeopleLists200JSONResponseBodySortHow) Valid() bool {
-	switch e {
-	case GetPeopleLists200JSONResponseBodySortHowAsc:
-		return true
-	case GetPeopleLists200JSONResponseBodySortHowDesc:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GetRecommendationsMoviesRecommendParamsWatchnow.
 const (
 	GetRecommendationsMoviesRecommendParamsWatchnowAny              GetRecommendationsMoviesRecommendParamsWatchnow = "any"
@@ -6546,27 +6471,6 @@ type GetPeopleSummaryParams struct {
 	// Language Language code to pick the Wikipedia page in, like `pt` or `pt-br`. Falls back to the base language, then English.
 	Language *string `form:"language,omitempty" json:"language,omitempty"`
 }
-
-// GetPeopleListsParams defines parameters for GetPeopleLists.
-type GetPeopleListsParams struct {
-	// Extended Extended information to include in the response.
-	Extended *string `form:"extended,omitempty" json:"extended,omitempty"`
-
-	// Page The page number to retrieve
-	Page *int `form:"page,omitempty" json:"page,omitempty"`
-
-	// Limit The number of items per page. Defaults and maximums vary by endpoint. When pagination parameters are omitted, a low default limit is applied (often 10). When a limit is provided, it is capped at the endpoint maximum (often 250); higher values are clamped rather than rejected.
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// GetPeopleListsParamsType defines parameters for GetPeopleLists.
-type GetPeopleListsParamsType string
-
-// GetPeopleListsParamsSort defines parameters for GetPeopleLists.
-type GetPeopleListsParamsSort string
-
-// GetPeopleLists200JSONResponseBodySortHow defines parameters for GetPeopleLists.
-type GetPeopleLists200JSONResponseBodySortHow string
 
 // GetPeopleMoviesParams defines parameters for GetPeopleMovies.
 type GetPeopleMoviesParams struct {
@@ -25042,17 +24946,6 @@ type ClientInterface interface {
 	// Corresponds with GET /people/{id}/ (the `GetPeopleSummary` operationId).
 	GetPeopleSummary(ctx context.Context, id string, params *GetPeopleSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetPeopleLists Get lists containing this person
-	//
-	// #### 📄 Pagination 😁 Emojis
-	//
-	// Lists no longer support people, so this always returns an empty array.
-	//
-	// Corresponds with GET /people/{id}/lists/{type}/{sort} (the `GetPeopleLists` operationId).
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	GetPeopleLists(ctx context.Context, id string, pType GetPeopleListsParamsType, sort GetPeopleListsParamsSort, params *GetPeopleListsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// GetPeopleMovies Get movie credits
 	//
 	// #### ✨ Extended Info
@@ -26587,26 +26480,6 @@ func (c *Client) PostOauthToken(ctx context.Context, body PostOauthTokenJSONRequ
 // Corresponds with GET /people/{id}/ (the `GetPeopleSummary` operationId).
 func (c *Client) GetPeopleSummary(ctx context.Context, id string, params *GetPeopleSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeopleSummaryRequest(c.Server, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-// GetPeopleLists Get lists containing this person
-//
-// #### 📄 Pagination 😁 Emojis
-//
-// Lists no longer support people, so this always returns an empty array.
-//
-// Corresponds with GET /people/{id}/lists/{type}/{sort} (the `GetPeopleLists` operationId).
-// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-func (c *Client) GetPeopleLists(ctx context.Context, id string, pType GetPeopleListsParamsType, sort GetPeopleListsParamsSort, params *GetPeopleListsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPeopleListsRequest(c.Server, id, pType, sort, params)
 	if err != nil {
 		return nil, err
 	}
@@ -30546,105 +30419,6 @@ func NewGetPeopleSummaryRequest(server string, id string, params *GetPeopleSumma
 		if params.Language != nil {
 
 			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "language", *params.Language, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if encoded := queryValues.Encode(); encoded != "" {
-			rawQueryFragments = append(rawQueryFragments, encoded)
-		}
-		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetPeopleListsRequest constructs an http.Request for the GetPeopleLists method
-func NewGetPeopleListsRequest(server string, id string, pType GetPeopleListsParamsType, sort GetPeopleListsParamsSort, params *GetPeopleListsParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "type", pType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam2 string
-
-	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "sort", sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/people/%s/lists/%s/%s", pathParam0, pathParam1, pathParam2)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		// queryValues collects non-styled parameters (passthrough, JSON)
-		// that are safe to round-trip through url.Values.Encode().
-		queryValues := queryURL.Query()
-		// rawQueryFragments collects pre-encoded query fragments from
-		// styled parameters, preserving literal commas as delimiters
-		// per the OpenAPI spec (e.g. "color=blue,black,brown").
-		var rawQueryFragments []string
-
-		if params.Extended != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "extended", *params.Extended, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.Page != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
-			}
-
-		}
-
-		if params.Limit != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
@@ -38735,19 +38509,6 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /people/{id}/ (the `GetPeopleSummary` operationId).
 	GetPeopleSummaryWithResponse(ctx context.Context, id string, params *GetPeopleSummaryParams, reqEditors ...RequestEditorFn) (*GetPeopleSummaryResponse, error)
 
-	// GetPeopleListsWithResponse Get lists containing this person
-	//
-	// #### 📄 Pagination 😁 Emojis
-	//
-	// Lists no longer support people, so this always returns an empty array.
-	//
-	// Returns a wrapper object for the known response body format(s).
-	//
-	// Corresponds with GET /people/{id}/lists/{type}/{sort} (the `GetPeopleLists` operationId).
-	//
-	// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	GetPeopleListsWithResponse(ctx context.Context, id string, pType GetPeopleListsParamsType, sort GetPeopleListsParamsSort, params *GetPeopleListsParams, reqEditors ...RequestEditorFn) (*GetPeopleListsResponse, error)
-
 	// GetPeopleMoviesWithResponse Get movie credits
 	//
 	// #### ✨ Extended Info
@@ -42486,173 +42247,6 @@ func (r GetPeopleSummaryResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetPeopleSummaryResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetPeopleListsResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	// JSON200 the response for an HTTP 200 `application/json` response
-	JSON200 *[]struct {
-		AllowComments bool `json:"allow_comments"`
-		CommentCount  int  `json:"comment_count"`
-		ConvertedTo   *struct {
-			Ids struct {
-				Slug  string `json:"slug"`
-				Trakt int    `json:"trakt"`
-			} `json:"ids"`
-		} `json:"converted_to,omitempty"`
-		CreatedAt      string  `json:"created_at"`
-		Description    *string `json:"description,omitempty"`
-		DisplayNumbers bool    `json:"display_numbers"`
-		Ids            struct {
-			Slug  string `json:"slug"`
-			Trakt int    `json:"trakt"`
-		} `json:"ids"`
-		Images *struct {
-			Posters []string `json:"posters"`
-		} `json:"images,omitempty"`
-		ItemCount   int                                      `json:"item_count"`
-		Likes       int                                      `json:"likes"`
-		Name        string                                   `json:"name"`
-		Privacy     string                                   `json:"privacy"`
-		ShareLink   string                                   `json:"share_link"`
-		SortBy      string                                   `json:"sort_by"`
-		SortHow     GetPeopleLists200JSONResponseBodySortHow `json:"sort_how"`
-		StaleOrigin *struct {
-			Name string  `json:"name"`
-			Url  *string `json:"url"`
-		} `json:"stale_origin,omitempty"`
-		Type      string `json:"type"`
-		UpdatedAt string `json:"updated_at"`
-		User      struct {
-			About    *string `json:"about,omitempty"`
-			Age      *int    `json:"age,omitempty"`
-			Deleted  bool    `json:"deleted"`
-			Director *bool   `json:"director,omitempty"`
-			Gender   *string `json:"gender,omitempty"`
-			Ids      struct {
-				Slug  *string `json:"slug,omitempty"`
-				Trakt int     `json:"trakt"`
-			} `json:"ids"`
-			Images *struct {
-				Avatar struct {
-					Full string `json:"full"`
-				} `json:"avatar"`
-			} `json:"images,omitempty"`
-			JoinedAt        *string `json:"joined_at,omitempty"`
-			Location        *string `json:"location,omitempty"`
-			Name            *string `json:"name,omitempty"`
-			Private         bool    `json:"private"`
-			Username        string  `json:"username"`
-			Vip             *bool   `json:"vip,omitempty"`
-			VipCoverImage   *string `json:"vip_cover_image,omitempty"`
-			VipEp           *bool   `json:"vip_ep,omitempty"`
-			VipGraceEndsAt  *string `json:"vip_grace_ends_at,omitempty"`
-			VipOg           *bool   `json:"vip_og,omitempty"`
-			VipVeteranSince *string `json:"vip_veteran_since,omitempty"`
-			VipVeteranTier  *int    `json:"vip_veteran_tier,omitempty"`
-			VipVeteranTitle *string `json:"vip_veteran_title,omitempty"`
-			VipVeteranYears *int    `json:"vip_veteran_years,omitempty"`
-			VipYears        *int    `json:"vip_years,omitempty"`
-		} `json:"user"`
-	}
-}
-
-// GetJSON200 returns the response for an HTTP 200 `application/json` response
-func (r GetPeopleListsResponse) GetJSON200() *[]struct {
-	AllowComments bool `json:"allow_comments"`
-	CommentCount  int  `json:"comment_count"`
-	ConvertedTo   *struct {
-		Ids struct {
-			Slug  string `json:"slug"`
-			Trakt int    `json:"trakt"`
-		} `json:"ids"`
-	} `json:"converted_to,omitempty"`
-	CreatedAt      string  `json:"created_at"`
-	Description    *string `json:"description,omitempty"`
-	DisplayNumbers bool    `json:"display_numbers"`
-	Ids            struct {
-		Slug  string `json:"slug"`
-		Trakt int    `json:"trakt"`
-	} `json:"ids"`
-	Images *struct {
-		Posters []string `json:"posters"`
-	} `json:"images,omitempty"`
-	ItemCount   int                                      `json:"item_count"`
-	Likes       int                                      `json:"likes"`
-	Name        string                                   `json:"name"`
-	Privacy     string                                   `json:"privacy"`
-	ShareLink   string                                   `json:"share_link"`
-	SortBy      string                                   `json:"sort_by"`
-	SortHow     GetPeopleLists200JSONResponseBodySortHow `json:"sort_how"`
-	StaleOrigin *struct {
-		Name string  `json:"name"`
-		Url  *string `json:"url"`
-	} `json:"stale_origin,omitempty"`
-	Type      string `json:"type"`
-	UpdatedAt string `json:"updated_at"`
-	User      struct {
-		About    *string `json:"about,omitempty"`
-		Age      *int    `json:"age,omitempty"`
-		Deleted  bool    `json:"deleted"`
-		Director *bool   `json:"director,omitempty"`
-		Gender   *string `json:"gender,omitempty"`
-		Ids      struct {
-			Slug  *string `json:"slug,omitempty"`
-			Trakt int     `json:"trakt"`
-		} `json:"ids"`
-		Images *struct {
-			Avatar struct {
-				Full string `json:"full"`
-			} `json:"avatar"`
-		} `json:"images,omitempty"`
-		JoinedAt        *string `json:"joined_at,omitempty"`
-		Location        *string `json:"location,omitempty"`
-		Name            *string `json:"name,omitempty"`
-		Private         bool    `json:"private"`
-		Username        string  `json:"username"`
-		Vip             *bool   `json:"vip,omitempty"`
-		VipCoverImage   *string `json:"vip_cover_image,omitempty"`
-		VipEp           *bool   `json:"vip_ep,omitempty"`
-		VipGraceEndsAt  *string `json:"vip_grace_ends_at,omitempty"`
-		VipOg           *bool   `json:"vip_og,omitempty"`
-		VipVeteranSince *string `json:"vip_veteran_since,omitempty"`
-		VipVeteranTier  *int    `json:"vip_veteran_tier,omitempty"`
-		VipVeteranTitle *string `json:"vip_veteran_title,omitempty"`
-		VipVeteranYears *int    `json:"vip_veteran_years,omitempty"`
-		VipYears        *int    `json:"vip_years,omitempty"`
-	} `json:"user"`
-} {
-	return r.JSON200
-}
-
-// GetBody returns the raw response body bytes
-func (r GetPeopleListsResponse) GetBody() []byte {
-	return r.Body
-}
-
-// Status returns HTTPResponse.Status
-func (r GetPeopleListsResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetPeopleListsResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetPeopleListsResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -54168,25 +53762,6 @@ func (c *ClientWithResponses) GetPeopleSummaryWithResponse(ctx context.Context, 
 	return ParseGetPeopleSummaryResponse(rsp)
 }
 
-// GetPeopleListsWithResponse Get lists containing this person
-//
-// #### 📄 Pagination 😁 Emojis
-//
-// Lists no longer support people, so this always returns an empty array.
-//
-// Returns a wrapper object for the known response body format(s).
-//
-// Corresponds with GET /people/{id}/lists/{type}/{sort} (the `GetPeopleLists` operationId).
-//
-// Deprecated: this operation has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-func (c *ClientWithResponses) GetPeopleListsWithResponse(ctx context.Context, id string, pType GetPeopleListsParamsType, sort GetPeopleListsParamsSort, params *GetPeopleListsParams, reqEditors ...RequestEditorFn) (*GetPeopleListsResponse, error) {
-	rsp, err := c.GetPeopleLists(ctx, id, pType, sort, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetPeopleListsResponse(rsp)
-}
-
 // GetPeopleMoviesWithResponse Get movie credits
 //
 // #### ✨ Extended Info
@@ -57205,95 +56780,6 @@ func ParseGetPeopleSummaryResponse(rsp *http.Response) (*GetPeopleSummaryRespons
 			return nil, err
 		}
 		response.JSON400 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetPeopleListsResponse parses an HTTP response from a GetPeopleListsWithResponse call
-func ParseGetPeopleListsResponse(rsp *http.Response) (*GetPeopleListsResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetPeopleListsResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest []struct {
-			AllowComments bool `json:"allow_comments"`
-			CommentCount  int  `json:"comment_count"`
-			ConvertedTo   *struct {
-				Ids struct {
-					Slug  string `json:"slug"`
-					Trakt int    `json:"trakt"`
-				} `json:"ids"`
-			} `json:"converted_to,omitempty"`
-			CreatedAt      string  `json:"created_at"`
-			Description    *string `json:"description,omitempty"`
-			DisplayNumbers bool    `json:"display_numbers"`
-			Ids            struct {
-				Slug  string `json:"slug"`
-				Trakt int    `json:"trakt"`
-			} `json:"ids"`
-			Images *struct {
-				Posters []string `json:"posters"`
-			} `json:"images,omitempty"`
-			ItemCount   int                                      `json:"item_count"`
-			Likes       int                                      `json:"likes"`
-			Name        string                                   `json:"name"`
-			Privacy     string                                   `json:"privacy"`
-			ShareLink   string                                   `json:"share_link"`
-			SortBy      string                                   `json:"sort_by"`
-			SortHow     GetPeopleLists200JSONResponseBodySortHow `json:"sort_how"`
-			StaleOrigin *struct {
-				Name string  `json:"name"`
-				Url  *string `json:"url"`
-			} `json:"stale_origin,omitempty"`
-			Type      string `json:"type"`
-			UpdatedAt string `json:"updated_at"`
-			User      struct {
-				About    *string `json:"about,omitempty"`
-				Age      *int    `json:"age,omitempty"`
-				Deleted  bool    `json:"deleted"`
-				Director *bool   `json:"director,omitempty"`
-				Gender   *string `json:"gender,omitempty"`
-				Ids      struct {
-					Slug  *string `json:"slug,omitempty"`
-					Trakt int     `json:"trakt"`
-				} `json:"ids"`
-				Images *struct {
-					Avatar struct {
-						Full string `json:"full"`
-					} `json:"avatar"`
-				} `json:"images,omitempty"`
-				JoinedAt        *string `json:"joined_at,omitempty"`
-				Location        *string `json:"location,omitempty"`
-				Name            *string `json:"name,omitempty"`
-				Private         bool    `json:"private"`
-				Username        string  `json:"username"`
-				Vip             *bool   `json:"vip,omitempty"`
-				VipCoverImage   *string `json:"vip_cover_image,omitempty"`
-				VipEp           *bool   `json:"vip_ep,omitempty"`
-				VipGraceEndsAt  *string `json:"vip_grace_ends_at,omitempty"`
-				VipOg           *bool   `json:"vip_og,omitempty"`
-				VipVeteranSince *string `json:"vip_veteran_since,omitempty"`
-				VipVeteranTier  *int    `json:"vip_veteran_tier,omitempty"`
-				VipVeteranTitle *string `json:"vip_veteran_title,omitempty"`
-				VipVeteranYears *int    `json:"vip_veteran_years,omitempty"`
-				VipYears        *int    `json:"vip_years,omitempty"`
-			} `json:"user"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
 
 	}
 

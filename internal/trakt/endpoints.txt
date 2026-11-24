@@ -48,7 +48,6 @@ GET /search/{type}
 GET /people/{id}/
 GET /people/{id}/movies
 GET /people/{id}/shows
-GET /people/{id}/lists/{type}/{sort}
 GET /comments/{id}
 GET /comments/{id}/replies
 GET /sync/watched/{type}
