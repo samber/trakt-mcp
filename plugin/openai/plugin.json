@@ -1,30 +1,30 @@
 {
-  "name": "google-contacts",
-  "version": "1.1.0",
-  "description": "Search, read, create, update and delete your Google Contacts, and manage contact groups, from ChatGPT or Codex. Hosted MCP server with OAuth sign-in through your Google account.",
+  "name": "trakt",
+  "version": "2.0.0",
+  "description": "Browse Trakt's catalog of movies and shows, and manage your Trakt watchlist, watch history, collection, ratings, check-ins and recommendations from ChatGPT or Codex. Hosted MCP server with OAuth sign-in through your Trakt account.",
   "author": {
     "name": "Samuel Berthe",
     "email": "hello@samuel-berthe.fr",
     "url": "https://github.com/samber"
   },
-  "homepage": "https://google-contacts-mcp.samber.dev",
+  "homepage": "https://trakt-mcp.samber.dev",
   "extensions": {
     "com.openai.interface": {
-      "displayName": "Google Contacts",
-      "shortDescription": "Manage your Google Contacts",
-      "longDescription": "Ask your assistant to find a phone number or e-mail, add a new contact, fix a job title, merge details into an existing contact by e-mail, or organize contacts into groups. You sign in with your Google account and grant access to Google Contacts only. Contact data is read and written live through the Google People API and is never stored on the server. Every tool that changes your address book says so in its description, and deleting a contact is flagged as destructive.",
+      "displayName": "Trakt MCP",
+      "shortDescription": "Manage what you watch on Trakt",
+      "longDescription": "Ask your assistant what is trending, look up a show or movie, its cast, ratings and comments, see which episode comes next, add titles to your watchlist or collection, mark episodes as watched, rate what you saw, check in to what you are watching, or tune your recommendations. You sign in with your Trakt account. Viewing data is read and written live through the Trakt API and is never stored on the server. Every tool that changes your Trakt account says so in its description, and removal tools are flagged as destructive. Independent open source project, not affiliated with or endorsed by Trakt.",
       "developerName": "Samuel Berthe",
-      "websiteURL": "https://google-contacts-mcp.samber.dev",
-      "supportURL": "https://github.com/samber/google-contacts-mcp/issues",
-      "privacyPolicyURL": "https://google-contacts-mcp.samber.dev/privacy",
-      "termsOfServiceURL": "https://google-contacts-mcp.samber.dev/terms",
+      "websiteURL": "https://trakt-mcp.samber.dev",
+      "supportURL": "https://github.com/samber/trakt-mcp/issues",
+      "privacyPolicyURL": "https://trakt-mcp.samber.dev/privacy",
+      "termsOfServiceURL": "https://trakt-mcp.samber.dev/terms",
       "defaultPrompt": [
-        "Find the e-mail address of my contact named Alex.",
-        "Add a contact: Jane Doe, jane@example.com, works at Acme.",
-        "List my contact groups and how many contacts each one has."
+        "What are the trending shows this week?",
+        "What is the next episode of Severance I should watch?",
+        "Add Dune: Part Two to my Trakt watchlist."
       ],
-      "brandColor": "#D33F49",
-      "brandColorDark": "#D33F49"
+      "brandColor": "#1D2B53",
+      "brandColorDark": "#F6A823"
     }
   },
   "publication": {

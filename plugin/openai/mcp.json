@@ -1,9 +1,9 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
-    "google-contacts": {
+    "trakt": {
       "type": "streamable-http",
-      "url": "https://mcp.google-contacts-mcp.samber.dev/mcp"
+      "url": "https://mcp.trakt-mcp.samber.dev/mcp"
     }
   }
 }

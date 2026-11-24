@@ -16,7 +16,7 @@ The project ships as an open-source Go binary that anyone can self-host. A publi
 
 Goals:
 
-- About 80 MCP tools covering the catalog reads and the user writes listed in section 8.
+- 79 MCP tools covering the catalog reads and the user writes listed in section 8 (77 shipped; the 2 smart-list tools wait on the spike of section 17).
 - Multi-tenant: one instance serves many Trakt accounts, isolated from each other.
 - Two consent screens to connect (ours, then Trakt's), no configuration on the user side.
 - Viewing history, watchlist, ratings and other Trakt data never touch disk.
@@ -54,7 +54,7 @@ Unchanged from the Google version: **ory/fosite**, chosen by the user for securi
 
 | Option | Trade-off |
 | --- | --- |
-| Hand-written thin client | Small and easy to review, but 80 tools mean about 60 endpoints to type by hand and keep in sync. |
+| Hand-written thin client | Small and easy to review, but about 80 tools mean about 60 endpoints to type by hand and keep in sync. |
 | **Generated from `openapi.json` (picked)** | Trakt publishes an official OpenAPI 3 file (`https://developer.trakt.tv/openapi.json`, 311 paths). `oapi-codegen` generates typed requests and responses. Picked by the user. |
 | Raw passthrough | Fastest, but bloated replies and a risk of logging raw bodies. Rejected. |
 
@@ -155,7 +155,7 @@ Annotations: every tool has a `title` and explicit `readOnlyHint`, `destructiveH
 
 Identifiers: wherever a tool takes a show, movie or person id, it accepts the Trakt slug (`breaking-bad`), the numeric Trakt id, or an IMDb id (`tt0903747`, `nm0186505` for people). Values are validated against `^[a-z0-9-]+$`, `^[0-9]+$` and `^(tt|nm)[0-9]+$` before Trakt is called, so no path or query injection reaches the API. List tools take `limit` (default 10, max 100) and `page`; without `page` they auto-paginate up to `limit`, with `page` they return one page plus `{page, page_count, item_count}` taken from the `X-Pagination-*` headers.
 
-The tool names below follow the community Trakt MCP naming the user supplied. The total is 80; the user chose the full set.
+The tool names below follow the community Trakt MCP naming the user supplied. The user chose the full set; `fetch_person_lists` was later dropped (see 8.3), so the total is 79, or 77 if the smart-list tools are dropped.
 
 ### 8.1 Catalog: shows (13)
 
@@ -163,15 +163,15 @@ The tool names below follow the community Trakt MCP naming the user supplied. Th
 
 ### 8.2 Catalog: seasons (10) and episodes (9)
 
-Seasons: `fetch_season_info`, `fetch_season_episodes`, `fetch_season_ratings`, `fetch_season_stats`, `fetch_season_people`, `fetch_season_videos`, `fetch_season_watching`, `fetch_season_translations` (`language`), `fetch_season_lists` (`list_type`, `sort`), `fetch_season_comments`.
+Seasons (`list_type` values follow Trakt's enum, singular `watchlist`): `fetch_season_info`, `fetch_season_episodes`, `fetch_season_ratings`, `fetch_season_stats`, `fetch_season_people`, `fetch_season_videos`, `fetch_season_watching`, `fetch_season_translations` (`language`), `fetch_season_lists` (`list_type`, `sort`), `fetch_season_comments`.
 
 Episodes: `fetch_episode_summary`, `fetch_episode_ratings`, `fetch_episode_stats`, `fetch_episode_people`, `fetch_episode_videos`, `fetch_episode_watching`, `fetch_episode_translations`, `fetch_episode_lists`, `fetch_episode_comments`.
 
-### 8.3 Catalog: movies (14), people (4), comments (3)
+### 8.3 Catalog: movies (14), people (3), comments (3)
 
 Movies: `fetch_trending_movies`, `fetch_popular_movies`, `fetch_anticipated_movies`, `fetch_favorited_movies`, `fetch_played_movies`, `fetch_watched_movies`, `fetch_boxoffice_movies`, `search_movies`, `fetch_movie_ratings`, `fetch_movie_summary`, `fetch_movie_videos`, `fetch_related_movies`, `fetch_movie_people`, `fetch_movie_comments`.
 
-People: `fetch_person_summary`, `fetch_person_movies`, `fetch_person_shows`, `fetch_person_lists`.
+People: `fetch_person_summary`, `fetch_person_movies`, `fetch_person_shows`. `fetch_person_lists` is dropped: Trakt's OpenAPI documents `GET /people/{id}/lists/...` as always returning an empty array.
 
 Comments: `fetch_show_comments`, `fetch_comment`, `fetch_comment_replies`. Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false: spoiler comments are dropped). Reviews are flagged. Comment text is untrusted third-party content: tool descriptions say so, and the output wraps it in a `comment` field the model must not treat as instructions.
 
@@ -186,7 +186,7 @@ Comments: `fetch_show_comments`, `fetch_comment`, `fetch_comment_replies`. Comme
 | Smart lists | `fetch_smart_lists`, `fetch_smart_list_items` (`type`, `sort_by`, `sort_how`) |
 | Check-in | `checkin_to_show` (by `show_id`, or `show_title` + `show_year`; `season`, `episode`, `message`), `checkin_to_movie`, `cancel_checkin` |
 
-Count check: 13 + 10 + 9 + 14 + 4 + 3 + 6 + 21 = 80. If a list and a number ever disagree, the lists in this section win and the number is corrected.
+Count check: 13 + 10 + 9 + 14 + 3 + 3 + 6 + 21 = 79. If a list and a number ever disagree, the lists in this section win and the number is corrected.
 
 Write tools (`add_to_history`, `remove_from_history`, `add_to_watchlist`, `remove_from_watchlist`, `add_to_collection`, `remove_from_collection`, `add_ratings`, `remove_ratings`) take typed items `{type, id}` with `type` one of `movie`, `show`, `season`, `episode`. `id` accepts a Trakt numeric id or an IMDb id; slugs are accepted for `movie` and `show` only (Trakt has no episode slugs). The tool groups items by type into the `movies`, `shows`, `seasons`, `episodes` arrays Trakt expects. A show item marks the whole show; a season or episode item marks only that one. Resolving "the last episode I watched" is the model's job through `fetch_show_progress` and `fetch_show_seasons`.
 
@@ -251,7 +251,7 @@ Environment variables carry **no prefix**: each flag reads the env var of the sa
 | Flag / env var | Default | Purpose |
 | --- | --- | --- |
 | `--base-url` / `BASE_URL` | required | Public HTTPS URL; also the OAuth `issuer` |
-| `--site-url` / `SITE_URL` | required | Where `GET /` redirects (the Astro site) |
+| `--site-url` / `SITE_URL` | required for `serve` | Where `GET /` redirects (the Astro site) |
 | `--listen` / `LISTEN` | `127.0.0.1:8080` (`0.0.0.0:$PORT` when `PORT` is set) | Listen address |
 | `--db-path` / `DB_PATH` | `./data/trakt-mcp.db` | SQLite file |
 | `--trakt-client-id` / `TRAKT_CLIENT_ID` | required | Trakt application client id (also sent as `trakt-api-key`) |
@@ -267,6 +267,7 @@ Environment variables carry **no prefix**: each flag reads the env var of the sa
 | `--metrics-password-file` / `METRICS_PASSWORD_FILE` | none | Safer alternative to the CLI password |
 | `--rate-limit-reads` / `RATE_LIMIT_READS` | `120` | Per-user reads per minute |
 | `--rate-limit-writes` / `RATE_LIMIT_WRITES` | `30` | Per-user writes per minute |
+| `--rate-limit-global` / `RATE_LIMIT_GLOBAL` | `1200` | Trakt requests per minute across all users |
 | `--openai-apps-challenge` / `OPENAI_APPS_CHALLENGE` | none | Serves `/.well-known/openai-apps-challenge` |
 
 Removed from the Google version: `--google-client-id`, `GCMCP_GOOGLE_CLIENT_SECRET`, `--allowed-domains` (Trakt has no organization domains), `--operator-name`, `--operator-email` (the site carries them). Subcommands: `serve` (default), `genkey`, `rekey`, `disconnect <trakt-slug>` (revokes at Trakt, deletes all rows), `version`.
@@ -289,7 +290,7 @@ The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide 
 - Full OAuth flow test with a fake Trakt (authorize, consent, callback, token, refresh rotation, reuse revocation, PKCE failure, wrong `resource`, denied consent).
 - CIMD fetcher tests: private IP, redirect to private IP, oversize, timeout, mismatched `client_id`.
 - MCP legacy `initialize` round trip for 2025-06-18 and 2025-11-25, plus a native 2026-07-28 call.
-- Tool tests: id validation table (slug, numeric, IMDb, injection attempts, empty), batch size 0, 1, 50, 51, `watched_at` variants, comment spoiler filter, annotation test over all 80 tools.
+- Tool tests: id validation table (slug, numeric, IMDb, injection attempts, empty), batch size 0, 1, 50, 51, `watched_at` variants, comment spoiler filter, annotation test over every registered tool.
 - Codegen test: `make generate` produces no diff.
 - No real Trakt account in CI.
 
@@ -304,6 +305,6 @@ The unprefixed names (`BASE_URL`, `LISTEN`, `LOG_LEVEL`, `METRICS`) can collide 
 
 - Read Trakt's API use policy (`https://developer.trakt.tv/docs/api-use-policy`) and confirm that a public hosted multi-tenant app driven by an LLM is allowed, whether an app review is needed, and what the branding rules are. Blocks the public launch, not the build.
 - Verify Trakt's current rate limits and the exact account-limit status codes against the live documentation.
-- Smart lists spike (decided by the user): the first implementation task calls the live Trakt API with the user's own test app and account (client id and secret in a local, gitignored env file) to settle how a user's smart lists are listed. The spec is updated with the result. If the endpoint does not exist, the 2 smart-list tools are dropped (count 78) and tracked as an enhancement issue.
+- Smart lists spike (decided by the user): the first implementation task calls the live Trakt API with the user's own test app and account (client id and secret in a local, gitignored env file) to settle how a user's smart lists are listed. The spec is updated with the result. If the endpoint does not exist, the 2 smart-list tools are dropped (count 77) and tracked as an enhancement issue.
 - Confirm the public hostname.
 - Test whether ChatGPT scheduled tasks can call developer-mode apps.
