@@ -39,7 +39,7 @@ Cover the Trakt API areas users ask an assistant about and the server does not e
 | Movie extras (7) | `fetch_movie_stats`, `_watching`, `_translations`, `_aliases`, `_studios`, `_lists`, `_releases` | Read |
 | Show extras (9) | `fetch_show_stats`, `_watching`, `_translations`, `_aliases`, `_studios`, `_lists`, `_next_episode`, `_last_episode`, `_certifications` | Read |
 | Custom lists read (5) | `fetch_user_lists`, `fetch_list`, `fetch_list_items`, `fetch_trending_lists`, `fetch_popular_lists` | Read |
-| Custom lists write (5) | `create_list`, `update_list`, `add_list_items`, `remove_list_items` (Write), `delete_list` (Destroy) | Write/Destroy |
+| Custom lists write (5) | `create_list`, `update_list`, `add_list_items`, `remove_list_items` (Destroy), `delete_list` (Destroy) | Write/Destroy |
 | Watchlist writes (2) | `update_watchlist_item`, `reorder_watchlist` | Write |
 | Notes (5) | `fetch_note`, `fetch_user_notes`, `create_note`, `update_note` (Write), `delete_note` (Destroy) | Read/Write/Destroy |
 | Progress (3) | `fetch_show_collection_progress` (Read), `reset_show_progress` (Write), `undo_reset_show_progress` (Write) | Mixed |
@@ -59,5 +59,7 @@ Reference-data tools take a `type` argument (`movies` or `shows`) where Trakt do
 ## Calls made without the owner
 
 - `reset_show_progress` is Write, not Destroy: Trakt keeps the history and `undo` reverses it.
+- Every `remove_*` and `delete_*` tool is Destroy, as in the existing tools (`remove_list_items` included).
+- Notes are "VIP Enhanced": free accounts keep a few notes and Trakt answers 420 past the cap; watchlist and list-item notes and show progress reset need VIP.
 - Notes tools stay in despite VIP: the error message already says so.
 - "Progress" read as show collection progress plus reset/undo; up next is out.
