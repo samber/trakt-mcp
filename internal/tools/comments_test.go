@@ -34,13 +34,13 @@ const (
 	keyRatingField    = ".rating"
 )
 
-// newToolNames are the 21 tools added with the movie, people and comment
+// newToolNames are the 20 tools added with the movie, people and comment
 // groups.
 var newToolNames = []string{
 	toolFetchPopularMovies, toolFetchAnticipatedMovies, toolFetchFavoritedMovies, toolFetchPlayedMovies, toolFetchWatchedMovies,
 	toolFetchBoxofficeMovies, toolSearchMovies, toolFetchMovieRatings, toolFetchMovieVideos, toolFetchRelatedMovies, toolFetchMoviePeople,
 	toolFetchMovieComments,
-	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows, toolFetchPersonLists,
+	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows,
 	toolFetchShowComments, toolFetchSeasonComments, toolFetchEpisodeComments, toolFetchComment, toolFetchCommentReplies,
 }
 
@@ -262,7 +262,7 @@ func commentBody(t *testing.T, text string) string {
 	raw, err := json.Marshal([]map[string]any{{
 		"id": 1, "parent_id": 0, "created_at": "2024-01-01T10:00:00.000Z", "updated_at": "2024-01-01T10:00:00.000Z",
 		"comment": text, "spoiler": false, "review": false, keyReplies: 0, "likes": 0,
-		"user_stats": map[string]any{"rating": 5}, "user": map[string]any{"username": testUsername, keyIDs: map[string]any{keySlug: testUsername}},
+		"user_stats": map[string]any{"rating": 5}, "user": map[string]any{keyUsername: testUsername, keyIDs: map[string]any{keySlug: testUsername}},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -380,7 +380,7 @@ func TestCommentUserHasOnlyUsernameAndSlug(t *testing.T) {
 
 		slices.Sort(keys)
 
-		if !slices.Equal(keys, []string{keySlug, "username"}) {
+		if !slices.Equal(keys, []string{keySlug, keyUsername}) {
 			t.Errorf("user keys = %v, want slug and username only", keys)
 		}
 	}
@@ -522,7 +522,93 @@ func TestFetchCommentWithholdsSpoilers(t *testing.T) {
 	}
 }
 
-// TestNewToolsAreAllReadOnly requires the 21 tools of the movie, people and
+// spoilerPageBody is a Trakt comment page holding n comments, all spoilers
+// when spoilers is set.
+func spoilerPageBody(t *testing.T, n int, spoilers bool) string {
+	t.Helper()
+
+	items := make([]map[string]any, 0, n)
+	for i := range n {
+		items = append(items, map[string]any{
+			"id": i + 1, "comment": "c", "spoiler": spoilers,
+			"user": map[string]any{keyUsername: testUsername, keyIDs: map[string]any{keySlug: testUsername}},
+		})
+	}
+
+	raw, err := json.Marshal(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(raw)
+}
+
+// serveCommentPages answers each page request with body(page) and a page
+// count of pageCount.
+func serveCommentPages(h *harness, route string, pageCount int, body func(page int) string) {
+	h.trakt.handle(route, func(w http.ResponseWriter, r *http.Request) {
+		page, err := strconv.Atoi(r.URL.Query().Get(fieldPage))
+		if err != nil {
+			page = 1
+		}
+
+		w.Header().Set("X-Pagination-Page", strconv.Itoa(page))
+		w.Header().Set("X-Pagination-Page-Count", strconv.Itoa(pageCount))
+		w.Header().Set("Content-Type", "application/json")
+
+		if _, err := w.Write([]byte(body(page))); err != nil {
+			panic(err)
+		}
+	})
+}
+
+func TestCommentsSpoilerOnlyPageContinuesToNextPage(t *testing.T) {
+	t.Parallel()
+
+	const route = "GET " + routeShowSlug + routeCommentsEnd
+
+	t.Run("later page has comments", func(t *testing.T) {
+		t.Parallel()
+
+		h := newHarness(t)
+		serveCommentPages(h, route, 3, func(page int) string { return spoilerPageBody(t, 2, page == 1) })
+
+		var out Listing[Comment]
+
+		h.ok(toolFetchShowComments, merge(showShow(testShowSlug), map[string]any{fieldLimit: 2}), &out)
+
+		if len(out.Items) != 2 {
+			t.Fatalf("items = %d, want the 2 comments of page 2", len(out.Items))
+		}
+
+		for _, c := range out.Items {
+			if c.IsSpoiler {
+				t.Errorf("spoiler returned: %+v", c)
+			}
+		}
+	})
+
+	t.Run("every page is spoilers", func(t *testing.T) {
+		t.Parallel()
+
+		h := newHarness(t)
+		serveCommentPages(h, route, maxAutoPages*3, func(int) string { return spoilerPageBody(t, 2, true) })
+
+		var out Listing[Comment]
+
+		h.ok(toolFetchShowComments, merge(showShow(testShowSlug), map[string]any{fieldLimit: 2}), &out)
+
+		if len(out.Items) != 0 {
+			t.Errorf("items = %d, want 0", len(out.Items))
+		}
+
+		if got := len(h.trakt.seen()); got > maxAutoPages {
+			t.Errorf("Trakt requests = %d, want at most %d", got, maxAutoPages)
+		}
+	})
+}
+
+// TestNewToolsAreAllReadOnly requires the 20 tools of the movie, people and
 // comment groups to be registered read-only and open-world.
 func TestNewToolsAreAllReadOnly(t *testing.T) {
 	t.Parallel()
@@ -546,8 +632,8 @@ func TestNewToolsAreAllReadOnly(t *testing.T) {
 		}
 	}
 
-	if len(newToolNames) != 21 {
-		t.Errorf("newToolNames holds %d tools, want 21", len(newToolNames))
+	if len(newToolNames) != 20 {
+		t.Errorf("newToolNames holds %d tools, want 20", len(newToolNames))
 	}
 }
 
@@ -571,13 +657,13 @@ func TestCommentToolDescriptionsWarnAboutUntrustedText(t *testing.T) {
 	}
 }
 
-// TestRegistryHas53Tools counts every registered tool: the 2 pilots, the 12
-// movie, 4 people and 5 comment tools of this group and the 30 show, season
+// TestRegistryHas52Tools counts every registered tool: the 2 pilots, the 12
+// movie, 3 people and 5 comment tools of this group and the 30 show, season
 // and episode tools.
-func TestRegistryHas53Tools(t *testing.T) {
+func TestRegistryHas52Tools(t *testing.T) {
 	t.Parallel()
 
-	const want = 2 + 12 + 4 + 5 + 30
+	const want = 2 + 12 + 3 + 5 + 30
 
 	if got := len(NewServer(offlineDeps()).Specs()); got != want {
 		t.Errorf("registered tools = %d, want %d", got, want)

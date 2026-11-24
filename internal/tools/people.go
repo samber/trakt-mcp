@@ -114,14 +114,6 @@ type PersonSummaryArgs struct {
 	Extended *bool `json:"extended,omitempty" jsonschema:"include biography, birthday, birthplace, homepage and social ids (default true)"`
 }
 
-// PersonListsArgs are the arguments of fetch_person_lists.
-type PersonListsArgs struct {
-	PageArgs
-	PersonRef
-	ListType string `json:"list_type,omitempty" jsonschema:"all, personal, official, watchlist or favorites (default all)"`
-	Sort     string `json:"sort,omitempty"      jsonschema:"popular, likes, comments, items, added or updated (default popular)"`
-}
-
 type traktPerson struct {
 	Name string `json:"name"`
 	IDs  struct {
@@ -298,16 +290,12 @@ func registerPeopleTools(s *Server) {
 	}, fetchPersonSummary)
 	Register(s, Spec{
 		Name: "fetch_person_movies", Title: "Fetch person movies", Access: Read,
-		Description: "List the movies a person acted in (with the character) or worked on (grouped by department with the job). Long credit lists are cut.",
+		Description: "List the movies a person acted in (with the character) or worked on (grouped by department with the job). Long credit lists are cut." + untrustedNote,
 	}, fetchPersonMovies)
 	Register(s, Spec{
 		Name: "fetch_person_shows", Title: "Fetch person shows", Access: Read,
-		Description: "List the shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut.",
+		Description: "List the shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
 	}, fetchPersonShows)
-	Register(s, Spec{
-		Name: "fetch_person_lists", Title: "Fetch lists with a person", Access: Read,
-		Description: "List the Trakt lists that contain a person, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchPersonLists)
 }
 
 func fetchPersonSummary(ctx context.Context, c *trakt.UserClient, in PersonSummaryArgs) (Person, error) {
@@ -346,24 +334,4 @@ func fetchPersonShows(ctx context.Context, c *trakt.UserClient, in PersonRef) (P
 	return fetchParsed(func() (*http.Response, error) {
 		return c.API().GetPeopleShows(ctx, id, &api.GetPeopleShowsParams{})
 	}, parsePersonShows)
-}
-
-func fetchPersonLists(ctx context.Context, c *trakt.UserClient, in PersonListsArgs) (Listing[TraktList], error) {
-	id, err := in.path()
-	if err != nil {
-		return Listing[TraktList]{}, err
-	}
-
-	listType, sortBy, err := listArgs(in.ListType, in.Sort)
-	if err != nil {
-		return Listing[TraktList]{}, err
-	}
-
-	return paginateDecoded(ctx, in.PageArgs, trimList, func(page, limit int) (*http.Response, error) {
-		// Trakt's OpenAPI marks this operation deprecated without a reason, yet
-		// it is the only endpoint that lists the lists holding a person.
-		return c.API().GetPeopleLists(ctx, //nolint:staticcheck // SA1019: no replacement endpoint exists
-			id, api.GetPeopleListsParamsType(listType), api.GetPeopleListsParamsSort(sortBy),
-			&api.GetPeopleListsParams{Page: &page, Limit: &limit})
-	})
 }
