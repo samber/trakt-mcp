@@ -38,7 +38,7 @@ const (
 // groups.
 var newToolNames = []string{
 	toolFetchPopularMovies, toolFetchAnticipatedMovies, toolFetchFavoritedMovies, toolFetchPlayedMovies, toolFetchWatchedMovies,
-	toolFetchBoxofficeMovies, toolSearchMovies, toolFetchMovieRatings, toolFetchMovieVideos, toolFetchRelatedMovies, toolFetchMoviePeople,
+	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolFetchMovieVideos, toolFetchRelatedMovies, toolFetchMoviePeople,
 	toolFetchMovieComments,
 	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows,
 	toolFetchShowComments, toolFetchSeasonComments, toolFetchEpisodeComments, toolFetchComment, toolFetchCommentReplies,

@@ -9,7 +9,7 @@ import (
 	"github.com/samber/trakt-mcp/internal/trakt/api"
 )
 
-// ShowTranslationsArgs are the arguments of fetch_show_translations.
+// ShowTranslationsArgs are the arguments of the show handler of list_translations.
 type ShowTranslationsArgs struct {
 	ShowRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
@@ -83,18 +83,6 @@ func parseMaybeEpisode(body []byte) (MaybeEpisode, error) {
 }
 
 func registerShowExtraTools(s *Server) {
-	Register(s, Spec{
-		Name: "fetch_show_stats", Title: "Fetch show stats", Access: Read,
-		Description: "Get a TV show's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchShowStats)
-	Register(s, Spec{
-		Name: "fetch_show_watching", Title: "Fetch show watchers", Access: Read,
-		Description: "Count the users watching a TV show right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchShowWatching)
-	Register(s, Spec{
-		Name: "fetch_show_translations", Title: "Fetch show translations", Access: Read,
-		Description: "Get a TV show's title and overview in one language (two-letter code) or in every language.",
-	}, fetchShowTranslations)
 	Register(s, Spec{
 		Name: "fetch_show_aliases", Title: "Fetch show aliases", Access: Read,
 		Description: "List a TV show's alternate titles with the country each is used in.",

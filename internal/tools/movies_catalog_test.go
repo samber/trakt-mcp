@@ -21,7 +21,6 @@ const (
 	toolFetchWatchedMovies     = "fetch_watched_movies"
 	toolFetchBoxofficeMovies   = "fetch_boxoffice_movies"
 	toolSearchMovies           = "search_movies"
-	toolFetchMovieRatings      = "fetch_movie_ratings"
 	toolFetchMovieVideos       = "fetch_movie_videos"
 	toolFetchRelatedMovies     = "fetch_related_movies"
 	toolFetchMoviePeople       = "fetch_movie_people"
@@ -86,7 +85,7 @@ var movieCases = []catalogCase{
 		},
 	},
 	{
-		tool: toolFetchMovieRatings, args: movieRef(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", fixture: "movie_ratings", object: true,
+		tool: toolGetRatings, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", fixture: "movie_ratings", object: true,
 		want: map[string]any{keyRating: 8.7, keyVotes: 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
 	},
 	{
@@ -127,11 +126,11 @@ func TestMovieToolArguments(t *testing.T) {
 		{name: "period path injection", tool: toolFetchWatchedMovies, args: map[string]any{fieldPeriod: traversalID}, wantErr: invalid(fieldPeriod)},
 		{name: nameLimit101, tool: toolFetchPopularMovies, args: map[string]any{fieldLimit: 101}, wantErr: invalid(fieldLimit)},
 		{name: namePage0, tool: toolFetchAnticipatedMovies, args: map[string]any{fieldPage: 0}, wantErr: invalid(fieldPage)},
-		{name: "id slug", tool: toolFetchMovieRatings, args: movieRef(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", body: emptyObject, wantPath: routeMovieSlug + "/ratings"},
+		{name: "id slug", tool: toolGetRatings, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", body: emptyObject, wantPath: routeMovieSlug + "/ratings"},
 		{name: "id numeric", tool: toolFetchMovieVideos, args: movieRef("481"), route: "GET /movies/481/videos", body: emptyList, wantPath: "/movies/481/videos"},
 		{name: "id imdb title", tool: toolFetchMoviePeople, args: movieRef(testMovieIMDb), route: "GET /movies/tt0133093/people", body: emptyObject, wantPath: "/movies/tt0133093/people"},
 		{name: "id imdb person", tool: toolFetchMoviePeople, args: movieRef(personIMDb), wantErr: invalid(fieldMovieID)},
-		{name: "id path traversal", tool: toolFetchMovieRatings, args: movieRef(traversalID), wantErr: invalid(fieldMovieID)},
+		{name: "id path traversal", tool: toolGetRatings, args: movieItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "id slash", tool: toolFetchRelatedMovies, args: movieRef("a/b"), wantErr: invalid(fieldMovieID)},
 		{name: "id query injection", tool: toolFetchMovieVideos, args: movieRef("x?extended=full"), wantErr: invalid(fieldMovieID)},
 		{name: "id empty", tool: toolFetchMoviePeople, args: movieRef(""), wantErr: invalid(fieldMovieID)},

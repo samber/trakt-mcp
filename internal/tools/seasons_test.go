@@ -8,14 +8,10 @@ import (
 )
 
 const (
-	toolSeasonEpisodes     = "fetch_season_episodes"
-	toolSeasonRatings      = "fetch_season_ratings"
-	toolSeasonStats        = "fetch_season_stats"
-	toolSeasonPeople       = "fetch_season_people"
-	toolSeasonVideos       = "fetch_season_videos"
-	toolSeasonWatching     = "fetch_season_watching"
-	toolSeasonTranslations = "fetch_season_translations"
-	toolSeasonLists        = "fetch_season_lists"
+	toolSeasonEpisodes = "fetch_season_episodes"
+	toolSeasonPeople   = "fetch_season_people"
+	toolSeasonVideos   = "fetch_season_videos"
+	toolSeasonLists    = "fetch_season_lists"
 
 	argLanguage = "language"
 	argListType = "list_type"
@@ -96,16 +92,16 @@ var seasonCases = []catalogCase{
 		},
 		absent: []string{"items.0.images", "items.1.overview", "items.1.runtime"},
 	},
-	{tool: toolSeasonRatings, args: seasonRef(nil), route: seasonRoute("/ratings"), fixture: "season_ratings", object: true, want: sharedRatingsWant},
-	{tool: toolSeasonStats, args: seasonRef(nil), route: seasonRoute("/stats"), fixture: "season_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
+	{tool: toolGetRatings, args: seasonItem(testShowSlug, 1), route: seasonRoute("/ratings"), fixture: "season_ratings", object: true, want: sharedRatingsWant},
+	{tool: toolGetStats, args: seasonItem(testShowSlug, 1), route: seasonRoute("/stats"), fixture: "season_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
 	{
 		tool: toolSeasonPeople, args: seasonRef(nil), route: seasonRoute("/people"), fixture: "season_people", object: true,
 		want: sharedPeopleWant, absent: []string{"guest_stars"},
 	},
 	{tool: toolSeasonVideos, args: seasonRef(nil), route: seasonRoute("/videos"), fixture: "season_videos", want: sharedVideosWant},
-	{tool: toolSeasonWatching, args: seasonRef(nil), route: seasonRoute("/watching"), fixture: "season_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
+	{tool: toolListWatching, args: seasonItem(testShowSlug, 1), route: seasonRoute("/watching"), fixture: "season_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
 	{
-		tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), fixture: "season_translations",
+		tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), fixture: "season_translations",
 		wantQuery: map[string]string{argLanguage: "fr"}, want: sharedTranslationsWant, absent: []string{"items.0.tagline", pathSecondTitle},
 	},
 	{
@@ -124,20 +120,20 @@ func TestSeasonToolArguments(t *testing.T) {
 		{name: "season -1", tool: toolGetSummary, args: seasonItem(testShowSlug, -1), wantErr: invalid(fieldSeason)},
 		{name: "season 0 is the specials", tool: toolGetSummary, args: seasonItem(testShowSlug, 0), route: "GET " + infoRoute(0), body: emptyObject},
 		{name: "season 1", tool: toolGetSummary, args: seasonItem(testShowSlug, 1), route: "GET " + infoRoute(1), body: emptyObject},
-		{name: "season 999", tool: toolSeasonStats, args: merge(seasonRef(nil), map[string]any{fieldSeason: 999}), route: "GET " + seasonBaseFor(999) + "/stats", body: emptyObject},
-		{name: "season 1000", tool: toolSeasonStats, args: merge(seasonRef(nil), map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
+		{name: "season 999", tool: toolGetStats, args: seasonItem(testShowSlug, 999), route: "GET " + seasonBaseFor(999) + "/stats", body: emptyObject},
+		{name: "season 1000", tool: toolGetStats, args: seasonItem(testShowSlug, 1000), wantErr: invalid(fieldSeason)},
 		{name: "season 1000 episodes", tool: toolSeasonEpisodes, args: merge(seasonRef(nil), map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
 		{name: "show id imdb", tool: toolSeasonVideos, args: merge(seasonRef(nil), map[string]any{fieldShowID: testShowIMDb}), route: "GET /shows/tt0903747/seasons/1/videos", body: emptyList},
 		{name: "show id numeric", tool: toolSeasonPeople, args: merge(seasonRef(nil), map[string]any{fieldShowID: "1388"}), route: "GET /shows/1388/seasons/1/people", body: emptyObject},
 		{name: "show id traversal", tool: toolGetSummary, args: seasonItem(traversalID, 1), wantErr: invalid(fieldID)},
-		{name: "show id person imdb", tool: toolSeasonRatings, args: merge(seasonRef(nil), map[string]any{fieldShowID: personIMDb}), wantErr: invalid(fieldShowID)},
-		{name: "show id empty", tool: toolSeasonWatching, args: merge(seasonRef(nil), map[string]any{fieldShowID: ""}), wantErr: invalid(fieldShowID)},
-		{name: "language fr", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
-		{name: "language omitted means all", tool: toolSeasonTranslations, args: seasonRef(nil), route: seasonRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
-		{name: "language upper case", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "FR"}), wantErr: invalid(fieldLanguage)},
-		{name: "language three letters", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
-		{name: "language one letter", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "f"}), wantErr: invalid(fieldLanguage)},
-		{name: "language injection", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
+		{name: "show id person imdb", tool: toolGetRatings, args: seasonItem(personIMDb, 1), wantErr: invalid(fieldID)},
+		{name: "show id empty", tool: toolListWatching, args: seasonItem("", 1), wantErr: invalid(fieldID)},
+		{name: "language fr", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
+		{name: "language omitted means all", tool: toolListTranslations, args: seasonItem(testShowSlug, 1), route: seasonRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
+		{name: "language upper case", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "FR"}), wantErr: invalid(fieldLanguage)},
+		{name: "language three letters", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
+		{name: "language one letter", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "f"}), wantErr: invalid(fieldLanguage)},
+		{name: "language injection", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
 		{name: "lists defaults", tool: toolSeasonLists, args: seasonRef(nil), route: seasonRoute(testSeasonPathTail), body: emptyList},
 		{name: "lists official by likes", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: seasonRoute("/lists/official/likes"), body: emptyList},
 		{name: "lists watchlist by updated", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeWatchlist, argSort: listSortUpdated}), route: seasonRoute("/lists/watchlist/updated"), body: emptyList},
@@ -175,7 +171,7 @@ func TestSeasonWatchingIsBounded(t *testing.T) {
 
 	var out Watching
 
-	h.ok(toolSeasonWatching, seasonRef(nil), &out)
+	h.ok(toolListWatching, seasonItem(testShowSlug, 1), &out)
 
 	if out.Count != maxWatchingUsers+10 || len(out.Users) != maxWatchingUsers {
 		t.Errorf("count %d, users %d, want %d and %d", out.Count, len(out.Users), maxWatchingUsers+10, maxWatchingUsers)

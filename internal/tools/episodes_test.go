@@ -6,13 +6,9 @@ import (
 )
 
 const (
-	toolEpisodeRatings      = "fetch_episode_ratings"
-	toolEpisodeStats        = "fetch_episode_stats"
-	toolEpisodePeople       = "fetch_episode_people"
-	toolEpisodeVideos       = "fetch_episode_videos"
-	toolEpisodeWatching     = "fetch_episode_watching"
-	toolEpisodeTranslations = "fetch_episode_translations"
-	toolEpisodeLists        = "fetch_episode_lists"
+	toolEpisodePeople = "fetch_episode_people"
+	toolEpisodeVideos = "fetch_episode_videos"
+	toolEpisodeLists  = "fetch_episode_lists"
 )
 
 func init() { catalogCaseSets = append(catalogCaseSets, episodeCases) }
@@ -38,16 +34,16 @@ var episodeCases = []catalogCase{
 		}),
 		absent: inItemPaths([]string{keyImages, "available_translations"}),
 	},
-	{tool: toolEpisodeRatings, args: episodeRef(nil), route: episodeRoute("/ratings"), fixture: "episode_ratings", object: true, want: sharedRatingsWant},
-	{tool: toolEpisodeStats, args: episodeRef(nil), route: episodeRoute("/stats"), fixture: "episode_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
+	{tool: toolGetRatings, args: episodeItem(testShowSlug, 1, 2), route: episodeRoute("/ratings"), fixture: "episode_ratings", object: true, want: sharedRatingsWant},
+	{tool: toolGetStats, args: episodeItem(testShowSlug, 1, 2), route: episodeRoute("/stats"), fixture: "episode_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
 	{
 		tool: toolEpisodePeople, args: episodeRef(nil), route: episodeRoute("/people"), fixture: "episode_people", object: true,
 		want: sharedPeopleWant, absent: []string{"guest_stars"},
 	},
 	{tool: toolEpisodeVideos, args: episodeRef(nil), route: episodeRoute("/videos"), fixture: "episode_videos", want: sharedVideosWant},
-	{tool: toolEpisodeWatching, args: episodeRef(nil), route: episodeRoute("/watching"), fixture: "episode_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
+	{tool: toolListWatching, args: episodeItem(testShowSlug, 1, 2), route: episodeRoute("/watching"), fixture: "episode_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
 	{
-		tool: toolEpisodeTranslations, args: episodeRef(map[string]any{argLanguage: "fr"}), route: episodeRoute("/translations"), fixture: "episode_translations",
+		tool: toolListTranslations, args: merge(episodeItem(testShowSlug, 1, 2), map[string]any{argLanguage: "fr"}), route: episodeRoute("/translations"), fixture: "episode_translations",
 		wantQuery: map[string]string{argLanguage: "fr"}, want: sharedTranslationsWant, absent: []string{"items.0.tagline", "items.1.title"},
 	},
 	{
@@ -66,20 +62,20 @@ func TestEpisodeToolArguments(t *testing.T) {
 		{name: "episode -1", tool: toolGetSummary, args: episodeItem(testShowSlug, 1, -1), wantErr: invalid(fieldEpisode)},
 		{name: "episode 0", tool: toolGetSummary, args: episodeItem(testShowSlug, 1, 0), wantErr: invalid(fieldEpisode)},
 		{name: "episode 1", tool: toolGetSummary, args: episodeItem(testShowSlug, 1, 1), route: "GET " + episodeBaseFor(1), body: emptyObject},
-		{name: "episode 9999", tool: toolEpisodeStats, args: withEpisode(9999), route: "GET " + episodeBaseFor(9999) + "/stats", body: emptyObject},
-		{name: "episode 10000", tool: toolEpisodeStats, args: withEpisode(10000), wantErr: invalid(fieldEpisode)},
+		{name: "episode 9999", tool: toolGetStats, args: episodeItem(testShowSlug, 1, 9999), route: "GET " + episodeBaseFor(9999) + "/stats", body: emptyObject},
+		{name: "episode 10000", tool: toolGetStats, args: episodeItem(testShowSlug, 1, 10000), wantErr: invalid(fieldEpisode)},
 		{name: "episode 0 lists", tool: toolEpisodeLists, args: withEpisode(0), wantErr: invalid(fieldEpisode)},
 		{name: "season -1", tool: toolGetSummary, args: episodeItem(testShowSlug, -1, 2), wantErr: invalid(fieldSeason)},
 		{name: "season 0 is the specials", tool: toolEpisodeVideos, args: episodeRef(map[string]any{fieldSeason: 0}), route: "GET /shows/breaking-bad/seasons/0/episodes/2/videos", body: emptyList},
-		{name: "season 999", tool: toolEpisodeRatings, args: episodeRef(map[string]any{fieldSeason: 999}), route: "GET /shows/breaking-bad/seasons/999/episodes/2/ratings", body: emptyObject},
-		{name: "season 1000", tool: toolEpisodeRatings, args: episodeRef(map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
+		{name: "season 999", tool: toolGetRatings, args: episodeItem(testShowSlug, 999, 2), route: "GET /shows/breaking-bad/seasons/999/episodes/2/ratings", body: emptyObject},
+		{name: "season 1000", tool: toolGetRatings, args: episodeItem(testShowSlug, 1000, 2), wantErr: invalid(fieldSeason)},
 		{name: "show id imdb", tool: toolEpisodePeople, args: episodeRef(map[string]any{fieldShowID: testShowIMDb}), route: "GET /shows/tt0903747/seasons/1/episodes/2/people", body: emptyObject},
 		{name: "show id traversal", tool: toolGetSummary, args: episodeItem(traversalID, 1, 2), wantErr: invalid(fieldID)},
-		{name: "show id person imdb", tool: toolEpisodeWatching, args: episodeRef(map[string]any{fieldShowID: personIMDb}), wantErr: invalid(fieldShowID)},
-		{name: "language fr", tool: toolEpisodeTranslations, args: episodeRef(map[string]any{argLanguage: "fr"}), route: episodeRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
-		{name: "language omitted means all", tool: toolEpisodeTranslations, args: episodeRef(nil), route: episodeRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
-		{name: "language upper case", tool: toolEpisodeTranslations, args: episodeRef(map[string]any{argLanguage: "Fr"}), wantErr: invalid(fieldLanguage)},
-		{name: "language three letters", tool: toolEpisodeTranslations, args: episodeRef(map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
+		{name: "show id person imdb", tool: toolListWatching, args: episodeItem(personIMDb, 1, 2), wantErr: invalid(fieldID)},
+		{name: "language fr", tool: toolListTranslations, args: merge(episodeItem(testShowSlug, 1, 2), map[string]any{argLanguage: "fr"}), route: episodeRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
+		{name: "language omitted means all", tool: toolListTranslations, args: episodeItem(testShowSlug, 1, 2), route: episodeRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
+		{name: "language upper case", tool: toolListTranslations, args: merge(episodeItem(testShowSlug, 1, 2), map[string]any{argLanguage: "Fr"}), wantErr: invalid(fieldLanguage)},
+		{name: "language three letters", tool: toolListTranslations, args: merge(episodeItem(testShowSlug, 1, 2), map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
 		{name: "lists defaults", tool: toolEpisodeLists, args: episodeRef(nil), route: episodeRoute(testSeasonPathTail), body: emptyList},
 		{name: "lists official by likes", tool: toolEpisodeLists, args: episodeRef(map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: episodeRoute("/lists/official/likes"), body: emptyList},
 		{name: "lists watchlist by updated", tool: toolEpisodeLists, args: episodeRef(map[string]any{argListType: listTypeWatchlist, argSort: listSortUpdated}), route: episodeRoute("/lists/watchlist/updated"), body: emptyList},

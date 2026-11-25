@@ -7,13 +7,10 @@ import (
 )
 
 const (
-	toolMovieStats        = "fetch_movie_stats"
-	toolMovieWatching     = "fetch_movie_watching"
-	toolMovieTranslations = "fetch_movie_translations"
-	toolMovieAliases      = "fetch_movie_aliases"
-	toolMovieStudios      = "fetch_movie_studios"
-	toolMovieLists        = "fetch_movie_lists"
-	toolMovieReleases     = "fetch_movie_releases"
+	toolMovieAliases  = "fetch_movie_aliases"
+	toolMovieStudios  = "fetch_movie_studios"
+	toolMovieLists    = "fetch_movie_lists"
+	toolMovieReleases = "fetch_movie_releases"
 
 	// Output paths of the first item, named to keep the literals unique.
 	pathFirstCountry  = "items.0.country"
@@ -34,10 +31,10 @@ func movieRoute(suffix string) string { return "GET " + routeMovieSlug + suffix 
 func movieArgs(extra map[string]any) map[string]any { return merge(movieRef(testMovieSlug), extra) }
 
 var movieExtraCases = []catalogCase{
-	{tool: toolMovieStats, args: movieArgs(nil), route: movieRoute("/stats"), fixture: "movie_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
-	{tool: toolMovieWatching, args: movieArgs(nil), route: movieRoute("/watching"), fixture: "movie_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
+	{tool: toolGetStats, args: movieItem(testMovieSlug), route: movieRoute("/stats"), fixture: "movie_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
+	{tool: toolListWatching, args: movieItem(testMovieSlug), route: movieRoute("/watching"), fixture: "movie_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
 	{
-		tool: toolMovieTranslations, args: movieArgs(map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), fixture: "movie_translations",
+		tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), fixture: "movie_translations",
 		wantQuery: map[string]string{argLanguage: "fr"},
 		want: map[string]any{
 			"items.0.language": "fr", pathFirstCountry: "fr", pathFirstTitle: "Matrix", pathFirstOverview: "Un hacker decouvre la verite.", "items.1.language": "de",
@@ -78,16 +75,16 @@ func TestMovieExtraToolArguments(t *testing.T) {
 	releases := func(country string) map[string]any { return movieArgs(map[string]any{fieldCountry: country}) }
 
 	cases := []argCase{
-		{name: "movie id traversal", tool: toolMovieStats, args: movieRef(traversalID), wantErr: invalid(fieldMovieID)},
-		{name: "movie id empty", tool: toolMovieWatching, args: movieRef(""), wantErr: invalid(fieldMovieID)},
+		{name: "movie id traversal", tool: toolGetStats, args: movieItem(traversalID), wantErr: invalid(fieldID)},
+		{name: "movie id empty", tool: toolListWatching, args: movieItem(""), wantErr: invalid(fieldID)},
 		{name: "movie id person imdb", tool: toolMovieStudios, args: movieRef(personIMDb), wantErr: invalid(fieldMovieID)},
 		{name: "movie id too long", tool: toolMovieAliases, args: movieRef(strings.Repeat("a", 129)), wantErr: invalid(fieldMovieID)},
 		{name: "movie id upper case", tool: toolMovieLists, args: movieRef("The-Matrix"), wantErr: invalid(fieldMovieID)},
-		{name: "movie id numeric", tool: toolMovieStats, args: movieRef("481"), route: "GET /movies/481/stats", body: emptyObject},
-		{name: "language fr", tool: toolMovieTranslations, args: movieArgs(map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
-		{name: "language omitted means all", tool: toolMovieTranslations, args: movieArgs(nil), route: movieRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
-		{name: "language three letters", tool: toolMovieTranslations, args: movieArgs(map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
-		{name: "language injection", tool: toolMovieTranslations, args: movieArgs(map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
+		{name: "movie id numeric", tool: toolGetStats, args: movieItem("481"), route: "GET /movies/481/stats", body: emptyObject},
+		{name: "language fr", tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
+		{name: "language omitted means all", tool: toolListTranslations, args: movieItem(testMovieSlug), route: movieRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
+		{name: "language three letters", tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
+		{name: "language injection", tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
 		{name: "country fr", tool: toolMovieReleases, args: releases("fr"), route: routeMovieReleasesFR, body: emptyList},
 		{name: "country three letters", tool: toolMovieReleases, args: releases("FRA"), wantErr: invalid(fieldCountry)},
 		{name: "country upper case", tool: toolMovieReleases, args: releases("FR"), wantErr: invalid(fieldCountry)},
@@ -115,9 +112,9 @@ func TestMovieExtraTraktFailures(t *testing.T) {
 		notAnArray = `[1]`
 	)
 
-	runUpstreamFailures(t, toolMovieStats, movieArgs(nil), movieRoute("/stats"), notAnArray)
-	runUpstreamFailures(t, toolMovieWatching, movieArgs(nil), movieRoute("/watching"), notAList)
-	runUpstreamFailures(t, toolMovieTranslations, movieArgs(nil), movieRoute("/translations"), notAList)
+	runUpstreamFailures(t, toolGetStats, movieItem(testMovieSlug), movieRoute("/stats"), notAnArray)
+	runUpstreamFailures(t, toolListWatching, movieItem(testMovieSlug), movieRoute("/watching"), notAList)
+	runUpstreamFailures(t, toolListTranslations, movieItem(testMovieSlug), movieRoute("/translations"), notAList)
 	runUpstreamFailures(t, toolMovieAliases, movieArgs(nil), movieRoute("/aliases"), notAList)
 	runUpstreamFailures(t, toolMovieStudios, movieArgs(nil), movieRoute("/studios"), notAList)
 	runUpstreamFailures(t, toolMovieLists, movieArgs(nil), movieRoute(pathMovieListsAll), notAList)

@@ -32,4 +32,5 @@ var catalog = []func(*Server){
 	registerFavoriteTools,
 	registerUpNextTools,
 	registerSummaryTools,
+	registerItemInfoTools,
 }

@@ -75,6 +75,9 @@ func checkOptional(n *int, needed bool, field string, inRange func(int) error) e
 // movieArgs is r as the arguments of the movie summary handler.
 func (r ItemRef) movieArgs() MovieSummaryArgs { return MovieSummaryArgs{MovieID: r.ID} }
 
+// movieRef is r as a movie reference.
+func (r ItemRef) movieRef() MovieRef { return MovieRef{MovieID: r.ID} }
+
 // showRef is r as a TV show reference.
 func (r ItemRef) showRef() ShowRef { return ShowRef{ShowID: r.ID} }
 

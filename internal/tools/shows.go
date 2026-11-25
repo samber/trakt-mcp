@@ -665,10 +665,6 @@ func registerShowTools(s *Server) {
 		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchShows)
 	Register(s, Spec{
-		Name: "fetch_show_ratings", Title: "Fetch show ratings", Access: Read,
-		Description: "Get a TV show's average rating, vote count and the number of votes for each rating from 1 to 10.",
-	}, fetchShowRatings)
-	Register(s, Spec{
 		Name: "fetch_show_videos", Title: "Fetch show videos", Access: Read,
 		Description: "List a TV show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
 	}, fetchShowVideos)

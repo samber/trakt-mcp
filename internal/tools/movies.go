@@ -297,10 +297,6 @@ func registerMovieCatalogTools(s *Server) {
 		Description: "Search movies by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchMovies)
 	Register(s, Spec{
-		Name: "fetch_movie_ratings", Title: "Fetch movie ratings", Access: Read,
-		Description: "Get a movie's average rating, vote count and the number of votes for each rating from 1 to 10.",
-	}, fetchMovieRatings)
-	Register(s, Spec{
 		Name: "fetch_movie_videos", Title: "Fetch movie videos", Access: Read,
 		Description: "List a movie's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
 	}, fetchMovieVideos)

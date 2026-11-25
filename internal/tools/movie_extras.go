@@ -27,7 +27,7 @@ const (
 	maxSlugRunes = 200
 )
 
-// MovieTranslationsArgs are the arguments of fetch_movie_translations.
+// MovieTranslationsArgs are the arguments of the movie handler of list_translations.
 type MovieTranslationsArgs struct {
 	MovieRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
@@ -122,18 +122,6 @@ func trimRelease(r traktRelease) Release {
 }
 
 func registerMovieExtraTools(s *Server) {
-	Register(s, Spec{
-		Name: "fetch_movie_stats", Title: "Fetch movie stats", Access: Read,
-		Description: "Get a movie's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchMovieStats)
-	Register(s, Spec{
-		Name: "fetch_movie_watching", Title: "Fetch movie watchers", Access: Read,
-		Description: "Count the users watching a movie right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchMovieWatching)
-	Register(s, Spec{
-		Name: "fetch_movie_translations", Title: "Fetch movie translations", Access: Read,
-		Description: "Get a movie's title and overview in one language (two-letter code) or in every language.",
-	}, fetchMovieTranslations)
 	Register(s, Spec{
 		Name: "fetch_movie_aliases", Title: "Fetch movie aliases", Access: Read,
 		Description: "List a movie's alternate titles with the country each is used in.",

@@ -54,7 +54,6 @@ const (
 	toolFetchRelatedShows     = "fetch_related_shows"
 	toolSearchShows           = "search_shows"
 	toolFetchShowPeople       = "fetch_show_people"
-	toolFetchShowRatings      = "fetch_show_ratings"
 	toolFetchShowSeasons      = "fetch_show_seasons"
 	toolFetchShowVideos       = "fetch_show_videos"
 	toolFetchTrendingShows    = "fetch_trending_shows"
@@ -227,7 +226,7 @@ var showCases = []catalogCase{
 		},
 	},
 	{
-		tool: toolFetchShowRatings, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/ratings", fixture: "show_ratings", object: true,
+		tool: toolGetRatings, args: showItem(testShowSlug), route: "GET /shows/breaking-bad/ratings", fixture: "show_ratings", object: true,
 		want: map[string]any{keyRating: 9.3, keyVotes: 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
 	},
 	{
@@ -480,7 +479,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "id imdb", tool: toolGetSummary, args: showItem(testShowIMDb), route: "GET /shows/tt0903747", body: emptyObject, wantPath: "/shows/tt0903747"},
 		{name: "id person imdb", tool: toolGetSummary, args: showItem(personIMDb), wantErr: invalid(fieldID)},
 		{name: "id path traversal", tool: toolGetSummary, args: showItem(traversalID), wantErr: invalid(fieldID)},
-		{name: "id slash", tool: toolFetchShowRatings, args: showShow("a/b"), wantErr: invalid(fieldShowID)},
+		{name: "id slash", tool: toolGetRatings, args: showItem("a/b"), wantErr: invalid(fieldID)},
 		{name: "id query injection", tool: toolFetchShowPeople, args: showShow("x?extended=full"), wantErr: invalid(fieldShowID)},
 		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},
 		{name: "id upper case", tool: toolFetchRelatedShows, args: showShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
@@ -632,7 +631,7 @@ func TestShowRatingsDistributionOrder(t *testing.T) {
 
 	var out Rating
 
-	h.ok(toolFetchShowRatings, showShow(testShowSlug), &out)
+	h.ok(toolGetRatings, showItem(testShowSlug), &out)
 
 	if want := []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 3}; !slices.Equal(out.Distribution, want) {
 		t.Errorf("distribution = %v, want %v", out.Distribution, want)
