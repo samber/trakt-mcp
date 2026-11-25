@@ -144,8 +144,8 @@ func TestCalendarRefusesOtherKinds(t *testing.T) {
 func TestLegacyCalendarToolsRemoved(t *testing.T) {
 	t.Parallel()
 
-	requireToolsRemoved(t, "fetch_calendar_shows", "fetch_calendar_new_shows", "fetch_calendar_show_premieres", "fetch_calendar_show_finales",
-		"fetch_calendar_movies", "fetch_calendar_dvd", "fetch_calendar_streaming")
+	requireToolsRemoved(t, legacyToolPrefix+"calendar_shows", legacyToolPrefix+"calendar_new_shows", legacyToolPrefix+"calendar_show_premieres", legacyToolPrefix+"calendar_show_finales",
+		legacyToolPrefix+"calendar_movies", legacyToolPrefix+"calendar_dvd", legacyToolPrefix+"calendar_streaming")
 }
 
 // TestCalendarOutputIsCapped requires a window with more than

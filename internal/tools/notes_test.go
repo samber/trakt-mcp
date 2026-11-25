@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	toolFetchNote      = "fetch_note"
-	toolFetchUserNotes = "fetch_user_notes"
+	toolFetchNote      = "get_note"
+	toolFetchUserNotes = "list_user_notes"
 	toolCreateNote     = "create_note"
 	toolUpdateNote     = "update_note"
 	toolDeleteNote     = "delete_note"

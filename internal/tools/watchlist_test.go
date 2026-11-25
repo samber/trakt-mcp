@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchWatchlist      = "fetch_watchlist"
+	toolFetchWatchlist      = "list_watchlist"
 	toolAddToWatchlist      = "add_to_watchlist"
 	toolRemoveFromWatchlist = "remove_from_watchlist"
 

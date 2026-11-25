@@ -31,18 +31,18 @@ var (
 	popularListTypes = []string{listTypePersonal, listTypeOfficial}
 )
 
-// UserListsArgs are the arguments of fetch_user_lists.
+// UserListsArgs are the arguments of list_user_lists.
 type UserListsArgs struct {
 	User string `json:"user,omitempty" jsonschema:"Trakt user slug or numeric id whose lists to list (default me, the connected user)"`
 }
 
-// ListArgs are the arguments of fetch_list.
+// ListArgs are the arguments of get_list.
 type ListArgs struct {
 	ListID string `json:"list_id"        jsonschema:"slug or numeric Trakt id of the list"`
 	User   string `json:"user,omitempty" jsonschema:"Trakt user slug or numeric id owning the list; omit it for an official or public list looked up by id alone"`
 }
 
-// ListItemsArgs are the arguments of fetch_list_items.
+// ListItemsArgs are the arguments of list_list_items.
 type ListItemsArgs struct {
 	ListArgs
 	Type    string `json:"type,omitempty"     jsonschema:"all, movies, shows, seasons, episodes or people (default all)"`
@@ -114,17 +114,17 @@ type ListItem struct {
 
 func registerListTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_user_lists", Title: "Fetch user lists", Access: Read,
+		Name: "list_user_lists", Title: "List user lists", Access: Read,
 		Description: "List a user's custom lists (default: the connected user's own) with name, description, privacy, item count and likes. " +
-			"Take list ids from the result for fetch_list and fetch_list_items." + untrustedNote,
+			"Take list ids from the result for get_list and list_list_items." + untrustedNote,
 	}, fetchUserLists)
 	Register(s, Spec{
-		Name: "fetch_list", Title: "Fetch list", Access: Read,
+		Name: "get_list", Title: "Get list", Access: Read,
 		Description: "Get one custom list: name, description, privacy, sort, item count and likes. " +
 			"Give user for a user's list; omit it to look a list up by its id alone." + untrustedNote,
 	}, fetchList)
 	Register(s, Spec{
-		Name: "fetch_list_items", Title: "Fetch list items", Access: Read,
+		Name: "list_list_items", Title: "List list items", Access: Read,
 		Description: "List the entries of a custom list: movies, TV shows, seasons, episodes and people, optionally of one type, sorted and paginated, with the owner's notes. " +
 			"Give user for a user's list; omit it to look a list up by its id alone." + untrustedNote,
 	}, fetchListItems)

@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	toolShowNextEpisode    = "fetch_show_next_episode"
-	toolShowLastEpisode    = "fetch_show_last_episode"
-	toolShowCertifications = "fetch_show_certifications"
+	toolShowNextEpisode    = "get_next_episode"
+	toolShowLastEpisode    = "get_last_episode"
+	toolShowCertifications = "list_show_certifications"
 
 	// Output paths and values reused across the cases, named to keep each
 	// literal unique in the package.

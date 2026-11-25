@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	toolFetchSmartLists     = "fetch_smart_lists"
-	toolFetchSmartListItems = "fetch_smart_list_items"
+	toolFetchSmartLists     = "list_smart_lists"
+	toolFetchSmartListItems = "list_smart_list_items"
 
 	argUser     = "user"
 	argListID   = "list_id"

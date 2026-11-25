@@ -53,7 +53,7 @@ var (
 	}
 )
 
-// SmartListsArgs are the arguments of fetch_smart_lists.
+// SmartListsArgs are the arguments of list_smart_lists.
 type SmartListsArgs struct {
 	User string `json:"user,omitempty" jsonschema:"Trakt user slug whose smart lists to list (default me, the connected user)"`
 }
@@ -68,7 +68,7 @@ type SmartListIDs struct {
 // currently resolves to.
 type SmartList struct {
 	Name      string       `json:"name"`
-	IDs       SmartListIDs `json:"ids"        jsonschema:"pass slug (or the numeric trakt id) as list_id to fetch_smart_list_items"`
+	IDs       SmartListIDs `json:"ids"        jsonschema:"pass slug (or the numeric trakt id) as list_id to list_smart_list_items"`
 	Privacy   string       `json:"privacy,omitempty"`
 	MediaType string       `json:"media_type,omitempty" jsonschema:"movies, shows or both"`
 	Source    string       `json:"source,omitempty"`
@@ -78,9 +78,9 @@ type SmartList struct {
 	Filters map[string]any `json:"filters" jsonschema:"the filters that define the list, as Trakt names them"`
 }
 
-// SmartListItemsArgs are the arguments of fetch_smart_list_items.
+// SmartListItemsArgs are the arguments of list_smart_list_items.
 type SmartListItemsArgs struct {
-	ListID  string `json:"list_id"            jsonschema:"slug or numeric Trakt id of the smart list, from fetch_smart_lists"`
+	ListID  string `json:"list_id"            jsonschema:"slug or numeric Trakt id of the smart list, from list_smart_lists"`
 	Type    string `json:"type,omitempty"     jsonschema:"all, movies or shows; narrows a list holding both (default all)"`
 	SortBy  string `json:"sort_by,omitempty"  jsonschema:"rank (the list's own order, default), random, title, released, runtime, percentage, votes, imdb_rating, imdb_votes, tmdb_rating, tmdb_votes, rt_tomatometer, rt_audience, metascore or added (watchlist-sourced lists)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc for rank and title, desc otherwise)"`
@@ -96,17 +96,17 @@ type SmartListItem struct {
 
 func registerSmartListTools(s *Server) {
 	Register(s, Spec{
-		Name:  "fetch_smart_lists",
-		Title: "Fetch smart lists",
+		Name:  "list_smart_lists",
+		Title: "List smart lists",
 		Description: "List a user's smart lists (default: the connected user's own): name, ids, privacy, media type, source and the filters that define each. " +
-			"Smart lists are dynamic, so this returns definitions, not titles; use fetch_smart_list_items for those." + untrustedNote,
+			"Smart lists are dynamic, so this returns definitions, not titles; use list_smart_list_items for those." + untrustedNote,
 		Access: Read,
 	}, fetchSmartLists)
 	Register(s, Spec{
-		Name:  "fetch_smart_list_items",
-		Title: "Fetch smart list items",
+		Name:  "list_smart_list_items",
+		Title: "List smart list items",
 		Description: "List the movies and shows a smart list resolves to right now, optionally of one type, sorted and paginated. " +
-			"Take list_id from fetch_smart_lists. Do not use the normal list tools for smart lists." + untrustedNote,
+			"Take list_id from list_smart_lists. Do not use the normal list tools for smart lists." + untrustedNote,
 		Access: Read,
 	}, fetchSmartListItems)
 }

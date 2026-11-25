@@ -28,7 +28,7 @@ var (
 	sortHows       = []string{sortHowAsc, sortHowDesc}
 )
 
-// WatchlistArgs are the arguments of fetch_watchlist.
+// WatchlistArgs are the arguments of list_watchlist.
 type WatchlistArgs struct {
 	Type    string `json:"type,omitempty"     jsonschema:"all, movies, shows, seasons or episodes (default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
@@ -54,8 +54,8 @@ type AddWatchlistArgs struct {
 
 func registerWatchlistTools(s *Server) {
 	Register(s, Spec{
-		Name:        "fetch_watchlist",
-		Title:       "Fetch watchlist",
+		Name:        "list_watchlist",
+		Title:       "List watchlist",
 		Description: "List the user's watchlist, optionally of one type, sorted by rank or another field, with the user's notes.",
 		Access:      Read,
 	}, fetchWatchlist)

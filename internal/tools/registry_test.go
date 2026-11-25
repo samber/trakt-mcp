@@ -148,10 +148,10 @@ func hasInputProperty(tool *mcp.Tool, name string) bool {
 var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 
 // accessByPrefix pins every tool name prefix to its access level, so a new
-// tool cannot be mislabeled (a fetch_ tool marked Write, an add_ tool marked
+// tool cannot be mislabeled (a list_ tool marked Write, an add_ tool marked
 // Read) and a new prefix must be added here deliberately.
 var accessByPrefix = map[string]Access{
-	"fetch_": Read, "search_": Read, "get_": Read, "list_": Read, "search": Read,
+	"search_": Read, "get_": Read, "list_": Read, "search": Read,
 	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "checkin": Write, "reorder_": Write,
 	"reset_": Write, "undo_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
@@ -159,7 +159,7 @@ var accessByPrefix = map[string]Access{
 
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
-var untrustedTextTools = []string{"list_item_lists", "list_person_credits", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "list_lists", "create_list", "update_list", "fetch_note", "fetch_user_notes", "create_note", "update_note", "fetch_favorites", "fetch_movie_releases"}
+var untrustedTextTools = []string{"list_item_lists", "list_person_credits", "search_by_id", "list_user_lists", "get_list", "list_list_items", "list_lists", "create_list", "update_list", "get_note", "list_user_notes", "create_note", "update_note", "list_favorites", "list_movie_releases", "list_smart_lists", "list_smart_list_items"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()
@@ -610,6 +610,34 @@ func TestToolCallMetrics(t *testing.T) {
 	for _, c := range checks {
 		if got := metricValue(t, h.reg, c.name, c.labels); got != 1 {
 			t.Errorf("%s%v = %v, want 1", c.name, c.labels, got)
+		}
+	}
+}
+
+// legacyToolPrefix is the retired verb prefix; no tool may start with it.
+const legacyToolPrefix = "fetch_"
+
+// summaryToolName is a tool that must stay registered; it anchors the
+// non-empty check of TestNoFetchPrefix.
+const summaryToolName = "get_summary"
+
+func TestNoFetchPrefix(t *testing.T) {
+	t.Parallel()
+
+	specs := NewServer(offlineDeps()).Specs()
+
+	// Positive control: an empty or truncated registry would pass the loop vacuously.
+	if len(specs) == 0 {
+		t.Fatal("registry is empty")
+	}
+
+	if !slices.ContainsFunc(specs, func(s Spec) bool { return s.Name == summaryToolName }) {
+		t.Fatalf("registry lacks %s", summaryToolName)
+	}
+
+	for _, spec := range specs {
+		if strings.HasPrefix(spec.Name, legacyToolPrefix) {
+			t.Errorf("%s: name starts with %q, want get_ or list_", spec.Name, legacyToolPrefix)
 		}
 	}
 }

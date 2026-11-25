@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchRatings  = "fetch_ratings"
+	toolFetchRatings  = "list_user_ratings"
 	toolAddRatings    = "add_ratings"
 	toolRemoveRatings = "remove_ratings"
 

@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	toolFetchUserWatched      = "fetch_user_watched"
-	toolFetchHistory          = "fetch_history"
-	toolFetchShowProgress     = "fetch_show_progress"
-	toolFetchPlaybackProgress = "fetch_playback_progress"
+	toolFetchUserWatched      = "list_user_watched"
+	toolFetchHistory          = "list_history"
+	toolFetchShowProgress     = "get_show_progress"
+	toolFetchPlaybackProgress = "list_playback_progress"
 	toolRemovePlaybackItem    = "remove_playback_item"
 
 	argHistoryType   = "history_type"

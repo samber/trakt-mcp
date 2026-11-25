@@ -71,7 +71,7 @@ func TestGetSummaryTypeEchoed(t *testing.T) {
 func TestLegacySummaryToolsRemoved(t *testing.T) {
 	t.Parallel()
 
-	legacy := []string{"fetch_movie_summary", "fetch_show_summary", "fetch_season_info", "fetch_episode_summary"}
+	legacy := []string{legacyToolPrefix + "movie_summary", legacyToolPrefix + "show_summary", legacyToolPrefix + "season_info", legacyToolPrefix + "episode_summary"}
 
 	for _, spec := range NewServer(offlineDeps()).Specs() {
 		if slices.Contains(legacy, spec.Name) {

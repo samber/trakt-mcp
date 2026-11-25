@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	toolFetchShowCollectionProgress = "fetch_show_collection_progress"
+	toolFetchShowCollectionProgress = "get_show_collection_progress"
 	toolResetShowProgress           = "reset_show_progress"
 	toolUndoResetShowProgress       = "undo_reset_show_progress"
 

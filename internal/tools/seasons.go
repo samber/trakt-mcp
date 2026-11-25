@@ -316,7 +316,7 @@ type SeasonListsArgs struct {
 
 func registerSeasonTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_season_episodes", Title: "Fetch season episodes", Access: Read,
+		Name: "list_season_episodes", Title: "List season episodes", Access: Read,
 		Description: "List the episodes of a TV show season with number, title, overview, rating, runtime and air date.",
 	}, fetchSeasonEpisodes)
 }

@@ -34,10 +34,10 @@ const (
 // digits and underscores. It keeps injected query syntax out of the request.
 var sortByPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
-// hiddenTypes are the types fetch_hidden_progress accepts.
+// hiddenTypes are the types list_hidden_progress accepts.
 var hiddenTypes = []string{hiddenTypeShow}
 
-// UpNextArgs are the arguments of fetch_up_next.
+// UpNextArgs are the arguments of list_up_next.
 type UpNextArgs struct {
 	PageArgs
 
@@ -101,7 +101,7 @@ func trimUpNext(u traktUpNext) UpNextEntry {
 	return out
 }
 
-// HiddenProgressArgs are the arguments of fetch_hidden_progress.
+// HiddenProgressArgs are the arguments of list_hidden_progress.
 type HiddenProgressArgs struct {
 	PageArgs
 
@@ -148,12 +148,12 @@ type ProgressItemsArgs struct {
 // registerUpNextTools registers the up next and hidden progress tools.
 func registerUpNextTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_up_next", Title: "Fetch up next", Access: Read,
+		Name: "list_up_next", Title: "List up next", Access: Read,
 		Description: "List the TV shows the user is watching, each with the next episode to watch, ordered by sort and sort_how " +
 			"(optionally with watch stats)." + upNextPagingNote,
 	}, fetchUpNext)
 	Register(s, Spec{
-		Name: "fetch_hidden_progress", Title: "Fetch hidden progress", Access: Read,
+		Name: "list_hidden_progress", Title: "List hidden progress", Access: Read,
 		Description: "List the hidden entries of the user's watched progress: they are hidden TV shows and may include hidden seasons. type is show, the only value Trakt accepts.",
 	}, fetchHiddenProgress)
 	Register(s, Spec{

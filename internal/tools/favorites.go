@@ -17,7 +17,7 @@ var favoriteTypes = []string{mediaAll, mediaMovies, mediaShows}
 // favoritesNature is the description sentence shared by every favorites tool.
 const favoritesNature = "The favorites are the user's own top list on Trakt (like a desert-island list) of movies and TV shows, not a sync with other platforms. "
 
-// FavoritesArgs are the arguments of fetch_favorites.
+// FavoritesArgs are the arguments of list_favorites.
 type FavoritesArgs struct {
 	Type    string `json:"type,omitempty"     jsonschema:"all, movies or shows (default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
@@ -48,14 +48,14 @@ type RemoveFavoritesArgs struct {
 
 // UpdateFavoriteArgs are the arguments of update_favorite.
 type UpdateFavoriteArgs struct {
-	ListItemID int     `json:"list_item_id"    jsonschema:"list_item_id of a fetch_favorites item"`
+	ListItemID int     `json:"list_item_id"    jsonschema:"list_item_id of a list_favorites item"`
 	Notes      *string `json:"notes,omitempty" jsonschema:"new note, at most 500 characters; empty clears it"`
 	Rank       *int    `json:"rank,omitempty"  jsonschema:"new position, 1 or more"`
 }
 
 // ReorderFavoritesArgs are the arguments of reorder_favorites.
 type ReorderFavoritesArgs struct {
-	Rank []int `json:"rank" jsonschema:"list_item_id values of fetch_favorites items in the wanted order, first is rank 1; no duplicates"`
+	Rank []int `json:"rank" jsonschema:"list_item_id values of list_favorites items in the wanted order, first is rank 1; no duplicates"`
 }
 
 // UpdateFavoriteResult confirms an updated favorite.
@@ -81,7 +81,7 @@ type updateFavoriteBody map[string]any
 
 func registerFavoriteTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_favorites", Title: "Fetch favorites", Access: Read,
+		Name: "list_favorites", Title: "List favorites", Access: Read,
 		Description: favoritesNature + "List the user's favorites, optionally of one type, sorted by rank or another field, with the user's notes. " +
 			"Takes limit and page." + untrustedNote,
 	}, fetchFavorites)
@@ -93,12 +93,12 @@ func registerFavoriteTools(s *Server) {
 	}, addToFavorites)
 	Register(s, Spec{
 		Name: "update_favorite", Title: "Update favorite", Access: Write,
-		Description: favoritesNature + "Update one favorite: set or clear its note and/or move it to a new rank. It is addressed by the list_item_id that fetch_favorites returns. " +
+		Description: favoritesNature + "Update one favorite: set or clear its note and/or move it to a new rank. It is addressed by the list_item_id that list_favorites returns. " +
 			"Give at least one of notes and rank.",
 	}, updateFavorite)
 	Register(s, Spec{
 		Name: "reorder_favorites", Title: "Reorder favorites", Access: Write,
-		Description: favoritesNature + "Reorder favorites by sending list_item_id values from fetch_favorites in the wanted order. " +
+		Description: favoritesNature + "Reorder favorites by sending list_item_id values from list_favorites in the wanted order. " +
 			"Returns how many entries moved and which ids Trakt skipped.",
 	}, reorderFavorites)
 	Register(s, Spec{

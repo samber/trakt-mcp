@@ -25,13 +25,13 @@ var referenceCapNote = " Not paginated; a list longer than " + strconv.Itoa(maxR
 // referenceTypes lists the media types Trakt accepts for reference data.
 var referenceTypes = []string{mediaMovies, mediaShows}
 
-// ReferenceArgs are the arguments of fetch_genres, fetch_countries,
-// fetch_languages and fetch_certifications.
+// ReferenceArgs are the arguments of list_genres, list_countries,
+// list_languages and list_certifications.
 type ReferenceArgs struct {
 	Type string `json:"type,omitempty" jsonschema:"movies or shows (TV shows); default movies"`
 }
 
-// NetworksArgs are the arguments of fetch_networks: none.
+// NetworksArgs are the arguments of list_networks: none.
 type NetworksArgs struct{}
 
 // Genre is one Trakt genre.
@@ -83,23 +83,23 @@ type traktNetwork struct {
 
 func registerReferenceTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_genres", Title: "Fetch genres", Access: Read,
+		Name: "list_genres", Title: "List genres", Access: Read,
 		Description: "List Trakt's genres (name and slug) for movies or TV shows. Use the slugs as genre filters." + referenceCapNote,
 	}, fetchGenres)
 	Register(s, Spec{
-		Name: "fetch_countries", Title: "Fetch countries", Access: Read,
+		Name: "list_countries", Title: "List countries", Access: Read,
 		Description: "List the countries Trakt knows (name and lowercase code) for movies or TV shows. Use the codes as country arguments." + referenceCapNote,
 	}, fetchCountries)
 	Register(s, Spec{
-		Name: "fetch_languages", Title: "Fetch languages", Access: Read,
+		Name: "list_languages", Title: "List languages", Access: Read,
 		Description: "List the languages Trakt knows (name and lowercase code) for movies or TV shows. Use the codes as language arguments." + referenceCapNote,
 	}, fetchLanguages)
 	Register(s, Spec{
-		Name: "fetch_certifications", Title: "Fetch certifications", Access: Read,
+		Name: "list_certifications", Title: "List certifications", Access: Read,
 		Description: "List the content ratings (certifications) of every country for movies or TV shows, each with country code, name, slug and description." + referenceCapNote,
 	}, fetchCertifications)
 	Register(s, Spec{
-		Name: "fetch_networks", Title: "Fetch TV networks", Access: Read,
+		Name: "list_networks", Title: "List TV networks", Access: Read,
 		Description: "List the TV networks Trakt knows, with name and country code. Takes no arguments." + referenceCapNote,
 	}, fetchNetworks)
 }

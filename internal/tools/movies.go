@@ -240,7 +240,7 @@ type SearchMoviesArgs struct {
 	Query string `json:"query" jsonschema:"text to search for in movie titles and descriptions, up to 200 characters"`
 }
 
-// BoxOfficeArgs are the arguments of fetch_boxoffice_movies: none, since
+// BoxOfficeArgs are the arguments of list_boxoffice: none, since
 // Trakt returns the whole top list.
 type BoxOfficeArgs struct{}
 
@@ -258,7 +258,7 @@ type RelatedMoviesArgs struct {
 
 func registerMovieCatalogTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_boxoffice_movies", Title: "Fetch box office movies", Access: Read,
+		Name: "list_boxoffice", Title: "List box office movies", Access: Read,
 		Description: "List the top movies of the last weekend's US box office with their revenue. Trakt returns the whole list: no limit or page.",
 	}, fetchBoxOfficeMovies)
 }

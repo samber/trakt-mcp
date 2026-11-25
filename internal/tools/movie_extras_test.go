@@ -9,7 +9,7 @@ import (
 const (
 	toolListAliases   = "list_aliases"
 	toolListStudios   = "list_studios"
-	toolMovieReleases = "fetch_movie_releases"
+	toolMovieReleases = "list_movie_releases"
 
 	// Output paths of the first item, named to keep the literals unique.
 	pathFirstCountry  = "items.0.country"

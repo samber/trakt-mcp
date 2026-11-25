@@ -33,7 +33,7 @@ const (
 // collection progress.
 var collectionActivity = []string{lastActivityAired, lastActivityCollected}
 
-// CollectionProgressArgs are the arguments of fetch_show_collection_progress.
+// CollectionProgressArgs are the arguments of get_show_collection_progress.
 type CollectionProgressArgs struct {
 	ShowID        string `json:"show_id"                  jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 	Hidden        *bool  `json:"hidden,omitempty"         jsonschema:"include seasons the user hid (default false)"`
@@ -131,7 +131,7 @@ type traktCollectionSeason struct {
 // registerProgressTools registers the show collection progress and reset tools.
 func registerProgressTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_show_collection_progress", Title: "Fetch show collection progress", Access: Read,
+		Name: "get_show_collection_progress", Title: "Get show collection progress", Access: Read,
 		Description: "Get how much of one TV show the user has collected: episodes aired and collected, percentage, " +
 			"next episode to collect, and per-season counts (every episode with verbose).",
 	}, fetchShowCollectionProgress)

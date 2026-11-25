@@ -41,7 +41,7 @@ type MovieListsArgs struct {
 	Sort     string `json:"sort,omitempty"      jsonschema:"popular, likes, comments, items, added or updated (default popular)"`
 }
 
-// MovieReleasesArgs are the arguments of fetch_movie_releases.
+// MovieReleasesArgs are the arguments of list_movie_releases.
 type MovieReleasesArgs struct {
 	MovieRef
 	Country string `json:"country" jsonschema:"two-letter lower-case ISO 3166-1 country code such as fr or us"`
@@ -123,7 +123,7 @@ func trimRelease(r traktRelease) Release {
 
 func registerMovieExtraTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
+		Name: "list_movie_releases", Title: "List movie releases", Access: Read,
 		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note." + untrustedNote,
 	}, fetchMovieReleases)
 }

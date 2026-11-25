@@ -14,8 +14,8 @@ import (
 
 const (
 	toolListComments        = "list_comments"
-	toolFetchComment        = "fetch_comment"
-	toolFetchCommentReplies = "fetch_comment_replies"
+	toolFetchComment        = "get_comment"
+	toolFetchCommentReplies = "list_comment_replies"
 
 	argCommentID     = "comment_id"
 	argShowSpoilers  = "show_spoilers"

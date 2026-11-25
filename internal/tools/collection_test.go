@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchCollection      = "fetch_collection"
+	toolFetchCollection      = "list_collection"
 	toolAddToCollection      = "add_to_collection"
 	toolRemoveFromCollection = "remove_from_collection"
 

@@ -230,7 +230,7 @@ func TestLegacyMovieShowToolsRemoved(t *testing.T) {
 
 	requireLegacyToolsRemoved(t, "watchnow", "aliases", "studios", "recommendations")
 	requireToolsRemoved(t,
-		"fetch_related_movies", "fetch_related_shows",
+		legacyToolPrefix+"related_movies", legacyToolPrefix+"related_shows",
 		"hide_movie_recommendation", "hide_show_recommendation",
 		"unhide_movie_recommendation", "unhide_show_recommendation",
 	)

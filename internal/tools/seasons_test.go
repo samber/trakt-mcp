@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	toolSeasonEpisodes = "fetch_season_episodes"
+	toolSeasonEpisodes = "list_season_episodes"
 
 	argLanguage = "language"
 	argListType = "list_type"

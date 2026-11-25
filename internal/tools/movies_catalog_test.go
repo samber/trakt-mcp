@@ -14,7 +14,7 @@ const (
 	// routeMovieSlug is the Trakt path prefix of the test movie.
 	routeMovieSlug = "/movies/" + testMovieSlug
 
-	toolFetchBoxofficeMovies = "fetch_boxoffice_movies"
+	toolFetchBoxofficeMovies = "list_boxoffice"
 	toolListRelated          = "list_related"
 
 	pathFirstMovieTitle   = "items.0.movie.title"

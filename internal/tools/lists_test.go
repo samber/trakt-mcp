@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	toolFetchUserLists = "fetch_user_lists"
-	toolFetchList      = "fetch_list"
-	toolFetchListItems = "fetch_list_items"
+	toolFetchUserLists = "list_user_lists"
+	toolFetchList      = "get_list"
+	toolFetchListItems = "list_list_items"
 	toolListLists      = "list_lists"
 
 	// testOtherUser is a user slug other than the default "me".
@@ -158,7 +158,7 @@ func TestListRankingRefusesOtherKinds(t *testing.T) {
 func TestLegacyListRankingToolsRemoved(t *testing.T) {
 	t.Parallel()
 
-	requireToolsRemoved(t, "fetch_trending_lists", "fetch_popular_lists")
+	requireToolsRemoved(t, legacyToolPrefix+"trending_lists", legacyToolPrefix+"popular_lists")
 }
 
 func TestListToolArguments(t *testing.T) {

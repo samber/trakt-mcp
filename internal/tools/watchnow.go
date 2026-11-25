@@ -227,7 +227,7 @@ func flattenWatchSources(body []byte, country string) (Listing[WatchSource], err
 	return Listing[WatchSource]{Items: capList(items)}, nil
 }
 
-// WatchSourcesArgs are the arguments of fetch_watchnow_sources.
+// WatchSourcesArgs are the arguments of list_watchnow_sources.
 type WatchSourcesArgs struct {
 	Country string `json:"country,omitempty" jsonschema:"two-letter lower-case ISO 3166-1 country code such as fr or us; keeps only that country's providers"`
 }
@@ -241,7 +241,7 @@ func registerWatchNowTools(s *Server) {
 			"id is the movie's or the TV show's id.",
 	}, getWatchNow)
 	Register(s, Spec{
-		Name: "fetch_watchnow_sources", Title: "Fetch streaming providers", Access: Read,
+		Name: "list_watchnow_sources", Title: "List streaming providers", Access: Read,
 		Description: "List the streaming providers Trakt knows, with provider key, name, offer type and the number of titles linked. Use it to read the provider keys of where-to-watch results. Pass country (such as fr) to keep one country's providers: without it the list is very long and is cut at " + strconv.Itoa(maxReferenceItems) + " entries (this server's cap, not Trakt's).",
 	}, fetchWatchNowSources)
 }

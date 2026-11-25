@@ -30,13 +30,13 @@ const vipNotesNote = "Watchlist notes need Trakt VIP."
 
 // UpdateWatchlistItemArgs are the arguments of update_watchlist_item.
 type UpdateWatchlistItemArgs struct {
-	ListItemID int    `json:"list_item_id" jsonschema:"list_item_id of a fetch_watchlist item"`
+	ListItemID int    `json:"list_item_id" jsonschema:"list_item_id of a list_watchlist item"`
 	Notes      string `json:"notes"        jsonschema:"new note, at most 500 characters; empty clears it; Trakt VIP only"`
 }
 
 // ReorderWatchlistArgs are the arguments of reorder_watchlist.
 type ReorderWatchlistArgs struct {
-	Rank []int `json:"rank" jsonschema:"list_item_id values of fetch_watchlist items in the wanted order, first is rank 1; no duplicates"`
+	Rank []int `json:"rank" jsonschema:"list_item_id values of list_watchlist items in the wanted order, first is rank 1; no duplicates"`
 }
 
 // UpdateWatchlistItemResult confirms an updated watchlist item.
@@ -86,11 +86,11 @@ type traktReorderResult struct {
 func registerWatchlistEditTools(s *Server) {
 	Register(s, Spec{
 		Name: "update_watchlist_item", Title: "Update watchlist item", Access: Write,
-		Description: "Set or clear the note of one watchlist entry, addressed by the list_item_id that fetch_watchlist returns. " + vipNotesNote,
+		Description: "Set or clear the note of one watchlist entry, addressed by the list_item_id that list_watchlist returns. " + vipNotesNote,
 	}, updateWatchlistItem)
 	Register(s, Spec{
 		Name: "reorder_watchlist", Title: "Reorder watchlist", Access: Write,
-		Description: "Reorder the user's watchlist by sending list_item_id values from fetch_watchlist in the wanted order. " +
+		Description: "Reorder the user's watchlist by sending list_item_id values from list_watchlist in the wanted order. " +
 			"Returns how many entries moved and which ids Trakt skipped.",
 	}, reorderWatchlist)
 }

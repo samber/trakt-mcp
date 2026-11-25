@@ -33,7 +33,7 @@ type PersonSocialIDs struct {
 	Wikipedia string `json:"wikipedia,omitempty"`
 }
 
-// Person is the trimmed person of fetch_person_summary. Biography is
+// Person is the trimmed person of get_person. Biography is
 // third-party text. Fields Trakt did not send are omitted.
 type Person struct {
 	Name       string          `json:"name"`
@@ -117,7 +117,7 @@ type ListPersonCreditsArgs struct {
 // creditHandlers hold the handler of each type of credits.
 var creditHandlers = typeHandlers[PersonRef]{movie: widen(fetchPersonMovies), show: widen(fetchPersonShows)}
 
-// PersonSummaryArgs are the arguments of fetch_person_summary.
+// PersonSummaryArgs are the arguments of get_person.
 type PersonSummaryArgs struct {
 	PersonRef
 	Extended *bool `json:"extended,omitempty" jsonschema:"include biography, birthday, birthplace, homepage and social ids (default true)"`
@@ -310,7 +310,7 @@ func parsePersonShows(body []byte) (PersonShows, error) {
 
 func registerPeopleTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_person_summary", Title: "Fetch person summary", Access: Read,
+		Name: "get_person", Title: "Get person summary", Access: Read,
 		Description: "Get one person's details: name, ids, biography (cut), birthday, death, birthplace, homepage and social ids." + untrustedNote,
 	}, fetchPersonSummary)
 	Register(s, Spec{

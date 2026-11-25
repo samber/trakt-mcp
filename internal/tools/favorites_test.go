@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchFavorites      = "fetch_favorites"
+	toolFetchFavorites      = "list_favorites"
 	toolAddToFavorites      = "add_to_favorites"
 	toolUpdateFavorite      = "update_favorite"
 	toolReorderFavorites    = "reorder_favorites"
@@ -287,7 +287,7 @@ func TestFavoriteDescriptions(t *testing.T) {
 	}
 
 	if d := tools[toolFetchFavorites].Description; !strings.Contains(d, untrustedNote) {
-		t.Error("fetch_favorites description lacks untrustedNote")
+		t.Error("list_favorites description lacks untrustedNote")
 	}
 
 	if d := tools[toolAddToFavorites].Description; !strings.Contains(d, "420") {

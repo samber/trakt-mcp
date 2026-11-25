@@ -9,7 +9,7 @@ import (
 
 const (
 	toolGetWatchNow     = "get_watchnow"
-	toolWatchNowSources = "fetch_watchnow_sources"
+	toolWatchNowSources = "list_watchnow_sources"
 
 	testCountry      = "fr"
 	routeWatchNowSrc = "GET /watchnow/sources"

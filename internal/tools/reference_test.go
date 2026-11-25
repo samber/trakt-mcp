@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	toolFetchGenres         = "fetch_genres"
-	toolFetchCountries      = "fetch_countries"
-	toolFetchLanguages      = "fetch_languages"
-	toolFetchCertifications = "fetch_certifications"
-	toolFetchNetworks       = "fetch_networks"
+	toolFetchGenres         = "list_genres"
+	toolFetchCountries      = "list_countries"
+	toolFetchLanguages      = "list_languages"
+	toolFetchCertifications = "list_certifications"
+	toolFetchNetworks       = "list_networks"
 
 	routeGenres         = "GET /genres/movies"
 	routeCountries      = "GET /countries/movies"

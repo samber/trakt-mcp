@@ -47,7 +47,7 @@ const (
 	pathFirstTitle       = "items.0.title"
 	pathSecondGenres     = "items.1.genres"
 	pathFirstShowTitle   = "items.0.show.title"
-	toolFetchShowSeasons = "fetch_show_seasons"
+	toolFetchShowSeasons = "list_seasons"
 )
 
 // catalogCase is one catalog tool run against its fixture: the request it
