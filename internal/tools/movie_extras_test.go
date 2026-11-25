@@ -9,7 +9,6 @@ import (
 const (
 	toolMovieAliases  = "fetch_movie_aliases"
 	toolMovieStudios  = "fetch_movie_studios"
-	toolMovieLists    = "fetch_movie_lists"
 	toolMovieReleases = "fetch_movie_releases"
 
 	// Output paths of the first item, named to keep the literals unique.
@@ -18,7 +17,7 @@ const (
 	pathFirstIDTMDB   = "items.0.ids.tmdb"
 	pathFirstOverview = "items.0.overview"
 
-	// pathMovieListsAll is the default list type and sort of fetch_movie_lists.
+	// pathMovieListsAll is the default list type and sort of list_item_lists for a movie.
 	pathMovieListsAll = "/lists/all/popular"
 	// routeMovieReleasesFR is the Trakt route of the French releases.
 	routeMovieReleasesFR = "GET " + routeMovieSlug + "/releases/fr"
@@ -55,7 +54,7 @@ var movieExtraCases = []catalogCase{
 		absent: []string{"items.0.updated_at", "items.1.country", "items.1.ids.tmdb"},
 	},
 	{
-		tool: toolMovieLists, args: merge(movieArgs(nil), pagedArgs), route: movieRoute(pathMovieListsAll), fixture: "movie_lists", headers: pagedHeaders,
+		tool: toolListItemLists, args: merge(movieItem(testMovieSlug), pagedArgs), route: movieRoute(pathMovieListsAll), fixture: "movie_lists", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		want:      merge(sharedListsWant, map[string]any{pathPageCount: 3}),
 	},
@@ -79,7 +78,7 @@ func TestMovieExtraToolArguments(t *testing.T) {
 		{name: "movie id empty", tool: toolListWatching, args: movieItem(""), wantErr: invalid(fieldID)},
 		{name: "movie id person imdb", tool: toolMovieStudios, args: movieRef(personIMDb), wantErr: invalid(fieldMovieID)},
 		{name: "movie id too long", tool: toolMovieAliases, args: movieRef(strings.Repeat("a", 129)), wantErr: invalid(fieldMovieID)},
-		{name: "movie id upper case", tool: toolMovieLists, args: movieRef("The-Matrix"), wantErr: invalid(fieldMovieID)},
+		{name: "movie id upper case", tool: toolListItemLists, args: movieItem("The-Matrix"), wantErr: invalid(fieldID)},
 		{name: "movie id numeric", tool: toolGetStats, args: movieItem("481"), route: "GET /movies/481/stats", body: emptyObject},
 		{name: "language fr", tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
 		{name: "language omitted means all", tool: toolListTranslations, args: movieItem(testMovieSlug), route: movieRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
@@ -90,13 +89,13 @@ func TestMovieExtraToolArguments(t *testing.T) {
 		{name: "country upper case", tool: toolMovieReleases, args: releases("FR"), wantErr: invalid(fieldCountry)},
 		{name: "country empty", tool: toolMovieReleases, args: releases(""), wantErr: invalid(fieldCountry)},
 		{name: "country traversal", tool: toolMovieReleases, args: releases("../"), wantErr: invalid(fieldCountry)},
-		{name: "lists defaults", tool: toolMovieLists, args: movieArgs(nil), route: movieRoute(pathMovieListsAll), body: emptyList},
-		{name: "lists official by likes", tool: toolMovieLists, args: movieArgs(map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: movieRoute("/lists/official/likes"), body: emptyList},
-		{name: "lists type unknown", tool: toolMovieLists, args: movieArgs(map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
-		{name: "lists sort unknown", tool: toolMovieLists, args: movieArgs(map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
-		{name: "lists page 0", tool: toolMovieLists, args: movieArgs(map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
-		{name: "lists limit 0", tool: toolMovieLists, args: movieArgs(map[string]any{fieldLimit: 0}), route: movieRoute(pathMovieListsAll), body: emptyList},
-		{name: "lists limit 101", tool: toolMovieLists, args: movieArgs(map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: "lists defaults", tool: toolListItemLists, args: movieItem(testMovieSlug), route: movieRoute(pathMovieListsAll), body: emptyList},
+		{name: "lists official by likes", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: movieRoute("/lists/official/likes"), body: emptyList},
+		{name: "lists type unknown", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
+		{name: "lists sort unknown", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
+		{name: "lists page 0", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
+		{name: "lists limit 0", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{fieldLimit: 0}), route: movieRoute(pathMovieListsAll), body: emptyList},
+		{name: "lists limit 101", tool: toolListItemLists, args: merge(movieItem(testMovieSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
 	}
 
 	runArgCases(t, cases)
@@ -117,7 +116,7 @@ func TestMovieExtraTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolListTranslations, movieItem(testMovieSlug), movieRoute("/translations"), notAList)
 	runUpstreamFailures(t, toolMovieAliases, movieArgs(nil), movieRoute("/aliases"), notAList)
 	runUpstreamFailures(t, toolMovieStudios, movieArgs(nil), movieRoute("/studios"), notAList)
-	runUpstreamFailures(t, toolMovieLists, movieArgs(nil), movieRoute(pathMovieListsAll), notAList)
+	runUpstreamFailures(t, toolListItemLists, movieItem(testMovieSlug), movieRoute(pathMovieListsAll), notAList)
 	runUpstreamFailures(t, toolMovieReleases, movieArgs(map[string]any{fieldCountry: testCountry}), routeMovieReleasesFR, notAList)
 }
 
@@ -168,7 +167,7 @@ func TestMovieExtraTextIsBounded(t *testing.T) {
 
 	var lists Listing[TraktList]
 
-	h.ok(toolMovieLists, movieArgs(nil), &lists)
+	h.ok(toolListItemLists, movieItem(testMovieSlug), &lists)
 
 	if l := lists.Items[0]; len([]rune(l.Name)) > maxTitleRunes {
 		t.Errorf("list name has %d runes, want at most %d", len([]rune(l.Name)), maxTitleRunes)

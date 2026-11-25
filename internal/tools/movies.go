@@ -253,7 +253,7 @@ type SearchMoviesArgs struct {
 // Trakt returns the whole top list.
 type BoxOfficeArgs struct{}
 
-// MovieVideosArgs are the arguments of fetch_movie_videos.
+// MovieVideosArgs are the arguments of the movie handler of list_videos.
 type MovieVideosArgs struct {
 	MovieRef
 	EmbedMarkdown *bool `json:"embed_markdown,omitempty" jsonschema:"also return each video as a ready markdown link (default true)"`
@@ -297,17 +297,9 @@ func registerMovieCatalogTools(s *Server) {
 		Description: "Search movies by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchMovies)
 	Register(s, Spec{
-		Name: "fetch_movie_videos", Title: "Fetch movie videos", Access: Read,
-		Description: "List a movie's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
-	}, fetchMovieVideos)
-	Register(s, Spec{
 		Name: "fetch_related_movies", Title: "Fetch related movies", Access: Read,
 		Description: "List movies related to a movie." + pageNote,
 	}, fetchRelatedMovies)
-	Register(s, Spec{
-		Name: "fetch_movie_people", Title: "Fetch movie people", Access: Read,
-		Description: "Get a movie's cast (name, character) and crew grouped by department. Long credit lists are cut.",
-	}, fetchMoviePeople)
 }
 
 func fetchPopularMovies(ctx context.Context, c *trakt.UserClient, in MovieListArgs) (Listing[Movie], error) {

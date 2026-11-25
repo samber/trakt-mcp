@@ -14,6 +14,9 @@ const (
 	toolGetStats         = "get_stats"
 	toolListWatching     = "list_watching"
 	toolListTranslations = "list_translations"
+	toolListPeople       = "list_people"
+	toolListVideos       = "list_videos"
+	toolListItemLists    = "list_item_lists"
 )
 
 // itemInfoTools are the tools taking an ItemRef whose result is the same
@@ -105,15 +108,23 @@ func TestItemInfoToolsNotFound(t *testing.T) {
 	}
 }
 
-// TestLegacyItemInfoToolsRemoved requires the per-type tools to be gone:
-// not registered, so a client still calling them gets an unknown-tool error.
+// TestLegacyItemInfoToolsRemoved requires the per-type tools to be gone.
 func TestLegacyItemInfoToolsRemoved(t *testing.T) {
 	t.Parallel()
+
+	requireLegacyToolsRemoved(t, "ratings", "stats", "watching", "translations")
+}
+
+// requireLegacyToolsRemoved requires the fetch_<type>_<suffix> tools to be
+// gone: not registered, so a client still calling them gets an unknown-tool
+// error and no Trakt request is made.
+func requireLegacyToolsRemoved(t *testing.T, suffixes ...string) {
+	t.Helper()
 
 	var legacy []string
 
 	for _, typ := range []string{typeMovie, typeShow, typeSeason, typeEpisode} {
-		for _, suffix := range []string{"ratings", "stats", "watching", "translations"} {
+		for _, suffix := range suffixes {
 			legacy = append(legacy, "fetch_"+typ+"_"+suffix)
 		}
 	}

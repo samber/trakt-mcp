@@ -10,7 +10,6 @@ var catalog = []func(*Server){
 	registerCommentTools,
 	registerShowTools,
 	registerSeasonTools,
-	registerEpisodeTools,
 	registerHistoryTools,
 	registerWatchlistTools,
 	registerCollectionTools,
@@ -33,4 +32,5 @@ var catalog = []func(*Server){
 	registerUpNextTools,
 	registerSummaryTools,
 	registerItemInfoTools,
+	registerItemExtraTools,
 }

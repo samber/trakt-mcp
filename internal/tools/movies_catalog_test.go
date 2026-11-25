@@ -21,9 +21,7 @@ const (
 	toolFetchWatchedMovies     = "fetch_watched_movies"
 	toolFetchBoxofficeMovies   = "fetch_boxoffice_movies"
 	toolSearchMovies           = "search_movies"
-	toolFetchMovieVideos       = "fetch_movie_videos"
 	toolFetchRelatedMovies     = "fetch_related_movies"
-	toolFetchMoviePeople       = "fetch_movie_people"
 
 	pathFirstMovieTitle   = "items.0.movie.title"
 	pathFirstIDSlug       = "items.0.ids.slug"
@@ -89,7 +87,7 @@ var movieCases = []catalogCase{
 		want: map[string]any{keyRating: 8.7, keyVotes: 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
 	},
 	{
-		tool: toolFetchMovieVideos, args: movieRef(testMovieSlug), route: "GET " + routeMovieSlug + "/videos", fixture: "movie_videos",
+		tool: toolListVideos, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/videos", fixture: "movie_videos",
 		want: map[string]any{
 			pathFirstTitle: "Official [Trailer]", "items.0.type": "trailer", "items.0.site": "youtube",
 			"items.0.url": "https://www.youtube.com/watch?v=abc", "items.0.published_at": "1999-01-01T00:00:00.000Z",
@@ -104,7 +102,7 @@ var movieCases = []catalogCase{
 		want:      map[string]any{pathFirstTitle: testMovieTitle, pathSecondGenres: []any{}, pathPageCount: 3},
 	},
 	{
-		tool: toolFetchMoviePeople, args: movieRef(testMovieSlug), route: "GET " + routeMovieSlug + "/people", fixture: "movie_people", object: true,
+		tool: toolListPeople, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/people", fixture: "movie_people", object: true,
 		want: map[string]any{
 			"cast.0.name": "Keanu Reeves", pathFirstCastChar: "Neo", "cast.0.ids.slug": "keanu-reeves",
 			"crew.0.department": deptDirecting, "crew.0.members.0.name": "Lana Wachowski", "crew.0.members.0.job": jobDirector,
@@ -127,13 +125,13 @@ func TestMovieToolArguments(t *testing.T) {
 		{name: nameLimit101, tool: toolFetchPopularMovies, args: map[string]any{fieldLimit: 101}, wantErr: invalid(fieldLimit)},
 		{name: namePage0, tool: toolFetchAnticipatedMovies, args: map[string]any{fieldPage: 0}, wantErr: invalid(fieldPage)},
 		{name: "id slug", tool: toolGetRatings, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", body: emptyObject, wantPath: routeMovieSlug + "/ratings"},
-		{name: "id numeric", tool: toolFetchMovieVideos, args: movieRef("481"), route: "GET /movies/481/videos", body: emptyList, wantPath: "/movies/481/videos"},
-		{name: "id imdb title", tool: toolFetchMoviePeople, args: movieRef(testMovieIMDb), route: "GET /movies/tt0133093/people", body: emptyObject, wantPath: "/movies/tt0133093/people"},
-		{name: "id imdb person", tool: toolFetchMoviePeople, args: movieRef(personIMDb), wantErr: invalid(fieldMovieID)},
+		{name: "id numeric", tool: toolListVideos, args: movieItem("481"), route: "GET /movies/481/videos", body: emptyList, wantPath: "/movies/481/videos"},
+		{name: "id imdb title", tool: toolListPeople, args: movieItem(testMovieIMDb), route: "GET /movies/tt0133093/people", body: emptyObject, wantPath: "/movies/tt0133093/people"},
+		{name: "id imdb person", tool: toolListPeople, args: movieItem(personIMDb), wantErr: invalid(fieldID)},
 		{name: "id path traversal", tool: toolGetRatings, args: movieItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "id slash", tool: toolFetchRelatedMovies, args: movieRef("a/b"), wantErr: invalid(fieldMovieID)},
-		{name: "id query injection", tool: toolFetchMovieVideos, args: movieRef("x?extended=full"), wantErr: invalid(fieldMovieID)},
-		{name: "id empty", tool: toolFetchMoviePeople, args: movieRef(""), wantErr: invalid(fieldMovieID)},
+		{name: "id query injection", tool: toolListVideos, args: movieItem("x?extended=full"), wantErr: invalid(fieldID)},
+		{name: "id empty", tool: toolListPeople, args: movieItem(""), wantErr: invalid(fieldID)},
 		{name: "id upper case", tool: toolFetchRelatedMovies, args: movieRef("The-Matrix"), wantErr: invalid(fieldMovieID)},
 		{name: "query empty", tool: toolSearchMovies, args: map[string]any{fieldQuery: ""}, wantErr: invalid(fieldQuery)},
 		{name: "query blank", tool: toolSearchMovies, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},
@@ -177,7 +175,7 @@ func TestMovieVideosMarkdownOptOut(t *testing.T) {
 
 	var plain Listing[Video]
 
-	h.ok(toolFetchMovieVideos, merge(movieRef(testMovieSlug), map[string]any{argEmbedMarkdown: false}), &plain)
+	h.ok(toolListVideos, merge(movieItem(testMovieSlug), map[string]any{argEmbedMarkdown: false}), &plain)
 
 	if len(plain.Items) != 2 {
 		t.Fatalf("items = %+v, want 2 (the javascript: video is dropped)", plain.Items)

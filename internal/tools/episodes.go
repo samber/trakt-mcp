@@ -50,27 +50,12 @@ type EpisodeTranslationsArgs struct {
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// EpisodeListsArgs are the arguments of fetch_episode_lists.
+// EpisodeListsArgs are the arguments of the episode handler of list_item_lists.
 type EpisodeListsArgs struct {
 	PageArgs
 	EpisodeRef
 	ListType string `json:"list_type,omitempty" jsonschema:"all, personal, official, watchlist or favorites (default all)"`
 	Sort     string `json:"sort,omitempty"      jsonschema:"popular, likes, comments, items, added or updated (default popular)"`
-}
-
-func registerEpisodeTools(s *Server) {
-	Register(s, Spec{
-		Name: "fetch_episode_people", Title: "Fetch episode people", Access: Read,
-		Description: "Get a TV show episode's cast (name, character) and crew grouped by department. Long credit lists are cut.",
-	}, fetchEpisodePeople)
-	Register(s, Spec{
-		Name: "fetch_episode_videos", Title: "Fetch episode videos", Access: Read,
-		Description: "List a TV show episode's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
-	}, fetchEpisodeVideos)
-	Register(s, Spec{
-		Name: "fetch_episode_lists", Title: "Fetch lists with an episode", Access: Read,
-		Description: "List the Trakt lists that contain a TV show episode, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchEpisodeLists)
 }
 
 func fetchEpisodeSummary(ctx context.Context, c *trakt.UserClient, in EpisodeRef) (Episode, error) {

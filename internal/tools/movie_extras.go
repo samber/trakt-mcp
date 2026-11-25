@@ -33,7 +33,7 @@ type MovieTranslationsArgs struct {
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// MovieListsArgs are the arguments of fetch_movie_lists.
+// MovieListsArgs are the arguments of the movie handler of list_item_lists.
 type MovieListsArgs struct {
 	PageArgs
 	MovieRef
@@ -130,10 +130,6 @@ func registerMovieExtraTools(s *Server) {
 		Name: "fetch_movie_studios", Title: "Fetch movie studios", Access: Read,
 		Description: "List the production studios of a movie with country and ids.",
 	}, fetchMovieStudios)
-	Register(s, Spec{
-		Name: "fetch_movie_lists", Title: "Fetch lists with a movie", Access: Read,
-		Description: "List the Trakt lists that contain a movie, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchMovieLists)
 	Register(s, Spec{
 		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
 		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note." + untrustedNote,

@@ -9,9 +9,6 @@ import (
 
 const (
 	toolSeasonEpisodes = "fetch_season_episodes"
-	toolSeasonPeople   = "fetch_season_people"
-	toolSeasonVideos   = "fetch_season_videos"
-	toolSeasonLists    = "fetch_season_lists"
 
 	argLanguage = "language"
 	argListType = "list_type"
@@ -95,17 +92,17 @@ var seasonCases = []catalogCase{
 	{tool: toolGetRatings, args: seasonItem(testShowSlug, 1), route: seasonRoute("/ratings"), fixture: "season_ratings", object: true, want: sharedRatingsWant},
 	{tool: toolGetStats, args: seasonItem(testShowSlug, 1), route: seasonRoute("/stats"), fixture: "season_stats", object: true, want: sharedStatsWant, absent: []string{"extra"}},
 	{
-		tool: toolSeasonPeople, args: seasonRef(nil), route: seasonRoute("/people"), fixture: "season_people", object: true,
+		tool: toolListPeople, args: seasonItem(testShowSlug, 1), route: seasonRoute("/people"), fixture: "season_people", object: true,
 		want: sharedPeopleWant, absent: []string{"guest_stars"},
 	},
-	{tool: toolSeasonVideos, args: seasonRef(nil), route: seasonRoute("/videos"), fixture: "season_videos", want: sharedVideosWant},
+	{tool: toolListVideos, args: seasonItem(testShowSlug, 1), route: seasonRoute("/videos"), fixture: "season_videos", want: sharedVideosWant},
 	{tool: toolListWatching, args: seasonItem(testShowSlug, 1), route: seasonRoute("/watching"), fixture: "season_watching", want: sharedWatchingWant, absent: []string{"users.1"}},
 	{
 		tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), fixture: "season_translations",
 		wantQuery: map[string]string{argLanguage: "fr"}, want: sharedTranslationsWant, absent: []string{"items.0.tagline", pathSecondTitle},
 	},
 	{
-		tool: toolSeasonLists, args: merge(seasonRef(nil), pagedArgs), route: seasonRoute(testSeasonPathTail), fixture: "season_lists", headers: pagedHeaders,
+		tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), pagedArgs), route: seasonRoute(testSeasonPathTail), fixture: "season_lists", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		want:      merge(sharedListsWant, map[string]any{pathPageCount: 3}),
 	},
@@ -123,8 +120,8 @@ func TestSeasonToolArguments(t *testing.T) {
 		{name: "season 999", tool: toolGetStats, args: seasonItem(testShowSlug, 999), route: "GET " + seasonBaseFor(999) + "/stats", body: emptyObject},
 		{name: "season 1000", tool: toolGetStats, args: seasonItem(testShowSlug, 1000), wantErr: invalid(fieldSeason)},
 		{name: "season 1000 episodes", tool: toolSeasonEpisodes, args: merge(seasonRef(nil), map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
-		{name: "show id imdb", tool: toolSeasonVideos, args: merge(seasonRef(nil), map[string]any{fieldShowID: testShowIMDb}), route: "GET /shows/tt0903747/seasons/1/videos", body: emptyList},
-		{name: "show id numeric", tool: toolSeasonPeople, args: merge(seasonRef(nil), map[string]any{fieldShowID: "1388"}), route: "GET /shows/1388/seasons/1/people", body: emptyObject},
+		{name: "show id imdb", tool: toolListVideos, args: merge(seasonItem(testShowSlug, 1), map[string]any{fieldID: testShowIMDb}), route: "GET /shows/tt0903747/seasons/1/videos", body: emptyList},
+		{name: "show id numeric", tool: toolListPeople, args: merge(seasonItem(testShowSlug, 1), map[string]any{fieldID: "1388"}), route: "GET /shows/1388/seasons/1/people", body: emptyObject},
 		{name: "show id traversal", tool: toolGetSummary, args: seasonItem(traversalID, 1), wantErr: invalid(fieldID)},
 		{name: "show id person imdb", tool: toolGetRatings, args: seasonItem(personIMDb, 1), wantErr: invalid(fieldID)},
 		{name: "show id empty", tool: toolListWatching, args: seasonItem("", 1), wantErr: invalid(fieldID)},
@@ -134,17 +131,17 @@ func TestSeasonToolArguments(t *testing.T) {
 		{name: "language three letters", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fra"}), wantErr: invalid(fieldLanguage)},
 		{name: "language one letter", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "f"}), wantErr: invalid(fieldLanguage)},
 		{name: "language injection", tool: toolListTranslations, args: merge(seasonItem(testShowSlug, 1), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
-		{name: "lists defaults", tool: toolSeasonLists, args: seasonRef(nil), route: seasonRoute(testSeasonPathTail), body: emptyList},
-		{name: "lists official by likes", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: seasonRoute("/lists/official/likes"), body: emptyList},
-		{name: "lists watchlist by updated", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeWatchlist, argSort: listSortUpdated}), route: seasonRoute("/lists/watchlist/updated"), body: emptyList},
-		{name: "lists favorites by items", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeFavorites, argSort: listSortItems}), route: seasonRoute("/lists/favorites/items"), body: emptyList},
-		{name: "lists personal by added", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypePersonal, argSort: listSortAdded}), route: seasonRoute("/lists/personal/added"), body: emptyList},
-		{name: "lists all by comments", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: listTypeAll, argSort: listSortComments}), route: seasonRoute("/lists/all/comments"), body: emptyList},
-		{name: "lists type unknown", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: "watchlists"}), wantErr: invalid(fieldListType)},
-		{name: "lists type traversal", tool: toolSeasonLists, args: seasonRef(map[string]any{argListType: traversalID}), wantErr: invalid(fieldListType)},
-		{name: "lists sort unknown", tool: toolSeasonLists, args: seasonRef(map[string]any{argSort: "newest"}), wantErr: invalid(fieldSort)},
-		{name: "lists sort upper case", tool: toolSeasonLists, args: seasonRef(map[string]any{argSort: "Popular"}), wantErr: invalid(fieldSort)},
-		{name: "lists limit 101", tool: toolSeasonLists, args: seasonRef(map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: "lists defaults", tool: toolListItemLists, args: seasonItem(testShowSlug, 1), route: seasonRoute(testSeasonPathTail), body: emptyList},
+		{name: "lists official by likes", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: seasonRoute("/lists/official/likes"), body: emptyList},
+		{name: "lists watchlist by updated", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: listTypeWatchlist, argSort: listSortUpdated}), route: seasonRoute("/lists/watchlist/updated"), body: emptyList},
+		{name: "lists favorites by items", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: listTypeFavorites, argSort: listSortItems}), route: seasonRoute("/lists/favorites/items"), body: emptyList},
+		{name: "lists personal by added", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: listTypePersonal, argSort: listSortAdded}), route: seasonRoute("/lists/personal/added"), body: emptyList},
+		{name: "lists all by comments", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: listTypeAll, argSort: listSortComments}), route: seasonRoute("/lists/all/comments"), body: emptyList},
+		{name: "lists type unknown", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: "watchlists"}), wantErr: invalid(fieldListType)},
+		{name: "lists type traversal", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argListType: traversalID}), wantErr: invalid(fieldListType)},
+		{name: "lists sort unknown", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argSort: "newest"}), wantErr: invalid(fieldSort)},
+		{name: "lists sort upper case", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{argSort: "Popular"}), wantErr: invalid(fieldSort)},
+		{name: "lists limit 101", tool: toolListItemLists, args: merge(seasonItem(testShowSlug, 1), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
 	}
 
 	runArgCases(t, cases)

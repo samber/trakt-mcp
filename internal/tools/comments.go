@@ -139,25 +139,25 @@ type CommentOpts struct {
 	ShowSpoilers bool   `json:"show_spoilers,omitempty" jsonschema:"also return comments flagged as spoilers (default false: they are dropped)"`
 }
 
-// MovieCommentsArgs are the arguments of fetch_movie_comments.
+// MovieCommentsArgs are the arguments of the movie handler of list_comments.
 type MovieCommentsArgs struct {
 	MovieRef
 	CommentOpts
 }
 
-// ShowCommentsArgs are the arguments of fetch_show_comments.
+// ShowCommentsArgs are the arguments of the show handler of list_comments.
 type ShowCommentsArgs struct {
 	ShowRef
 	CommentOpts
 }
 
-// SeasonCommentsArgs are the arguments of fetch_season_comments.
+// SeasonCommentsArgs are the arguments of the season handler of list_comments.
 type SeasonCommentsArgs struct {
 	SeasonRef
 	CommentOpts
 }
 
-// EpisodeCommentsArgs are the arguments of fetch_episode_comments.
+// EpisodeCommentsArgs are the arguments of the episode handler of list_comments.
 type EpisodeCommentsArgs struct {
 	EpisodeRef
 	CommentOpts
@@ -192,24 +192,6 @@ type CommentRepliesArgs struct {
 }
 
 func registerCommentTools(s *Server) {
-	const listNote = " Takes sort, limit and page."
-
-	Register(s, Spec{
-		Name: "fetch_movie_comments", Title: "Fetch movie comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a movie, with likes, replies, rating, review flag and author." + listNote + commentNote,
-	}, fetchMovieComments)
-	Register(s, Spec{
-		Name: "fetch_show_comments", Title: "Fetch show comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a TV show, with likes, replies, rating, review flag and author." + listNote + commentNote,
-	}, fetchShowComments)
-	Register(s, Spec{
-		Name: "fetch_season_comments", Title: "Fetch season comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a TV show season, with likes, replies, rating, review flag and author." + listNote + commentNote,
-	}, fetchSeasonComments)
-	Register(s, Spec{
-		Name: "fetch_episode_comments", Title: "Fetch episode comments", Access: Read,
-		Description: "List the comments Trakt users wrote about a TV show episode, with likes, replies, rating, review flag and author." + listNote + commentNote,
-	}, fetchEpisodeComments)
 	Register(s, Spec{
 		Name: "fetch_comment", Title: "Fetch comment", Access: Read,
 		Description: "Get one comment by its numeric id. The text of a spoiler comment is withheld (empty untrusted_text, withheld true) unless show_spoilers is true." + untrustedCommentNote,

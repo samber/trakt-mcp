@@ -9,7 +9,6 @@ import (
 const (
 	toolShowAliases        = "fetch_show_aliases"
 	toolShowStudios        = "fetch_show_studios"
-	toolShowLists          = "fetch_show_lists"
 	toolShowNextEpisode    = "fetch_show_next_episode"
 	toolShowLastEpisode    = "fetch_show_last_episode"
 	toolShowCertifications = "fetch_show_certifications"
@@ -29,7 +28,7 @@ const (
 	languageThreeChars = "fra"
 	pathSecondCountry  = "items.1.country"
 
-	// pathShowListsAll is the default list type and sort of fetch_show_lists.
+	// pathShowListsAll is the default list type and sort of list_item_lists for a show.
 	pathShowListsAll = "/lists/all/popular"
 )
 
@@ -67,7 +66,7 @@ var showExtraCases = []catalogCase{
 		absent: []string{pathFirstUpdatedAt, pathSecondCountry, "items.1.ids.tmdb"},
 	},
 	{
-		tool: toolShowLists, args: merge(showShow(testShowSlug), pagedArgs), route: showExtraRoute(pathShowListsAll), fixture: "show_lists", headers: pagedHeaders,
+		tool: toolListItemLists, args: merge(showItem(testShowSlug), pagedArgs), route: showExtraRoute(pathShowListsAll), fixture: "show_lists", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		want:      merge(sharedListsWant, map[string]any{pathPageCount: 3}),
 	},
@@ -96,7 +95,7 @@ func TestShowExtraToolArguments(t *testing.T) {
 		{name: "show id empty", tool: toolListWatching, args: showItem(""), wantErr: invalid(fieldID)},
 		{name: "show extra show id person imdb", tool: toolShowStudios, args: withShow(personIMDb), wantErr: invalid(fieldShowID)},
 		{name: "show id too long", tool: toolShowAliases, args: withShow(strings.Repeat("a", 129)), wantErr: invalid(fieldShowID)},
-		{name: "show id upper case", tool: toolShowLists, args: withShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
+		{name: "show id upper case", tool: toolListItemLists, args: showItem("Breaking-Bad"), wantErr: invalid(fieldID)},
 		{name: "show id empty next episode", tool: toolShowNextEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
 		{name: "show id empty last episode", tool: toolShowLastEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
 		{name: "show id empty certifications", tool: toolShowCertifications, args: withShow(""), wantErr: invalid(fieldShowID)},
@@ -105,12 +104,12 @@ func TestShowExtraToolArguments(t *testing.T) {
 		{name: "show extra language omitted means all", tool: toolListTranslations, args: showItem(testShowSlug), route: showExtraRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
 		{name: "show extra language three letters", tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: languageThreeChars}), wantErr: invalid(fieldLanguage)},
 		{name: "language injection", tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
-		{name: "show extra lists defaults", tool: toolShowLists, args: showShow(testShowSlug), route: showExtraRoute(pathShowListsAll), body: emptyList},
-		{name: "show extra lists official by likes", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: showExtraRoute("/lists/official/likes"), body: emptyList},
-		{name: "show extra lists type unknown", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
-		{name: "show extra lists sort unknown", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
-		{name: "lists page 0", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
-		{name: "lists limit 101", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: "show extra lists defaults", tool: toolListItemLists, args: showItem(testShowSlug), route: showExtraRoute(pathShowListsAll), body: emptyList},
+		{name: "show extra lists official by likes", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: showExtraRoute("/lists/official/likes"), body: emptyList},
+		{name: "show extra lists type unknown", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
+		{name: "show extra lists sort unknown", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
+		{name: "lists page 0", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
+		{name: "lists limit 101", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
 	}
 
 	runArgCases(t, cases)
@@ -205,7 +204,7 @@ func TestShowExtraTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolListTranslations, showItem(testShowSlug), showExtraRoute("/translations"), notAList)
 	runUpstreamFailures(t, toolShowAliases, args, showExtraRoute("/aliases"), notAList)
 	runUpstreamFailures(t, toolShowStudios, args, showExtraRoute("/studios"), notAList)
-	runUpstreamFailures(t, toolShowLists, args, showExtraRoute(pathShowListsAll), notAList)
+	runUpstreamFailures(t, toolListItemLists, showItem(testShowSlug), showExtraRoute(pathShowListsAll), notAList)
 	runUpstreamFailures(t, toolShowNextEpisode, args, showExtraRoute("/next_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowLastEpisode, args, showExtraRoute("/last_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowCertifications, args, showExtraRoute("/certifications"), notAList)
@@ -221,7 +220,7 @@ func TestShowListOwnerIsBounded(t *testing.T) {
 
 	var lists Listing[TraktList]
 
-	h.ok(toolShowLists, showShow(testShowSlug), &lists)
+	h.ok(toolListItemLists, showItem(testShowSlug), &lists)
 
 	if o := lists.Items[0].Owner; len([]rune(o)) > maxTitleRunes {
 		t.Errorf("owner has %d runes, want at most %d", len([]rune(o)), maxTitleRunes)
@@ -273,7 +272,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var lists Listing[TraktList]
 
-	h.ok(toolShowLists, showShow(testShowSlug), &lists)
+	h.ok(toolListItemLists, showItem(testShowSlug), &lists)
 
 	if l := lists.Items[0]; len([]rune(l.Name)) > maxTitleRunes {
 		t.Errorf("list name has %d runes, want at most %d", len([]rune(l.Name)), maxTitleRunes)

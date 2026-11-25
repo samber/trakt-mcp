@@ -306,7 +306,7 @@ type SeasonTranslationsArgs struct {
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// SeasonListsArgs are the arguments of fetch_season_lists.
+// SeasonListsArgs are the arguments of the season handler of list_item_lists.
 type SeasonListsArgs struct {
 	PageArgs
 	SeasonRef
@@ -319,18 +319,6 @@ func registerSeasonTools(s *Server) {
 		Name: "fetch_season_episodes", Title: "Fetch season episodes", Access: Read,
 		Description: "List the episodes of a TV show season with number, title, overview, rating, runtime and air date.",
 	}, fetchSeasonEpisodes)
-	Register(s, Spec{
-		Name: "fetch_season_people", Title: "Fetch season people", Access: Read,
-		Description: "Get a TV show season's cast (name, character) and crew grouped by department. Long credit lists are cut.",
-	}, fetchSeasonPeople)
-	Register(s, Spec{
-		Name: "fetch_season_videos", Title: "Fetch season videos", Access: Read,
-		Description: "List a TV show season's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
-	}, fetchSeasonVideos)
-	Register(s, Spec{
-		Name: "fetch_season_lists", Title: "Fetch lists with a season", Access: Read,
-		Description: "List the Trakt lists that contain a TV show season, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchSeasonLists)
 }
 
 func fetchSeasonInfo(ctx context.Context, c *trakt.UserClient, in SeasonRef) (Season, error) {

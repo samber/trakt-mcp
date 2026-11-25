@@ -615,7 +615,7 @@ type ShowSummaryArgs struct {
 	Extended *bool `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification, genres, network and status (default true)"`
 }
 
-// VideosArgs are the arguments of fetch_show_videos.
+// VideosArgs are the arguments of the show handler of list_videos.
 type VideosArgs struct {
 	ShowRef
 	EmbedMarkdown *bool `json:"embed_markdown,omitempty" jsonschema:"also return each video as a ready markdown link (default true)"`
@@ -627,7 +627,7 @@ type RelatedShowsArgs struct {
 	ShowRef
 }
 
-// ShowPeopleArgs are the arguments of fetch_show_people.
+// ShowPeopleArgs are the arguments of the show handler of list_people.
 type ShowPeopleArgs struct {
 	ShowRef
 	IncludeGuestStars bool `json:"include_guest_stars,omitempty" jsonschema:"also return guest stars (default false)"`
@@ -665,10 +665,6 @@ func registerShowTools(s *Server) {
 		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchShows)
 	Register(s, Spec{
-		Name: "fetch_show_videos", Title: "Fetch show videos", Access: Read,
-		Description: "List a TV show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
-	}, fetchShowVideos)
-	Register(s, Spec{
 		Name: "fetch_related_shows", Title: "Fetch related shows", Access: Read,
 		Description: "List TV shows related to this one." + pageNote,
 	}, fetchRelatedShows)
@@ -676,10 +672,6 @@ func registerShowTools(s *Server) {
 		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,
 		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",
 	}, fetchShowSeasons)
-	Register(s, Spec{
-		Name: "fetch_show_people", Title: "Fetch show people", Access: Read,
-		Description: "Get a TV show's cast (name, character) and crew grouped by department, optionally with guest stars. Long credit lists are cut.",
-	}, fetchShowPeople)
 }
 
 // Handlers.

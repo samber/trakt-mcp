@@ -53,9 +53,7 @@ const (
 	toolFetchPopularShows     = "fetch_popular_shows"
 	toolFetchRelatedShows     = "fetch_related_shows"
 	toolSearchShows           = "search_shows"
-	toolFetchShowPeople       = "fetch_show_people"
 	toolFetchShowSeasons      = "fetch_show_seasons"
-	toolFetchShowVideos       = "fetch_show_videos"
 	toolFetchTrendingShows    = "fetch_trending_shows"
 	toolFetchWatchedShows     = "fetch_watched_shows"
 )
@@ -238,7 +236,7 @@ var showCases = []catalogCase{
 		}),
 	},
 	{
-		tool: toolFetchShowVideos, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/videos", fixture: "show_videos",
+		tool: toolListVideos, args: showItem(testShowSlug), route: "GET /shows/breaking-bad/videos", fixture: "show_videos",
 		want: map[string]any{
 			pathFirstTitle: "Official [Trailer]", "items.0.type": "trailer", "items.0.site": "youtube",
 			"items.0.url": "https://www.youtube.com/watch?v=abc", "items.0.published_at": "2008-01-01T00:00:00.000Z",
@@ -259,7 +257,7 @@ var showCases = []catalogCase{
 		},
 	},
 	{
-		tool: toolFetchShowPeople, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/people", fixture: "show_people", object: true,
+		tool: toolListPeople, args: showItem(testShowSlug), route: "GET /shows/breaking-bad/people", fixture: "show_people", object: true,
 		want: map[string]any{
 			"cast.0.name": "Bryan Cranston", "cast.0.character": "Walter White", "cast.0.episode_count": 62, "cast.0.ids.slug": "bryan-cranston",
 			"cast.1.name": "Aaron Paul", "crew.0.department": "directing", "crew.0.members.0.name": "Vince Gilligan",
@@ -480,7 +478,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "id person imdb", tool: toolGetSummary, args: showItem(personIMDb), wantErr: invalid(fieldID)},
 		{name: "id path traversal", tool: toolGetSummary, args: showItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "id slash", tool: toolGetRatings, args: showItem("a/b"), wantErr: invalid(fieldID)},
-		{name: "id query injection", tool: toolFetchShowPeople, args: showShow("x?extended=full"), wantErr: invalid(fieldShowID)},
+		{name: "id query injection", tool: toolListPeople, args: showItem("x?extended=full"), wantErr: invalid(fieldID)},
 		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},
 		{name: "id upper case", tool: toolFetchRelatedShows, args: showShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
 		{name: "summary not extended", tool: toolGetSummary, args: merge(showItem("1388"), map[string]any{queryExtended: false}), route: "GET /shows/1388", body: emptyObject, noQuery: []string{queryExtended}},
@@ -488,7 +486,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "query blank", tool: toolSearchShows, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},
 		{name: "query 200 runes", tool: toolSearchShows, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes)}, route: "GET /search/show", body: emptyList},
 		{name: "query 201 runes", tool: toolSearchShows, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes+1)}, wantErr: invalid(fieldQuery)},
-		{name: "people guest stars on", tool: toolFetchShowPeople, args: merge(showShow("1388"), map[string]any{argGuestStars: true}), route: "GET /shows/1388/people", body: emptyObject},
+		{name: "people guest stars on", tool: toolListPeople, args: merge(showItem("1388"), map[string]any{argGuestStars: true}), route: "GET /shows/1388/people", body: emptyObject},
 	}
 
 	runArgCases(t, cases)
@@ -532,7 +530,7 @@ func TestShowVideosMarkdown(t *testing.T) {
 
 	var plain Listing[Video]
 
-	h.ok(toolFetchShowVideos, merge(showShow(testShowSlug), map[string]any{argEmbedMarkdown: false}), &plain)
+	h.ok(toolListVideos, merge(showItem(testShowSlug), map[string]any{argEmbedMarkdown: false}), &plain)
 
 	if len(plain.Items) != 2 {
 		t.Fatalf("items = %+v, want 2 (the javascript: video is dropped)", plain.Items)
@@ -577,13 +575,13 @@ func TestShowPeopleGuestStars(t *testing.T) {
 
 	var without, with map[string]json.RawMessage
 
-	h.ok(toolFetchShowPeople, showShow(testShowSlug), &without)
+	h.ok(toolListPeople, showItem(testShowSlug), &without)
 
 	if _, ok := without["guest_stars"]; ok {
 		t.Errorf("guest_stars present without include_guest_stars: %s", without["guest_stars"])
 	}
 
-	h.ok(toolFetchShowPeople, merge(showShow(testShowSlug), map[string]any{argGuestStars: true}), &with)
+	h.ok(toolListPeople, merge(showItem(testShowSlug), map[string]any{argGuestStars: true}), &with)
 
 	if got := string(with["guest_stars"]); !strings.Contains(got, "Giancarlo Esposito") || !strings.Contains(got, "Gus Fring") {
 		t.Errorf("guest_stars = %s", got)
@@ -616,7 +614,7 @@ func TestShowPeopleAreBounded(t *testing.T) {
 
 	var out People
 
-	h.ok(toolFetchShowPeople, merge(showShow(testShowSlug), map[string]any{argGuestStars: true}), &out)
+	h.ok(toolListPeople, merge(showItem(testShowSlug), map[string]any{argGuestStars: true}), &out)
 
 	if len(out.Cast) != maxCastMembers || len(out.Crew[0].Members) != maxCrewPerDepartment || out.GuestStars == nil || len(*out.GuestStars) != maxGuestStars {
 		t.Errorf("cast %d, crew %d, guests %v, want %d, %d, %d", len(out.Cast), len(out.Crew[0].Members), out.GuestStars, maxCastMembers, maxCrewPerDepartment, maxGuestStars)

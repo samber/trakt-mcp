@@ -43,7 +43,7 @@ go generate ./internal/trakt/api && git diff --exit-code internal/trakt   # gene
 
 - Run `make generate` after editing `internal/trakt/endpoints.txt` or the overlay; commit `openapi.filtered.json` and `api/api.gen.go` together. `make spec-fetch` refreshes the cached upstream spec in `$TMPDIR`.
 - Run `make plugin-openai` whenever anything in `plugin/openai/` changes, or a tool name, title or description changes. Bump `version` in `plugin/openai/plugin.json` first: OpenAI rejects a changed package with an old version.
-- Change the tool count in one test only (`TestRegistryHas128Tools`, renamed with the count); keep README, plugin and site lists in sync.
+- Change the tool count in one test only (`TestRegistryHas116Tools`, renamed with the count); keep README, plugin and site lists in sync.
 
 Other `make` targets: `build`, `coverage` (writes `cover.out`, `cover.html`), `bench`, `watch-test`, `watch-bench`, `tools`, `lint-fix`, `audit`, `outdated`, `weight`. `generate`, `spec-fetch` and `plugin-openai` are described above.
 

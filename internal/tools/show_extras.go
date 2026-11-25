@@ -15,7 +15,7 @@ type ShowTranslationsArgs struct {
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// ShowListsArgs are the arguments of fetch_show_lists.
+// ShowListsArgs are the arguments of the show handler of list_item_lists.
 type ShowListsArgs struct {
 	PageArgs
 	ShowRef
@@ -91,10 +91,6 @@ func registerShowExtraTools(s *Server) {
 		Name: "fetch_show_studios", Title: "Fetch show studios", Access: Read,
 		Description: "List the production studios of a TV show with country and ids.",
 	}, fetchShowStudios)
-	Register(s, Spec{
-		Name: "fetch_show_lists", Title: "Fetch lists with a show", Access: Read,
-		Description: "List the Trakt lists that contain a TV show, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchShowLists)
 	Register(s, Spec{
 		Name: "fetch_show_next_episode", Title: "Fetch show next episode", Access: Read,
 		Description: "Get the next episode to air of a TV series. Returns an empty object when none is scheduled.",

@@ -13,12 +13,9 @@ import (
 )
 
 const (
-	toolFetchMovieComments   = "fetch_movie_comments"
-	toolFetchShowComments    = "fetch_show_comments"
-	toolFetchSeasonComments  = "fetch_season_comments"
-	toolFetchEpisodeComments = "fetch_episode_comments"
-	toolFetchComment         = "fetch_comment"
-	toolFetchCommentReplies  = "fetch_comment_replies"
+	toolListComments        = "list_comments"
+	toolFetchComment        = "fetch_comment"
+	toolFetchCommentReplies = "fetch_comment_replies"
 
 	argCommentID     = "comment_id"
 	argShowSpoilers  = "show_spoilers"
@@ -34,14 +31,13 @@ const (
 	keyRatingField    = ".rating"
 )
 
-// newToolNames are the 20 tools added with the movie, people and comment
-// groups.
+// newToolNames are the tools of the movie, people and comment groups.
 var newToolNames = []string{
 	toolFetchPopularMovies, toolFetchAnticipatedMovies, toolFetchFavoritedMovies, toolFetchPlayedMovies, toolFetchWatchedMovies,
-	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolFetchMovieVideos, toolFetchRelatedMovies, toolFetchMoviePeople,
-	toolFetchMovieComments,
+	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolListVideos, toolFetchRelatedMovies, toolListPeople,
+	toolListComments,
 	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows,
-	toolFetchShowComments, toolFetchSeasonComments, toolFetchEpisodeComments, toolFetchComment, toolFetchCommentReplies,
+	toolFetchComment, toolFetchCommentReplies,
 }
 
 func seasonArgs(season int) map[string]any {
@@ -73,10 +69,10 @@ func commentListCase(tool string, args map[string]any, route, fixtureName string
 }
 
 var commentCases = []catalogCase{
-	commentListCase(toolFetchMovieComments, merge(movieRef(testMovieSlug), pagedArgs), "GET "+routeMovieSlug+"/comments/newest", "movie_comments"),
-	commentListCase(toolFetchShowComments, merge(showShow(testShowSlug), pagedArgs), "GET "+routeShowSlug+routeCommentsEnd, "show_comments"),
-	commentListCase(toolFetchSeasonComments, merge(seasonArgs(1), pagedArgs), "GET "+routeShowSlug+"/seasons/1"+routeCommentsEnd, "season_comments"),
-	commentListCase(toolFetchEpisodeComments, merge(episodeArgs(1, 2), pagedArgs), "GET "+routeShowSlug+"/seasons/1/episodes/2"+routeCommentsEnd, "episode_comments"),
+	commentListCase(toolListComments, merge(movieItem(testMovieSlug), pagedArgs), "GET "+routeMovieSlug+"/comments/newest", "movie_comments"),
+	commentListCase(toolListComments, merge(showItem(testShowSlug), pagedArgs), "GET "+routeShowSlug+routeCommentsEnd, "show_comments"),
+	commentListCase(toolListComments, merge(seasonItem(testShowSlug, 1), pagedArgs), "GET "+routeShowSlug+"/seasons/1"+routeCommentsEnd, "season_comments"),
+	commentListCase(toolListComments, merge(episodeItem(testShowSlug, 1, 2), pagedArgs), "GET "+routeShowSlug+"/seasons/1/episodes/2"+routeCommentsEnd, "episode_comments"),
 	{
 		tool: toolFetchComment, args: map[string]any{argCommentID: testCommentID}, route: "GET /comments/" + testCommentID, fixture: "comment_summary", object: true,
 		want: map[string]any{
@@ -295,7 +291,7 @@ func TestCommentTextTruncatedAndInUntrustedField(t *testing.T) {
 
 			var out Listing[Comment]
 
-			h.ok(toolFetchShowComments, showShow(testShowSlug), &out)
+			h.ok(toolListComments, showItem(testShowSlug), &out)
 
 			if len(out.Items) != 1 {
 				t.Fatalf("items = %d, want 1", len(out.Items))
@@ -326,7 +322,7 @@ func TestCommentTextOnlyInUntrustedField(t *testing.T) {
 		Items []map[string]any `json:"items"`
 	}
 
-	res := h.ok(toolFetchShowComments, showShow(testShowSlug), &wrapper)
+	res := h.ok(toolListComments, showItem(testShowSlug), &wrapper)
 	out = wrapper.Items
 
 	for key, v := range out[0] {
@@ -351,7 +347,7 @@ func TestCommentErrorsNeverEchoTraktText(t *testing.T) {
 		h := newHarness(t)
 		h.trakt.respond("GET "+routeShowSlug+routeCommentsEnd, status, `{"error":"`+injectionText+`"}`, nil)
 
-		res := h.call(toolFetchShowComments, showShow(testShowSlug))
+		res := h.call(toolListComments, showItem(testShowSlug))
 		if !res.IsError || strings.Contains(resultText(res), "Ignore") || strings.Contains(h.logs.String(), "Ignore") {
 			t.Errorf("status %d: result = %v %q, logs hold the text = %v", status, res.IsError, resultText(res), strings.Contains(h.logs.String(), "Ignore"))
 		}
@@ -370,7 +366,7 @@ func TestCommentUserHasOnlyUsernameAndSlug(t *testing.T) {
 		} `json:"items"`
 	}
 
-	res := h.ok(toolFetchShowComments, showShow(testShowSlug), &out)
+	res := h.ok(toolListComments, showItem(testShowSlug), &out)
 
 	for _, item := range out.Items {
 		keys := make([]string, 0, len(item.User))
@@ -398,7 +394,7 @@ func TestCommentIsReviewFlag(t *testing.T) {
 
 	var out Listing[Comment]
 
-	h.ok(toolFetchShowComments, showShow(testShowSlug), &out)
+	h.ok(toolListComments, showItem(testShowSlug), &out)
 
 	if len(out.Items) != 2 || out.Items[0].IsReview || !out.Items[1].IsReview {
 		t.Errorf("is_review flags = %+v, want [false true]", out.Items)
@@ -427,19 +423,19 @@ func TestCommentSortValidated(t *testing.T) {
 
 	for _, sortBy := range commentSorts {
 		cases = append(cases,
-			argCase{name: "show sort " + sortBy, tool: toolFetchShowComments, args: merge(showShow(testShowSlug), map[string]any{fieldSort: sortBy}), route: "GET " + routeShowSlug + "/comments/" + sortBy, body: emptyList},
-			argCase{name: "movie sort " + sortBy, tool: toolFetchMovieComments, args: merge(movieRef(testMovieSlug), map[string]any{fieldSort: sortBy}), route: "GET " + routeMovieSlug + "/comments/" + sortBy, body: emptyList},
+			argCase{name: "show sort " + sortBy, tool: toolListComments, args: merge(showItem(testShowSlug), map[string]any{fieldSort: sortBy}), route: "GET " + routeShowSlug + "/comments/" + sortBy, body: emptyList},
+			argCase{name: "movie sort " + sortBy, tool: toolListComments, args: merge(movieItem(testMovieSlug), map[string]any{fieldSort: sortBy}), route: "GET " + routeMovieSlug + "/comments/" + sortBy, body: emptyList},
 		)
 	}
 
 	cases = append(cases,
-		argCase{name: "season sort replies", tool: toolFetchSeasonComments, args: merge(seasonArgs(2), map[string]any{fieldSort: "replies"}), route: "GET " + routeShowSlug + "/seasons/2/comments/replies", body: emptyList},
-		argCase{name: "episode sort oldest", tool: toolFetchEpisodeComments, args: merge(episodeArgs(2, 3), map[string]any{fieldSort: "oldest"}), route: "GET " + routeShowSlug + "/seasons/2/episodes/3/comments/oldest", body: emptyList},
-		argCase{name: "default sort is newest", tool: toolFetchEpisodeComments, args: episodeArgs(1, 1), route: "GET " + routeShowSlug + "/seasons/1/episodes/1/comments/newest", body: emptyList},
-		argCase{name: "sort unknown", tool: toolFetchShowComments, args: merge(showShow(testShowSlug), map[string]any{fieldSort: "popular"}), wantErr: invalid(fieldSort)},
-		argCase{name: "sort wrong case", tool: toolFetchMovieComments, args: merge(movieRef(testMovieSlug), map[string]any{fieldSort: "Likes"}), wantErr: invalid(fieldSort)},
-		argCase{name: "sort path injection", tool: toolFetchSeasonComments, args: merge(seasonArgs(1), map[string]any{fieldSort: traversalID}), wantErr: invalid(fieldSort)},
-		argCase{name: "sort query injection", tool: toolFetchEpisodeComments, args: merge(episodeArgs(1, 1), map[string]any{fieldSort: "likes?x=1"}), wantErr: invalid(fieldSort)},
+		argCase{name: "season sort replies", tool: toolListComments, args: merge(seasonItem(testShowSlug, 2), map[string]any{fieldSort: "replies"}), route: "GET " + routeShowSlug + "/seasons/2/comments/replies", body: emptyList},
+		argCase{name: "episode sort oldest", tool: toolListComments, args: merge(episodeItem(testShowSlug, 2, 3), map[string]any{fieldSort: "oldest"}), route: "GET " + routeShowSlug + "/seasons/2/episodes/3/comments/oldest", body: emptyList},
+		argCase{name: "default sort is newest", tool: toolListComments, args: episodeItem(testShowSlug, 1, 1), route: "GET " + routeShowSlug + "/seasons/1/episodes/1/comments/newest", body: emptyList},
+		argCase{name: "sort unknown", tool: toolListComments, args: merge(showItem(testShowSlug), map[string]any{fieldSort: "popular"}), wantErr: invalid(fieldSort)},
+		argCase{name: "sort wrong case", tool: toolListComments, args: merge(movieItem(testMovieSlug), map[string]any{fieldSort: "Likes"}), wantErr: invalid(fieldSort)},
+		argCase{name: "sort path injection", tool: toolListComments, args: merge(seasonItem(testShowSlug, 1), map[string]any{fieldSort: traversalID}), wantErr: invalid(fieldSort)},
+		argCase{name: "sort query injection", tool: toolListComments, args: merge(episodeItem(testShowSlug, 1, 1), map[string]any{fieldSort: "likes?x=1"}), wantErr: invalid(fieldSort)},
 	)
 
 	runArgCases(t, cases)
@@ -449,21 +445,21 @@ func TestCommentToolArguments(t *testing.T) {
 	t.Parallel()
 
 	cases := []argCase{
-		{name: "show id traversal", tool: toolFetchShowComments, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "show id person imdb", tool: toolFetchShowComments, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
-		{name: "movie id traversal", tool: toolFetchMovieComments, args: movieRef(traversalID), wantErr: invalid(fieldMovieID)},
-		{name: "season -1", tool: toolFetchSeasonComments, args: seasonArgs(-1), wantErr: invalid(fieldSeason)},
-		{name: "season 0", tool: toolFetchSeasonComments, args: seasonArgs(0), route: "GET " + routeShowSlug + "/seasons/0" + routeCommentsEnd, body: emptyList},
-		{name: "season 999", tool: toolFetchSeasonComments, args: seasonArgs(999), route: "GET " + routeShowSlug + "/seasons/999" + routeCommentsEnd, body: emptyList},
-		{name: "season 1000", tool: toolFetchSeasonComments, args: seasonArgs(1000), wantErr: invalid(fieldSeason)},
-		{name: "episode 0", tool: toolFetchEpisodeComments, args: episodeArgs(1, 0), wantErr: invalid(fieldEpisode)},
-		{name: "episode 1", tool: toolFetchEpisodeComments, args: episodeArgs(1, 1), route: "GET " + routeShowSlug + "/seasons/1/episodes/1" + routeCommentsEnd, body: emptyList},
-		{name: "episode 9999", tool: toolFetchEpisodeComments, args: episodeArgs(1, 9999), route: "GET " + routeShowSlug + "/seasons/1/episodes/9999" + routeCommentsEnd, body: emptyList},
-		{name: "episode 10000", tool: toolFetchEpisodeComments, args: episodeArgs(1, 10000), wantErr: invalid(fieldEpisode)},
-		{name: "episode season out of range", tool: toolFetchEpisodeComments, args: episodeArgs(1000, 1), wantErr: invalid(fieldSeason)},
-		{name: nameLimit101, tool: toolFetchMovieComments, args: merge(movieRef(testMovieSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
-		{name: "limit 100", tool: toolFetchMovieComments, args: merge(movieRef(testMovieSlug), map[string]any{fieldLimit: 100}), route: "GET " + routeMovieSlug + routeCommentsEnd, body: emptyList, wantQuery: map[string]string{fieldLimit: "100"}},
-		{name: namePage0, tool: toolFetchShowComments, args: merge(showShow(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
+		{name: "show id traversal", tool: toolListComments, args: showItem(traversalID), wantErr: invalid(fieldID)},
+		{name: "show id person imdb", tool: toolListComments, args: showItem(personIMDb), wantErr: invalid(fieldID)},
+		{name: "movie id traversal", tool: toolListComments, args: movieItem(traversalID), wantErr: invalid(fieldID)},
+		{name: "season -1", tool: toolListComments, args: seasonItem(testShowSlug, -1), wantErr: invalid(fieldSeason)},
+		{name: "season 0", tool: toolListComments, args: seasonItem(testShowSlug, 0), route: "GET " + routeShowSlug + "/seasons/0" + routeCommentsEnd, body: emptyList},
+		{name: "season 999", tool: toolListComments, args: seasonItem(testShowSlug, 999), route: "GET " + routeShowSlug + "/seasons/999" + routeCommentsEnd, body: emptyList},
+		{name: "season 1000", tool: toolListComments, args: seasonItem(testShowSlug, 1000), wantErr: invalid(fieldSeason)},
+		{name: "episode 0", tool: toolListComments, args: episodeItem(testShowSlug, 1, 0), wantErr: invalid(fieldEpisode)},
+		{name: "episode 1", tool: toolListComments, args: episodeItem(testShowSlug, 1, 1), route: "GET " + routeShowSlug + "/seasons/1/episodes/1" + routeCommentsEnd, body: emptyList},
+		{name: "episode 9999", tool: toolListComments, args: episodeItem(testShowSlug, 1, 9999), route: "GET " + routeShowSlug + "/seasons/1/episodes/9999" + routeCommentsEnd, body: emptyList},
+		{name: "episode 10000", tool: toolListComments, args: episodeItem(testShowSlug, 1, 10000), wantErr: invalid(fieldEpisode)},
+		{name: "episode season out of range", tool: toolListComments, args: episodeItem(testShowSlug, 1000, 1), wantErr: invalid(fieldSeason)},
+		{name: nameLimit101, tool: toolListComments, args: merge(movieItem(testMovieSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: "limit 100", tool: toolListComments, args: merge(movieItem(testMovieSlug), map[string]any{fieldLimit: 100}), route: "GET " + routeMovieSlug + routeCommentsEnd, body: emptyList, wantQuery: map[string]string{fieldLimit: "100"}},
+		{name: namePage0, tool: toolListComments, args: merge(showItem(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
 		{name: "replies limit 0 is the default", tool: toolFetchCommentReplies, args: map[string]any{argCommentID: testCommentID, fieldLimit: 0}, route: "GET /comments/201/replies", body: emptyList, wantQuery: map[string]string{fieldLimit: "10"}},
 		{name: "replies page 0", tool: toolFetchCommentReplies, args: map[string]any{argCommentID: testCommentID, fieldPage: 0}, wantErr: invalid(fieldPage)},
 	}
@@ -575,7 +571,7 @@ func TestCommentsSpoilerOnlyPageContinuesToNextPage(t *testing.T) {
 
 		var out Listing[Comment]
 
-		h.ok(toolFetchShowComments, merge(showShow(testShowSlug), map[string]any{fieldLimit: 2}), &out)
+		h.ok(toolListComments, merge(showItem(testShowSlug), map[string]any{fieldLimit: 2}), &out)
 
 		if len(out.Items) != 2 {
 			t.Fatalf("items = %d, want the 2 comments of page 2", len(out.Items))
@@ -596,7 +592,7 @@ func TestCommentsSpoilerOnlyPageContinuesToNextPage(t *testing.T) {
 
 		var out Listing[Comment]
 
-		h.ok(toolFetchShowComments, merge(showShow(testShowSlug), map[string]any{fieldLimit: 2}), &out)
+		h.ok(toolListComments, merge(showItem(testShowSlug), map[string]any{fieldLimit: 2}), &out)
 
 		if len(out.Items) != 0 {
 			t.Errorf("items = %d, want 0", len(out.Items))
@@ -608,7 +604,7 @@ func TestCommentsSpoilerOnlyPageContinuesToNextPage(t *testing.T) {
 	})
 }
 
-// TestNewToolsAreAllReadOnly requires the 20 tools of the movie, people and
+// TestNewToolsAreAllReadOnly requires the 17 tools of the movie, people and
 // comment groups to be registered read-only and open-world.
 func TestNewToolsAreAllReadOnly(t *testing.T) {
 	t.Parallel()
@@ -632,8 +628,8 @@ func TestNewToolsAreAllReadOnly(t *testing.T) {
 		}
 	}
 
-	if len(newToolNames) != 20 {
-		t.Errorf("newToolNames holds %d tools, want 20", len(newToolNames))
+	if len(newToolNames) != 17 {
+		t.Errorf("newToolNames holds %d tools, want 17", len(newToolNames))
 	}
 }
 
