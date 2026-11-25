@@ -19,195 +19,125 @@ Trakt MCP uses the Trakt API but is not affiliated with, endorsed by, or certifi
 
 ## 🛠️ Tools
 
-143 tools. Every id argument accepts a Trakt slug (`breaking-bad`), a numeric Trakt id or an IMDb id (`tt0903747`, `nm0186505` for people). List tools take `limit` (default 10, max 100) and an optional `page`; recommendation list tools take `limit` only. Write tools change your real Trakt account and say so in their description.
+90 tools. Every id argument accepts a Trakt slug (`breaking-bad`), a numeric Trakt id or an IMDb id (`tt0903747`, `nm0186505` for people). List tools take `limit` (default 10, max 100) and an optional `page`; recommendation list tools take `limit` only. Write tools change your real Trakt account and say so in their description.
 
-### Shows (13)
+### Movies and shows: charts (8)
 
-| Tool                      | What it does                                     |
-| ------------------------- | ------------------------------------------------ |
-| `fetch_trending_shows`    | Shows being watched right now.                   |
-| `fetch_popular_shows`     | Most popular shows.                              |
-| `fetch_anticipated_shows` | Most anticipated upcoming shows.                 |
-| `fetch_favorited_shows`   | Most favorited shows over a `period`.            |
-| `fetch_played_shows`      | Most played shows over a `period`.               |
-| `fetch_watched_shows`     | Most watched shows over a `period`.              |
-| `search_shows`            | Searches shows by text.                          |
-| `fetch_show_ratings`      | Rating distribution of a show.                   |
-| `fetch_show_summary`      | Details of a show (`extended` for more fields).  |
-| `fetch_show_videos`       | Trailers and clips (`embed_markdown` for links). |
-| `fetch_related_shows`     | Shows similar to a show.                         |
-| `fetch_show_seasons`      | Seasons of a show.                               |
-| `fetch_show_people`       | Cast and crew (`include_guest_stars`).           |
+| Tool               | What it does                                                               |
+| ------------------ | -------------------------------------------------------------------------- |
+| `list_trending`    | Movies or shows being watched right now (`type` `movie` or `show`).        |
+| `list_popular`     | Most popular movies or shows (`type` `movie` or `show`).                   |
+| `list_anticipated` | Most anticipated upcoming movies or shows (`type` `movie` or `show`).      |
+| `list_favorited`   | Most favorited movies or shows over a `period` (`type` `movie` or `show`). |
+| `list_played`      | Most played movies or shows over a `period` (`type` `movie` or `show`).    |
+| `list_watched`     | Most watched movies or shows over a `period` (`type` `movie` or `show`).   |
+| `list_boxoffice`   | Weekend box office.                                                        |
+| `list_related`     | Movies or shows similar to one (`type` `movie` or `show`).                 |
 
-### Seasons (10)
+### Movies, shows, seasons and episodes (16)
 
-| Tool                        | What it does                                       |
-| --------------------------- | -------------------------------------------------- |
-| `fetch_season_info`         | Details of one season.                             |
-| `fetch_season_episodes`     | Episodes of a season.                              |
-| `fetch_season_ratings`      | Rating distribution of a season.                   |
-| `fetch_season_stats`        | Watchers, plays, comments, lists.                  |
-| `fetch_season_people`       | Cast and crew of a season.                         |
-| `fetch_season_videos`       | Videos of a season.                                |
-| `fetch_season_watching`     | Users watching the season now.                     |
-| `fetch_season_translations` | Translated titles and overviews (`language`).      |
-| `fetch_season_lists`        | Lists containing the season (`list_type`, `sort`). |
-| `fetch_season_comments`     | Comments on a season.                              |
+| Tool                       | What it does                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `get_summary`              | Details of an item, any `type` (`extended` for more fields, movie and show only). |
+| `get_ratings`              | Rating distribution of an item, any `type`.                                       |
+| `get_stats`                | Watchers, plays, collectors, comments and lists of an item, any `type`.           |
+| `list_watching`            | Users watching an item now, any `type`.                                           |
+| `list_people`              | Cast and crew of an item, any `type` (`include_guest_stars`, show only).          |
+| `list_videos`              | Trailers and clips, any `type` (`embed_markdown` for links, movie and show only). |
+| `list_translations`        | Translated titles and overviews, any `type` (`language`).                         |
+| `list_item_lists`          | Public lists containing an item, any `type` (`list_type`, `sort`).                |
+| `list_aliases`             | Alternative titles by country (movie or show).                                    |
+| `list_studios`             | Studios behind a movie or show.                                                   |
+| `list_seasons`             | Seasons of a show.                                                                |
+| `list_season_episodes`     | Episodes of a season.                                                             |
+| `get_next_episode`         | The next episode of a show to air.                                                |
+| `get_last_episode`         | The latest episode of a show that aired.                                          |
+| `list_show_certifications` | Age ratings of a show by country.                                                 |
+| `list_movie_releases`      | Release dates of a movie by country.                                              |
 
-### Episodes (9)
+Tools that cover several kinds of item take `type`: `movie`, `show`, `season` or `episode`. `season` is required for types `season` and `episode`, `episode` for type `episode` (season 0 is the specials). Tools marked movie or show take those two types only.
 
-| Tool                         | What it does                       |
-| ---------------------------- | ---------------------------------- |
-| `fetch_episode_summary`      | Details of one episode.            |
-| `fetch_episode_ratings`      | Rating distribution of an episode. |
-| `fetch_episode_stats`        | Watchers, plays, comments, lists.  |
-| `fetch_episode_people`       | Cast and crew of an episode.       |
-| `fetch_episode_videos`       | Videos of an episode.              |
-| `fetch_episode_watching`     | Users watching the episode now.    |
-| `fetch_episode_translations` | Translated titles and overviews.   |
-| `fetch_episode_lists`        | Lists containing the episode.      |
-| `fetch_episode_comments`     | Comments on an episode.            |
+### People and comments (5)
 
-### Movies (14)
+| Tool                   | What it does                                                  |
+| ---------------------- | ------------------------------------------------------------- |
+| `get_person`           | Details of a person.                                          |
+| `list_person_credits`  | Movie or show credits of a person (`type` `movie` or `show`). |
+| `list_comments`        | Comments on a movie, show, season or episode.                 |
+| `get_comment`          | One comment.                                                  |
+| `list_comment_replies` | Replies to a comment.                                         |
 
-| Tool                       | What it does                         |
-| -------------------------- | ------------------------------------ |
-| `fetch_trending_movies`    | Movies being watched right now.      |
-| `fetch_popular_movies`     | Most popular movies.                 |
-| `fetch_anticipated_movies` | Most anticipated upcoming movies.    |
-| `fetch_favorited_movies`   | Most favorited movies over a period. |
-| `fetch_played_movies`      | Most played movies over a period.    |
-| `fetch_watched_movies`     | Most watched movies over a period.   |
-| `fetch_boxoffice_movies`   | Weekend box office.                  |
-| `search_movies`            | Searches movies by text.             |
-| `fetch_movie_ratings`      | Rating distribution of a movie.      |
-| `fetch_movie_summary`      | Details of a movie.                  |
-| `fetch_movie_videos`       | Trailers and clips.                  |
-| `fetch_related_movies`     | Movies similar to a movie.           |
-| `fetch_movie_people`       | Cast and crew.                       |
-| `fetch_movie_comments`     | Comments on a movie.                 |
-
-### People (3) and comments (3)
-
-| Tool                    | What it does               |
-| ----------------------- | -------------------------- |
-| `fetch_person_summary`  | Details of a person.       |
-| `fetch_person_movies`   | Movie credits of a person. |
-| `fetch_person_shows`    | Show credits of a person.  |
-| `fetch_show_comments`   | Comments on a show.        |
-| `fetch_comment`         | One comment.               |
-| `fetch_comment_replies` | Replies to a comment.      |
-
-Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false). Comment text is untrusted third-party content.
+`list_comments` and `list_person_credits` take a `type` (comments: `movie`, `show`, `season` or `episode`; credits: `movie` or `show`). Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false). Comment text is untrusted third-party content.
 
 ### Your account (21)
 
-| Tool                      | What it does                                                           |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `fetch_user_watched`      | Your watched movies or shows, with last watched date and play count.   |
-| `fetch_history`           | Your watch history, filtered by type, item and date range.             |
-| `add_to_history`          | Marks movies, shows, seasons or episodes as watched (`watched_at`).    |
-| `remove_from_history`     | Removes plays from your history.                                       |
-| `fetch_show_progress`     | Your progress on a show: next episode, completed count.                |
-| `fetch_playback_progress` | Paused playbacks you can resume.                                       |
-| `remove_playback_item`    | Removes one paused playback.                                           |
-| `fetch_watchlist`         | Your watchlist (`type`, `sort`).                                       |
-| `add_to_watchlist`        | Adds items to your watchlist (optional `notes`, VIP only).             |
-| `remove_from_watchlist`   | Removes items from your watchlist.                                     |
-| `fetch_collection`        | Your collection (`type`).                                              |
-| `add_to_collection`       | Adds items to your collection (`collected_at`).                        |
-| `remove_from_collection`  | Removes items from your collection.                                    |
-| `fetch_ratings`           | Your ratings.                                                          |
-| `add_ratings`             | Rates items from 1 to 10.                                              |
-| `remove_ratings`          | Removes ratings.                                                       |
-| `checkin_to_show`         | Checks in to an episode (by `show_id`, or `show_title` + `show_year`). |
-| `checkin_to_movie`        | Checks in to a movie.                                                  |
-| `cancel_checkin`          | Cancels the active check-in.                                           |
-| `fetch_smart_lists`       | Your smart lists (or another user's), with the filters behind each.    |
-| `fetch_smart_list_items`  | Movies and shows a smart list resolves to (`type`, `sort_by`).         |
+| Tool                           | What it does                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_user_watched`            | Your watched movies or shows, with last watched date and play count.                                                                      |
+| `list_history`                 | Your watch history, filtered by type, item and date range.                                                                                |
+| `add_to_history`               | Marks movies, shows, seasons or episodes as watched (`watched_at`).                                                                       |
+| `remove_from_history`          | Removes plays from your history.                                                                                                          |
+| `get_show_progress`            | Your progress on a show: next episode, completed count.                                                                                   |
+| `list_playback_progress`       | Paused playbacks you can resume.                                                                                                          |
+| `remove_playback_item`         | Removes one paused playback.                                                                                                              |
+| `list_watchlist`               | Your watchlist (`type`, `sort`).                                                                                                          |
+| `add_to_watchlist`             | Adds items to your watchlist (optional `notes`, VIP only).                                                                                |
+| `remove_from_watchlist`        | Removes items from your watchlist.                                                                                                        |
+| `list_collection`              | Your collection (`type`).                                                                                                                 |
+| `add_to_collection`            | Adds items to your collection (`collected_at`).                                                                                           |
+| `remove_from_collection`       | Removes items from your collection.                                                                                                       |
+| `list_user_ratings`            | Your ratings.                                                                                                                             |
+| `add_ratings`                  | Rates items from 1 to 10.                                                                                                                 |
+| `remove_ratings`               | Removes ratings.                                                                                                                          |
+| `checkin`                      | Checks in to a movie (`type` `movie`) or an episode (`type` `show`, by `id`, or `show_title` + `show_year`, with `season` and `episode`). |
+| `cancel_checkin`               | Cancels the active check-in.                                                                                                              |
+| `list_smart_lists`             | Your smart lists (or another user's), with the filters behind each.                                                                       |
+| `list_smart_list_items`        | Movies and shows a smart list resolves to (`type`, `sort_by`).                                                                            |
+| `get_show_collection_progress` | How much of a show you collected: counts, percentage, next episode to collect.                                                            |
 
 Write tools take up to 50 items per call, each `{type, id}` with `type` one of `movie`, `show`, `season`, `episode`.
 
-### Recommendations (6)
+### Recommendations (3)
 
-| Tool                          | What it does                                                           |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| `fetch_movie_recommendations` | Movies recommended for you (`ignore_collected`, `ignore_watchlisted`). |
-| `fetch_show_recommendations`  | Shows recommended for you (same filters).                              |
-| `hide_movie_recommendation`   | Hides a movie from your recommendations.                               |
-| `hide_show_recommendation`    | Hides a show from your recommendations.                                |
-| `unhide_movie_recommendation` | Shows a hidden movie again.                                            |
-| `unhide_show_recommendation`  | Shows a hidden show again.                                             |
+| Tool                    | What it does                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `list_recommendations`  | Movies or shows recommended for you (`type` `movie` or `show`; `ignore_collected`, `ignore_watchlisted`). |
+| `hide_recommendation`   | Hides a movie or show from your recommendations (`type` `movie` or `show`).                               |
+| `unhide_recommendation` | Shows a hidden movie or show again (`type` `movie` or `show`).                                            |
 
-### Calendars (7)
+### Calendars and where to watch (3)
 
-| Tool                            | What it does                                              |
-| ------------------------------- | --------------------------------------------------------- |
-| `fetch_calendar_shows`          | Episodes airing in a date window (`scope` `my` or `all`). |
-| `fetch_calendar_new_shows`      | New shows whose first season starts in the window.        |
-| `fetch_calendar_show_premieres` | Season premieres in the window.                           |
-| `fetch_calendar_show_finales`   | Season finales in the window.                             |
-| `fetch_calendar_movies`         | Movies released in cinemas in the window.                 |
-| `fetch_calendar_dvd`            | Movies released on DVD or Blu-ray in the window.          |
-| `fetch_calendar_streaming`      | Movies arriving on streaming in the window.               |
+| Tool                    | What it does                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `list_calendar`         | What airs or is released in a date window. `kind` is `shows`, `new_shows`, `premieres`, `finales`, `movies`, `dvd` or `streaming`; `scope` is `my` or `all`. |
+| `get_watchnow`          | Free, subscription, rent or buy, cable and cinema offers in a country (`type` `movie`, `show` or `episode`).                                                 |
+| `list_watchnow_sources` | Every streaming provider Trakt knows.                                                                                                                        |
 
-### Where to watch (4)
+### Search and reference data (7)
 
-| Tool                     | What it does                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| `fetch_movie_watchnow`   | Free, subscription, rent or buy, cable and cinema offers for a movie in a country. |
-| `fetch_show_watchnow`    | The same for a show.                                                               |
-| `fetch_episode_watchnow` | The same for an episode.                                                           |
-| `fetch_watchnow_sources` | Every streaming provider Trakt knows.                                              |
+| Tool                  | What it does                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `search`              | Searches movies or shows by text (`type` `movie` or `show`; `exact` to match the title exactly). |
+| `search_by_id`        | Finds movies, shows, episodes and people from a Trakt, IMDb, TMDB or TVDB id.                    |
+| `list_genres`         | Genres (name and slug) Trakt uses for movies or shows.                                           |
+| `list_countries`      | Countries (name and code) Trakt uses for movies or shows.                                        |
+| `list_languages`      | Languages (name and code) Trakt uses for movies or shows.                                        |
+| `list_certifications` | Content ratings of every country for movies or shows.                                            |
+| `list_networks`       | TV networks Trakt knows, with their country.                                                     |
 
-### Search by id and reference data (8)
+### Custom lists (9)
 
-| Tool                   | What it does                                                                  |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| `search_by_id`         | Finds movies, shows, episodes and people from a Trakt, IMDb, TMDB or TVDB id. |
-| `search_movies_exact`  | Searches movies by exact title.                                               |
-| `search_shows_exact`   | Searches shows by exact title.                                                |
-| `fetch_genres`         | Genres (name and slug) Trakt uses for movies or shows.                        |
-| `fetch_countries`      | Countries (name and code) Trakt uses for movies or shows.                     |
-| `fetch_languages`      | Languages (name and code) Trakt uses for movies or shows.                     |
-| `fetch_certifications` | Content ratings of every country for movies or shows.                         |
-| `fetch_networks`       | TV networks Trakt knows, with their country.                                  |
-
-### Movie and show extras (16)
-
-| Tool                        | What it does                                                |
-| --------------------------- | ----------------------------------------------------------- |
-| `fetch_movie_stats`         | Watchers, plays, collectors, comments and lists of a movie. |
-| `fetch_movie_watching`      | Users watching the movie now.                               |
-| `fetch_movie_translations`  | Translated titles and overviews (`language`).               |
-| `fetch_movie_aliases`       | Alternative titles by country.                              |
-| `fetch_movie_studios`       | Studios behind the movie.                                   |
-| `fetch_movie_lists`         | Lists containing the movie.                                 |
-| `fetch_movie_releases`      | Release dates by country.                                   |
-| `fetch_show_stats`          | Watchers, plays, collectors, comments and lists of a show.  |
-| `fetch_show_watching`       | Users watching the show now.                                |
-| `fetch_show_translations`   | Translated titles and overviews (`language`).               |
-| `fetch_show_aliases`        | Alternative titles by country.                              |
-| `fetch_show_studios`        | Studios behind the show.                                    |
-| `fetch_show_lists`          | Lists containing the show.                                  |
-| `fetch_show_next_episode`   | The next episode to air.                                    |
-| `fetch_show_last_episode`   | The latest episode that aired.                              |
-| `fetch_show_certifications` | Age ratings by country.                                     |
-
-### Custom lists (10)
-
-| Tool                   | What it does                                                                              |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| `fetch_user_lists`     | Your custom lists, or another user's public ones.                                         |
-| `fetch_list`           | One list: name, privacy, item count, likes.                                               |
-| `fetch_list_items`     | Items on a list.                                                                          |
-| `fetch_trending_lists` | Lists people are liking now.                                                              |
-| `fetch_popular_lists`  | Most popular lists.                                                                       |
-| `create_list`          | Creates a list (`privacy`: private, link, friends or public).                             |
-| `update_list`          | Renames a list or changes its description and privacy (private, link, friends or public). |
-| `add_list_items`       | Adds up to 50 items to one of your lists.                                                 |
-| `remove_list_items`    | Removes items from one of your lists.                                                     |
-| `delete_list`          | Deletes one of your lists.                                                                |
+| Tool                | What it does                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------- |
+| `list_user_lists`   | Your custom lists, or another user's public ones.                                         |
+| `get_list`          | One list: name, privacy, item count, likes.                                               |
+| `list_list_items`   | Items on a list.                                                                          |
+| `list_lists`        | Lists from Trakt's rankings (`kind` `trending` or `popular`).                             |
+| `create_list`       | Creates a list (`privacy`: private, link, friends or public).                             |
+| `update_list`       | Renames a list or changes its description and privacy (private, link, friends or public). |
+| `add_list_items`    | Adds up to 50 items to one of your lists.                                                 |
+| `remove_list_items` | Removes items from one of your lists.                                                     |
+| `delete_list`       | Deletes one of your lists.                                                                |
 
 ### Watchlist edits, notes and favorites (12)
 
@@ -215,28 +145,27 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | ----------------------- | ------------------------------------------------------------------------------------------- |
 | `update_watchlist_item` | Sets or clears the note of a watchlist entry (VIP only).                                    |
 | `reorder_watchlist`     | Reorders your whole watchlist by `list_item_id`.                                            |
-| `fetch_note`            | One of your notes (free accounts keep few notes).                                           |
-| `fetch_user_notes`      | Your notes, optionally for one kind of item (free accounts keep few notes).                 |
+| `get_note`              | One of your notes (free accounts keep few notes).                                           |
+| `list_user_notes`       | Your notes, optionally for one kind of item (free accounts keep few notes).                 |
 | `create_note`           | Attaches a note to a movie, show, season, episode or person (free accounts keep few notes). |
 | `update_note`           | Edits a note (free accounts keep few notes).                                                |
 | `delete_note`           | Deletes a note (free accounts keep few notes).                                              |
-| `fetch_favorites`       | Your favorite movies and shows.                                                             |
+| `list_favorites`        | Your favorite movies and shows.                                                             |
 | `add_to_favorites`      | Adds up to 50 movies or shows to your favorites, with an optional note.                     |
 | `update_favorite`       | Sets or clears the note of a favorite, or moves it to a new rank.                           |
 | `reorder_favorites`     | Reorders your favorites by `list_item_id`.                                                  |
 | `remove_from_favorites` | Removes up to 50 movies or shows from your favorites.                                       |
 
-### Progress and up next (7)
+### Progress and up next (6)
 
-| Tool                             | What it does                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------ |
-| `fetch_show_collection_progress` | How much of a show you collected: counts, percentage, next episode to collect. |
-| `reset_show_progress`            | Restarts a show's watch progress to rewatch it (VIP only).                     |
-| `undo_reset_show_progress`       | Undoes the last reset (VIP only).                                              |
-| `fetch_up_next`                  | The TV shows you are watching, each with its next episode to watch.            |
-| `fetch_hidden_progress`          | TV shows and seasons hidden from your progress.                                |
-| `hide_from_progress`             | Hides TV shows or seasons from your progress and up next.                      |
-| `unhide_from_progress`           | Shows hidden TV shows or seasons in your progress again.                       |
+| Tool                       | What it does                                                        |
+| -------------------------- | ------------------------------------------------------------------- |
+| `reset_show_progress`      | Restarts a show's watch progress to rewatch it (VIP only).          |
+| `undo_reset_show_progress` | Undoes the last reset (VIP only).                                   |
+| `list_up_next`             | The TV shows you are watching, each with its next episode to watch. |
+| `list_hidden_progress`     | TV shows and seasons hidden from your progress.                     |
+| `hide_from_progress`       | Hides TV shows or seasons from your progress and up next.           |
+| `unhide_from_progress`     | Shows hidden TV shows or seasons in your progress again.            |
 
 Watchlist notes and show progress reset need Trakt VIP; other accounts get "Trakt VIP is required for this feature". Free accounts can keep only a few notes; past the cap Trakt answers with an account limit error.
 
