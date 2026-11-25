@@ -35,7 +35,7 @@ var noteItemTypes = []string{itemMovie, itemShow, itemSeason, itemEpisode, itemP
 // NoteItemArg names the one item a new note is attached to. Trakt takes only
 // its numeric Trakt id here, unlike the batch tools.
 type NoteItemArg struct {
-	Type string `json:"type" jsonschema:"movie, show, season, episode or person"`
+	Type string `json:"type" jsonschema:"movie, show (a TV show), season, episode or person"`
 	ID   string `json:"id"   jsonschema:"numeric Trakt id of the item (slugs and IMDb ids are not accepted for notes)"`
 }
 
@@ -46,7 +46,7 @@ type NoteRefArgs struct {
 
 // UserNotesArgs are the arguments of list_user_notes.
 type UserNotesArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (singular movie, show, season or episode also accepted; default all)"`
+	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (shows are TV shows; singular movie, show, season or episode also accepted; default all)"`
 	PageArgs
 }
 
@@ -81,7 +81,7 @@ type NoteDetail struct {
 // sends it, that item.
 type Note struct {
 	NoteDetail
-	ItemType string `json:"item_type,omitempty" jsonschema:"movie, show, season, episode or person"`
+	ItemType string `json:"item_type,omitempty" jsonschema:"movie, show (a TV show), season, episode or person"`
 	MediaRef
 	Person *Person `json:"person,omitempty"`
 }
@@ -102,7 +102,7 @@ type NoteAttachment struct {
 // UserNote is an entry of list_user_notes: a note, what it is attached to
 // and the media object it belongs to.
 type UserNote struct {
-	Type       string          `json:"type"                  jsonschema:"movie, show, season, episode or person"`
+	Type       string          `json:"type"                  jsonschema:"movie, show (a TV show), season, episode or person"`
 	AttachedTo *NoteAttachment `json:"attached_to,omitempty"`
 	Note       NoteDetail      `json:"note"`
 	MediaRef

@@ -90,7 +90,7 @@ func registerCheckinTools(s *Server) {
 	Register(s, Spec{
 		Name:  "checkin",
 		Title: "Check in",
-		Description: "Tell Trakt the user is watching a movie or an episode of a TV show now. " +
+		Description: "Tell Trakt the user is watching a movie or an episode of a TV show now. For something already watched, use add_to_history. " +
 			"type movie: id is the movie's id. " +
 			"type show: id is the TV show's id, or give show_title and show_year instead; season (0 is the specials) and episode are required. " +
 			"show_title, show_year, season and episode apply to type show only. message is shared with the check-in, at most 280 characters. " +

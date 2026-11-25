@@ -131,17 +131,17 @@ type traktCollectionSeason struct {
 // registerProgressTools registers the show collection progress and reset tools.
 func registerProgressTools(s *Server) {
 	Register(s, Spec{
-		Name: "get_show_collection_progress", Title: "Get show collection progress", Access: Read,
+		Name: "get_show_collection_progress", Title: "Get TV show collection progress", Access: Read,
 		Description: "Get how much of one TV show the user has collected: episodes aired and collected, percentage, " +
 			"next episode to collect, and per-season counts (every episode with verbose).",
 	}, fetchShowCollectionProgress)
 	Register(s, Spec{
-		Name: "reset_show_progress", Title: "Reset show progress", Access: Write,
+		Name: "reset_show_progress", Title: "Reset TV show progress", Access: Write,
 		Description: "Restart a TV show's watch progress from now or from reset_at, to rewatch it. " + resetVIPNote +
 			" Reverse it with undo_reset_show_progress.",
 	}, resetShowProgress)
 	Register(s, Spec{
-		Name: "undo_reset_show_progress", Title: "Undo show progress reset", Access: Write,
+		Name: "undo_reset_show_progress", Title: "Undo TV show progress reset", Access: Write,
 		Description: "Undo the last reset of a TV show's watch progress, so earlier plays count again. " + resetVIPNote,
 	}, undoResetShowProgress)
 }

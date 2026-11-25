@@ -30,7 +30,7 @@ var (
 
 // WatchlistArgs are the arguments of list_watchlist.
 type WatchlistArgs struct {
-	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons or episodes (singular movie, show, season or episode also accepted; default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons or episodes (shows are TV shows; singular movie, show, season or episode also accepted; default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
@@ -41,14 +41,14 @@ type WatchlistItem struct {
 	Rank       int    `json:"rank"`
 	ListItemID int    `json:"list_item_id,omitempty" jsonschema:"id the update_watchlist_item and reorder_watchlist tools take"`
 	ListedAt   string `json:"listed_at,omitempty"`
-	Type       string `json:"type"            jsonschema:"movie, show, season or episode"`
+	Type       string `json:"type"            jsonschema:"movie, show (a TV show), season or episode"`
 	Notes      string `json:"notes,omitempty" jsonschema:"the user's own note"`
 	MediaRef
 }
 
 // AddWatchlistArgs are the arguments of add_to_watchlist.
 type AddWatchlistArgs struct {
-	Items []ItemArg `json:"items"           jsonschema:"1 to 50 items; a show item covers the whole show, a season or episode item only that one"`
+	Items []ItemArg `json:"items"           jsonschema:"1 to 50 items; a show item covers the whole TV show, a season or episode item only that one"`
 	Notes string    `json:"notes,omitempty" jsonschema:"note stored with every item, at most 500 characters; Trakt VIP only"`
 }
 
@@ -56,20 +56,20 @@ func registerWatchlistTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_watchlist",
 		Title:       "List watchlist",
-		Description: "List the user's watchlist of movies, TV shows, seasons and episodes, optionally of one type, sorted by rank or another field, with the user's notes.",
+		Description: "List the user's watchlist: the movies, TV shows, seasons and episodes they saved to watch later, optionally of one type, sorted by rank or another field, with the user's notes.",
 		Access:      Read,
 	}, fetchWatchlist)
 	Register(s, Spec{
 		Name:  "add_to_watchlist",
 		Title: "Add to watchlist",
-		Description: "Add up to 50 movies, shows, seasons or episodes to the user's watchlist, optionally with a note (Trakt VIP only). " +
+		Description: "Add up to 50 movies, TV shows, seasons or episodes to the user's watchlist, optionally with a note (Trakt VIP only). " +
 			"Returns how many were added or already there, and which items Trakt did not find.",
 		Access: Write,
 	}, addToWatchlist)
 	Register(s, Spec{
 		Name:  "remove_from_watchlist",
 		Title: "Remove from watchlist",
-		Description: "Remove up to 50 movies, shows, seasons or episodes from the user's watchlist. " +
+		Description: "Remove up to 50 movies, TV shows, seasons or episodes from the user's watchlist. " +
 			"Returns how many were deleted and which items Trakt did not find.",
 		Access: Destroy,
 	}, removeFromWatchlist)

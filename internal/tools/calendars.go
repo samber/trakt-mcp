@@ -46,7 +46,7 @@ var calendarScopes = []string{calendarScopeMy, calendarScopeAll}
 
 // CalendarArgs are the arguments shared by every calendar tool.
 type CalendarArgs struct {
-	Scope     string `json:"scope,omitempty"      jsonschema:"my (the user's own shows and movies) or all (everything airing); default my"`
+	Scope     string `json:"scope,omitempty"      jsonschema:"my (the user's own TV shows and movies) or all (everything airing); default my"`
 	StartDate string `json:"start_date,omitempty" jsonschema:"first day of the window, YYYY-MM-DD in UTC; default today"`
 	// Days is nullable: nil means the default window, while 0 is rejected.
 	Days *int `json:"days,omitempty" jsonschema:"number of days from 1 to 33; default 7"`

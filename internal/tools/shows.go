@@ -634,7 +634,7 @@ type ShowPeopleArgs struct {
 
 func registerShowTools(s *Server) {
 	Register(s, Spec{
-		Name: "list_seasons", Title: "List show seasons", Access: Read,
+		Name: "list_seasons", Title: "List TV show seasons", Access: Read,
 		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",
 	}, fetchShowSeasons)
 }

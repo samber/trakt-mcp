@@ -306,17 +306,22 @@ func parsePersonShows(body []byte) (PersonShows, error) {
 	return out, nil
 }
 
+// personIDNote tells where a person's id comes from: no tool searches
+// people by name.
+const personIDNote = "Take the person's id from list_people (the cast and crew of a movie or TV show) or from search_by_id with an IMDb nm id."
+
 func registerPeopleTools(s *Server) {
 	Register(s, Spec{
 		Name: "get_person", Title: "Get person summary", Access: Read,
-		Description: "Get one person's details: name, ids, biography (cut), birthday, death, birthplace, homepage and social ids." + untrustedNote,
+		Description: "Get one person's (actor, director or other crew member) details: name, ids, biography (cut), birthday, death, birthplace, homepage and social ids. " +
+			personIDNote + untrustedNote,
 	}, fetchPersonSummary)
 	Register(s, Spec{
 		Name: "list_person_credits", Title: "List person credits", Access: Read,
 		Description: "List the movies or TV shows a person acted in or worked on, returned as {type, item}. " +
 			"type movie: item has cast (character and movie) and crew grouped by department (job and movie). " +
 			"type show: item has cast (character, episode count, series-regular flag and TV show) and crew grouped by department (job, episode count and TV show). " +
-			"Long credit lists are cut. type is movie or show (a TV show). id is the person's Trakt slug, Trakt id or IMDb person id." + untrustedNote,
+			"Long credit lists are cut. type is movie or show (a TV show). id is the person's Trakt slug, Trakt id or IMDb person id. " + personIDNote + untrustedNote,
 	}, listPersonCredits)
 }
 

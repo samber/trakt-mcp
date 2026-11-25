@@ -147,6 +147,12 @@ func TestMovieShowToolsNotFound(t *testing.T) {
 	}
 }
 
+// undeclared is the go-sdk error for an argument the tool's input schema does
+// not declare: the call fails before any handler runs.
+func undeclared(field string) string {
+	return `validating "arguments": validating root: unexpected additional properties ["` + field + `"]`
+}
+
 // TestMovieShowToolsRefuseOtherTypes requires a type the tool does not
 // accept, an empty or upper-case one included, to fail before any Trakt call.
 func TestMovieShowToolsRefuseOtherTypes(t *testing.T) {
@@ -179,18 +185,24 @@ func TestMovieShowToolsRefuseOtherTypes(t *testing.T) {
 	}
 
 	// A season or an episode reference never makes sense for a movie or a TV
-	// show: refused, not ignored.
+	// show: refused, not ignored. The movie-or-TV-show tools do not even
+	// declare season and episode, so the input schema refuses them; get_watchnow
+	// declares them for episodes, so its handler refuses them.
 	for _, tool := range []string{toolListAliases, toolListStudios, toolListRelated, toolHideRecommendation, toolUnhideRecommendation, toolGetWatchNow} {
 		base := map[string]any{}
+		refused := invalid
+
 		if tool == toolGetWatchNow {
 			base = withCountry(base, testCountry)
+		} else {
+			refused = undeclared
 		}
 
 		cases = append(cases,
-			argCase{name: tool + " movie with season", tool: tool, args: merge(merge(base, movieItem(testMovieSlug)), map[string]any{fieldSeason: 1}), wantErr: invalid(fieldSeason)},
-			argCase{name: tool + " show with season", tool: tool, args: merge(merge(base, showItem(testShowSlug)), map[string]any{fieldSeason: 1}), wantErr: invalid(fieldSeason)},
-			argCase{name: tool + " movie with episode", tool: tool, args: merge(merge(base, movieItem(testMovieSlug)), map[string]any{fieldEpisode: 1}), wantErr: invalid(fieldEpisode)},
-			argCase{name: tool + " show with episode", tool: tool, args: merge(merge(base, showItem(testShowSlug)), map[string]any{fieldEpisode: 1}), wantErr: invalid(fieldEpisode)},
+			argCase{name: tool + " movie with season", tool: tool, args: merge(merge(base, movieItem(testMovieSlug)), map[string]any{fieldSeason: 1}), wantErr: refused(fieldSeason)},
+			argCase{name: tool + " show with season", tool: tool, args: merge(merge(base, showItem(testShowSlug)), map[string]any{fieldSeason: 1}), wantErr: refused(fieldSeason)},
+			argCase{name: tool + " movie with episode", tool: tool, args: merge(merge(base, movieItem(testMovieSlug)), map[string]any{fieldEpisode: 1}), wantErr: refused(fieldEpisode)},
+			argCase{name: tool + " show with episode", tool: tool, args: merge(merge(base, showItem(testShowSlug)), map[string]any{fieldEpisode: 1}), wantErr: refused(fieldEpisode)},
 			argCase{name: tool + " id person imdb", tool: tool, args: merge(base, movieItem(personIMDb)), wantErr: invalid(fieldID)},
 		)
 	}

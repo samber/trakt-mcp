@@ -19,7 +19,7 @@ const favoritesNature = "The favorites are the user's own top list on Trakt (lik
 
 // FavoritesArgs are the arguments of list_favorites.
 type FavoritesArgs struct {
-	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies or shows (singular movie or show also accepted; default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies or shows (shows are TV shows; singular movie or show also accepted; default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
@@ -37,13 +37,13 @@ type FavoriteItem struct {
 
 // AddFavoritesArgs are the arguments of add_to_favorites.
 type AddFavoritesArgs struct {
-	Items []ItemArg `json:"items"           jsonschema:"1 to 50 items; movies or shows only"`
+	Items []ItemArg `json:"items"           jsonschema:"1 to 50 items; movies or TV shows only"`
 	Notes string    `json:"notes,omitempty" jsonschema:"note stored with every item, at most 500 characters"`
 }
 
 // RemoveFavoritesArgs are the arguments of remove_from_favorites.
 type RemoveFavoritesArgs struct {
-	Items []ItemArg `json:"items" jsonschema:"1 to 50 items; movies or shows only"`
+	Items []ItemArg `json:"items" jsonschema:"1 to 50 items; movies or TV shows only"`
 }
 
 // UpdateFavoriteArgs are the arguments of update_favorite.
@@ -87,7 +87,7 @@ func registerFavoriteTools(s *Server) {
 	}, fetchFavorites)
 	Register(s, Spec{
 		Name: "add_to_favorites", Title: "Add to favorites", Access: Write,
-		Description: favoritesNature + "Add up to 50 movies or shows to the favorites, optionally with a note. Seasons and episodes are not accepted. " +
+		Description: favoritesNature + "Add up to 50 movies or TV shows to the favorites, optionally with a note. Seasons and episodes are not accepted. " +
 			"Trakt caps the number of favorites: past the cap it answers 420, reported as an account limit error. " +
 			"Returns how many were added or already there, and which items Trakt did not find.",
 	}, addToFavorites)
@@ -103,7 +103,7 @@ func registerFavoriteTools(s *Server) {
 	}, reorderFavorites)
 	Register(s, Spec{
 		Name: "remove_from_favorites", Title: "Remove from favorites", Access: Destroy,
-		Description: favoritesNature + "Remove up to 50 movies or shows from the favorites. " +
+		Description: favoritesNature + "Remove up to 50 movies or TV shows from the favorites. " +
 			"Returns how many were deleted and which items Trakt did not find.",
 	}, removeFromFavorites)
 }

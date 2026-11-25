@@ -21,7 +21,7 @@ var ratingTypes = []string{mediaAll, mediaMovies, mediaShows, mediaSeasons, medi
 
 // RatingsArgs are the arguments of list_user_ratings.
 type RatingsArgs struct {
-	Type   string `json:"type,omitempty"   jsonschema:"plural: all, movies, shows, seasons or episodes (singular movie, show, season or episode also accepted); omit for all"`
+	Type   string `json:"type,omitempty"   jsonschema:"plural: all, movies, shows, seasons or episodes (shows are TV shows; singular movie, show, season or episode also accepted); omit for all"`
 	Rating *int   `json:"rating,omitempty" jsonschema:"only items rated this, 1 to 10"`
 	PageArgs
 }
@@ -30,7 +30,7 @@ type RatingsArgs struct {
 type RatedItem struct {
 	Rating  int    `json:"rating"`
 	RatedAt string `json:"rated_at,omitempty"`
-	Type    string `json:"type" jsonschema:"movie, show, season or episode"`
+	Type    string `json:"type" jsonschema:"movie, show (a TV show), season or episode"`
 	MediaRef
 }
 
@@ -44,20 +44,20 @@ func registerRatingTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_user_ratings",
 		Title:       "List my ratings",
-		Description: "List what the user rated (movies, TV shows, seasons, episodes), optionally of one type or one rating value, with the rating and when it was given.",
+		Description: "List what the user rated (movies, TV shows, seasons, episodes), optionally of one type or one rating value, with the rating and when it was given. Trakt-wide average ratings are in get_ratings.",
 		Access:      Read,
 	}, fetchRatings)
 	Register(s, Spec{
 		Name:  "add_ratings",
 		Title: "Add ratings",
-		Description: "Rate up to 50 movies, shows, seasons or episodes 1 to 10, replacing any earlier rating. " +
+		Description: "Rate up to 50 movies, TV shows, seasons or episodes 1 to 10, replacing any earlier rating. " +
 			"Returns how many were rated and which items Trakt did not find.",
 		Access: Write,
 	}, addRatings)
 	Register(s, Spec{
 		Name:  "remove_ratings",
 		Title: "Remove ratings",
-		Description: "Remove the user's rating of up to 50 movies, shows, seasons or episodes. " +
+		Description: "Remove the user's rating of up to 50 movies, TV shows, seasons or episodes. " +
 			"Returns how many were deleted and which items Trakt did not find.",
 		Access: Destroy,
 	}, removeRatings)
