@@ -153,7 +153,8 @@ func run(specPath, endpointsPath, outPath string) error {
 }
 
 func readSpec(path string) (map[string]any, error) {
-	data, err := os.ReadFile(filepath.Clean(path))
+	// path is a CLI flag of this offline code generator, never network or tool input.
+	data, err := os.ReadFile(filepath.Clean(path)) //nolint:gosec // G703: operator-supplied path in a dev-only generator
 	if err != nil {
 		return nil, fmt.Errorf("read spec: %w", err)
 	}
