@@ -14,14 +14,8 @@ const (
 	// routeMovieSlug is the Trakt path prefix of the test movie.
 	routeMovieSlug = "/movies/" + testMovieSlug
 
-	toolFetchPopularMovies     = "fetch_popular_movies"
-	toolFetchAnticipatedMovies = "fetch_anticipated_movies"
-	toolFetchFavoritedMovies   = "fetch_favorited_movies"
-	toolFetchPlayedMovies      = "fetch_played_movies"
-	toolFetchWatchedMovies     = "fetch_watched_movies"
-	toolFetchBoxofficeMovies   = "fetch_boxoffice_movies"
-	toolSearchMovies           = "search_movies"
-	toolListRelated            = "list_related"
+	toolFetchBoxofficeMovies = "fetch_boxoffice_movies"
+	toolListRelated          = "list_related"
 
 	pathFirstMovieTitle   = "items.0.movie.title"
 	pathFirstIDSlug       = "items.0.ids.slug"
@@ -38,35 +32,35 @@ func movieRef(id string) map[string]any { return map[string]any{fieldMovieID: id
 
 var movieCases = []catalogCase{
 	{
-		tool: toolFetchPopularMovies, args: merge(pagedArgs, nil), route: "GET /movies/popular", fixture: "movie_popular", headers: pagedHeaders,
+		tool: toolListPopular, args: merge(typeArg(typeMovie), pagedArgs), route: "GET /movies/popular", fixture: "movie_popular", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2", queryExtended: extendedFull},
-		want: map[string]any{
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{
 			pathFirstTitle: testMovieTitle, "items.0.year": 1999, pathFirstIDTrakt: 481, pathFirstIDSlug: testMovieSlug,
 			"items.0.ids.imdb": testMovieIMDb, "items.0.ids.tmdb": 603, "items.0.rating": 8.7, "items.0.votes": 60000,
 			"items.0.overview": "A hacker learns the truth.", "items.0.runtime": 136, "items.0.certification": "R",
 			"items.0.released": "1999-03-31", "items.0.genres": []any{"action", "science-fiction"},
 			pathSecondGenres: []any{}, pathPageCount: 3, "page.item_count": 6,
-		},
-		absent: []string{"items.0.tagline", keyImages, "items.0.ids.plex"},
+		})),
+		absent: inItemPaths([]string{"items.0.tagline", keyImages, "items.0.ids.plex"}),
 	},
 	{
-		tool: toolFetchAnticipatedMovies, args: map[string]any{}, route: "GET /movies/anticipated", fixture: "movie_anticipated",
-		want: map[string]any{"items.0.list_count": 5000, pathFirstMovieTitle: testMovieTitle, pathSecondMovieGenres: []any{}},
+		tool: toolListAnticipated, args: typeArg(typeMovie), route: "GET /movies/anticipated", fixture: "movie_anticipated",
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{"items.0.list_count": 5000, pathFirstMovieTitle: testMovieTitle, pathSecondMovieGenres: []any{}})),
 	},
 	{
-		tool: toolFetchFavoritedMovies, args: map[string]any{fieldPeriod: periodMonthly}, route: "GET /movies/favorited/monthly", fixture: "movie_favorited",
-		want: map[string]any{"items.0.user_count": 800, "items.0.movie.ids.slug": testMovieSlug, pathSecondMovieGenres: []any{}},
+		tool: toolListFavorited, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: periodMonthly}), route: "GET /movies/favorited/monthly", fixture: "movie_favorited",
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{"items.0.user_count": 800, "items.0.movie.ids.slug": testMovieSlug, pathSecondMovieGenres: []any{}})),
 	},
 	{
-		tool: toolFetchPlayedMovies, args: map[string]any{fieldPeriod: periodDaily}, route: "GET /movies/played/daily", fixture: "movie_played",
-		want: map[string]any{
+		tool: toolListPlayed, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: periodDaily}), route: "GET /movies/played/daily", fixture: "movie_played",
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{
 			pathFirstWatcherCount: 70, pathFirstPlayCount: 140, "items.0.collected_count": 40, "items.0.collector_count": 30,
 			pathFirstMovieTitle: testMovieTitle, pathSecondMovieGenres: []any{},
-		},
+		})),
 	},
 	{
-		tool: toolFetchWatchedMovies, args: map[string]any{}, route: "GET /movies/watched/weekly", fixture: "movie_watched",
-		want: map[string]any{pathFirstWatcherCount: 90, pathFirstPlayCount: 180, "items.0.movie.ids.imdb": testMovieIMDb, pathSecondMovieGenres: []any{}},
+		tool: toolListWatched, args: typeArg(typeMovie), route: "GET /movies/watched/weekly", fixture: "movie_watched",
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{pathFirstWatcherCount: 90, pathFirstPlayCount: 180, "items.0.movie.ids.imdb": testMovieIMDb, pathSecondMovieGenres: []any{}})),
 	},
 	{
 		tool: toolFetchBoxofficeMovies, args: map[string]any{}, route: "GET /movies/boxoffice", fixture: "movie_boxoffice",
@@ -75,12 +69,12 @@ var movieCases = []catalogCase{
 		absent:    []string{fieldPage},
 	},
 	{
-		tool: toolSearchMovies, args: map[string]any{fieldQuery: "  matrix  "}, route: "GET /search/movie", fixture: "movie_search",
+		tool: toolSearch, args: merge(typeArg(typeMovie), map[string]any{fieldQuery: "  matrix  "}), route: routeSearchMovie, fixture: "movie_search",
 		wantQuery: map[string]string{"query": "matrix"},
-		want: map[string]any{
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{
 			"items.0.score": 97.5, pathFirstTitle: testMovieTitle, "items.0.year": 1999, pathFirstIDSlug: testMovieSlug,
 			"items.1.score": 12.25, "items.1.ids.trakt": 2,
-		},
+		})),
 	},
 	{
 		tool: toolGetRatings, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", fixture: "movie_ratings", object: true,
@@ -116,14 +110,14 @@ func TestMovieToolArguments(t *testing.T) {
 	t.Parallel()
 
 	cases := []argCase{
-		{name: "period default is weekly", tool: toolFetchFavoritedMovies, args: map[string]any{}, route: "GET /movies/favorited/weekly", body: emptyList},
-		{name: "period yearly", tool: toolFetchPlayedMovies, args: map[string]any{fieldPeriod: periodYearly}, route: "GET /movies/played/yearly", body: emptyList},
-		{name: "period all", tool: toolFetchWatchedMovies, args: map[string]any{fieldPeriod: periodAll}, route: "GET /movies/watched/all", body: emptyList},
-		{name: "period unknown", tool: toolFetchPlayedMovies, args: map[string]any{fieldPeriod: "hourly"}, wantErr: invalid(fieldPeriod)},
-		{name: "period wrong case", tool: toolFetchFavoritedMovies, args: map[string]any{fieldPeriod: "Weekly"}, wantErr: invalid(fieldPeriod)},
-		{name: "period path injection", tool: toolFetchWatchedMovies, args: map[string]any{fieldPeriod: traversalID}, wantErr: invalid(fieldPeriod)},
-		{name: nameLimit101, tool: toolFetchPopularMovies, args: map[string]any{fieldLimit: 101}, wantErr: invalid(fieldLimit)},
-		{name: namePage0, tool: toolFetchAnticipatedMovies, args: map[string]any{fieldPage: 0}, wantErr: invalid(fieldPage)},
+		{name: "period default is weekly", tool: toolListFavorited, args: typeArg(typeMovie), route: "GET /movies/favorited/weekly", body: emptyList},
+		{name: "period yearly", tool: toolListPlayed, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: periodYearly}), route: "GET /movies/played/yearly", body: emptyList},
+		{name: "period all", tool: toolListWatched, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: periodAll}), route: "GET /movies/watched/all", body: emptyList},
+		{name: "period unknown", tool: toolListPlayed, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: "hourly"}), wantErr: invalid(fieldPeriod)},
+		{name: "period wrong case", tool: toolListFavorited, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: "Weekly"}), wantErr: invalid(fieldPeriod)},
+		{name: "period path injection", tool: toolListWatched, args: merge(typeArg(typeMovie), map[string]any{fieldPeriod: traversalID}), wantErr: invalid(fieldPeriod)},
+		{name: nameLimit101, tool: toolListPopular, args: merge(typeArg(typeMovie), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: namePage0, tool: toolListAnticipated, args: merge(typeArg(typeMovie), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
 		{name: "id slug", tool: toolGetRatings, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/ratings", body: emptyObject, wantPath: routeMovieSlug + "/ratings"},
 		{name: "id numeric", tool: toolListVideos, args: movieItem("481"), route: "GET /movies/481/videos", body: emptyList, wantPath: "/movies/481/videos"},
 		{name: "id imdb title", tool: toolListPeople, args: movieItem(testMovieIMDb), route: "GET /movies/tt0133093/people", body: emptyObject, wantPath: "/movies/tt0133093/people"},
@@ -133,10 +127,10 @@ func TestMovieToolArguments(t *testing.T) {
 		{name: "id query injection", tool: toolListVideos, args: movieItem("x?extended=full"), wantErr: invalid(fieldID)},
 		{name: "id empty", tool: toolListPeople, args: movieItem(""), wantErr: invalid(fieldID)},
 		{name: "id upper case", tool: toolListRelated, args: movieItem("The-Matrix"), wantErr: invalid(fieldID)},
-		{name: "query empty", tool: toolSearchMovies, args: map[string]any{fieldQuery: ""}, wantErr: invalid(fieldQuery)},
-		{name: "query blank", tool: toolSearchMovies, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},
-		{name: "query 200 runes", tool: toolSearchMovies, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes)}, route: "GET /search/movie", body: emptyList},
-		{name: "query 201 runes", tool: toolSearchMovies, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes+1)}, wantErr: invalid(fieldQuery)},
+		{name: "query empty", tool: toolSearch, args: searchArgs(typeMovie, ""), wantErr: invalid(fieldQuery)},
+		{name: "query blank", tool: toolSearch, args: searchArgs(typeMovie, "   "), wantErr: invalid(fieldQuery)},
+		{name: "query 200 runes", tool: toolSearch, args: searchArgs(typeMovie, strings.Repeat("é", maxQueryRunes)), route: routeSearchMovie, body: emptyList},
+		{name: "query 201 runes", tool: toolSearch, args: searchArgs(typeMovie, strings.Repeat("é", maxQueryRunes+1)), wantErr: invalid(fieldQuery)},
 	}
 
 	runArgCases(t, cases)
@@ -150,8 +144,8 @@ func TestSearchMoviesEncodesQuery(t *testing.T) {
 	const query = "a/b?c=d&e"
 
 	h := newHarness(t)
-	h.trakt.respond("GET /search/movie", http.StatusOK, fixture(t, "movie_search"), nil)
-	h.ok(toolSearchMovies, map[string]any{fieldQuery: query}, nil)
+	h.trakt.respond(routeSearchMovie, http.StatusOK, fixture(t, "movie_search"), nil)
+	h.ok(toolSearch, searchArgs(typeMovie, query), nil)
 
 	seen := h.trakt.seen()
 	if len(seen) != 1 {

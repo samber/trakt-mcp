@@ -121,7 +121,7 @@ type PlayedShow struct {
 	Show           Show `json:"show"`
 }
 
-// SearchedShow is one match of search_shows.
+// SearchedShow is one match of search for type show.
 type SearchedShow struct {
 	Score float64 `json:"score"`
 	Title string  `json:"title"`
@@ -602,7 +602,7 @@ type PeriodShowArgs struct {
 	Period string `json:"period,omitempty" jsonschema:"daily, weekly, monthly, yearly or all (default weekly)"`
 }
 
-// SearchShowsArgs are the arguments of search_shows.
+// SearchShowsArgs are the arguments of the TV show text search of search.
 type SearchShowsArgs struct {
 	PageArgs
 	Query string `json:"query" jsonschema:"text to search for in show titles and descriptions, up to 200 characters"`
@@ -634,36 +634,6 @@ type ShowPeopleArgs struct {
 }
 
 func registerShowTools(s *Server) {
-	const pageNote = " Takes limit and page."
-
-	Register(s, Spec{
-		Name: "fetch_trending_shows", Title: "Fetch trending shows", Access: Read,
-		Description: "List the TV shows most watched on Trakt right now, with how many people are watching each." + pageNote,
-	}, fetchTrendingShows)
-	Register(s, Spec{
-		Name: "fetch_popular_shows", Title: "Fetch popular shows", Access: Read,
-		Description: "List the most popular TV shows on Trakt, by rating and votes." + pageNote,
-	}, fetchPopularShows)
-	Register(s, Spec{
-		Name: "fetch_anticipated_shows", Title: "Fetch anticipated shows", Access: Read,
-		Description: "List the most anticipated upcoming TV shows, with the number of lists each is on." + pageNote,
-	}, fetchAnticipatedShows)
-	Register(s, Spec{
-		Name: "fetch_favorited_shows", Title: "Fetch favorited shows", Access: Read,
-		Description: "List the TV shows favorited by the most users in a period (daily, weekly, monthly, yearly, all)." + pageNote,
-	}, fetchFavoritedShows)
-	Register(s, Spec{
-		Name: "fetch_played_shows", Title: "Fetch most played shows", Access: Read,
-		Description: "List the TV shows with the most plays in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchPlayedShows)
-	Register(s, Spec{
-		Name: "fetch_watched_shows", Title: "Fetch most watched shows", Access: Read,
-		Description: "List the TV shows watched by the most users in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchWatchedShows)
-	Register(s, Spec{
-		Name: "search_shows", Title: "Search shows", Access: Read,
-		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
-	}, searchShows)
 	Register(s, Spec{
 		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,
 		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",

@@ -1,6 +1,11 @@
 package tools
 
-import "slices"
+import (
+	"context"
+	"slices"
+
+	"github.com/samber/trakt-mcp/internal/trakt"
+)
 
 // Values of the type argument of tools that take one item of several media
 // types. They are the singular words the batch write tools already accept,
@@ -31,6 +36,39 @@ type ItemRef struct {
 	ID      string `json:"id"                jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747) of the movie or TV show; for a season or an episode, the TV show's id"`
 	Season  *int   `json:"season,omitempty"  jsonschema:"season number, 0 to 999 (0 is the specials); required for type season or episode, refused otherwise"`
 	Episode *int   `json:"episode,omitempty" jsonschema:"episode number in the season, 1 to 9999; required for type episode, refused otherwise"`
+}
+
+// typeHandlers holds the handler of a movie and of a TV show for a tool that
+// takes a bare type argument and whose result shape differs by type. The
+// result travels in a Typed envelope.
+type typeHandlers[A any] struct {
+	movie func(context.Context, *trakt.UserClient, A) (any, error)
+	show  func(context.Context, *trakt.UserClient, A) (any, error)
+}
+
+// call validates typ, then runs the handler of its type on in.
+func (h typeHandlers[A]) call(ctx context.Context, c *trakt.UserClient, typ string, in A) (Typed, error) {
+	if err := checkType(typ, typeMovie, typeShow); err != nil {
+		return Typed{}, err
+	}
+
+	if typ == typeMovie {
+		item, err := h.movie(ctx, c, in)
+
+		return typed(typ, item, err)
+	}
+
+	item, err := h.show(ctx, c, in)
+
+	return typed(typ, item, err)
+}
+
+// widen adapts a handler with a concrete result type to the result type of
+// typeHandlers.
+func widen[A, T any](f func(context.Context, *trakt.UserClient, A) (T, error)) func(context.Context, *trakt.UserClient, A) (any, error) {
+	return func(ctx context.Context, c *trakt.UserClient, in A) (any, error) {
+		return f(ctx, c, in)
+	}
 }
 
 // checkType fails with an invalid-argument error naming the type field when

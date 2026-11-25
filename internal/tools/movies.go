@@ -96,7 +96,7 @@ func (m traktMovie) trim(maxOverview int) Movie {
 	}
 }
 
-// TrendingMoviesArgs are the arguments of fetch_trending_movies.
+// TrendingMoviesArgs are the arguments of the movie handler of list_trending.
 type TrendingMoviesArgs struct {
 	PageArgs
 }
@@ -106,15 +106,6 @@ type TrendingMoviesArgs struct {
 type MovieSummaryArgs struct {
 	MovieID  string `json:"movie_id"           jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 	Extended *bool  `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification and genres (default true)"`
-}
-
-func registerMovieTools(s *Server) {
-	Register(s, Spec{
-		Name:        "fetch_trending_movies",
-		Title:       "Fetch trending movies",
-		Description: "List the movies most watched on Trakt right now, with how many people are watching each. Takes limit and page.",
-		Access:      Read,
-	}, fetchTrendingMovies)
 }
 
 func fetchTrendingMovies(ctx context.Context, c *trakt.UserClient, in TrendingMoviesArgs) (Listing[TrendingMovie], error) {
@@ -188,7 +179,7 @@ type BoxOfficeMovie struct {
 	Movie   Movie `json:"movie"`
 }
 
-// SearchedMovie is one match of search_movies.
+// SearchedMovie is one match of search for type movie.
 type SearchedMovie struct {
 	Score float64  `json:"score"`
 	Title string   `json:"title"`
@@ -243,7 +234,7 @@ type MovieListArgs struct {
 // PeriodMovieArgs are the arguments of the period-based movie rankings.
 type PeriodMovieArgs = PeriodShowArgs
 
-// SearchMoviesArgs are the arguments of search_movies.
+// SearchMoviesArgs are the arguments of the movie text search of search.
 type SearchMoviesArgs struct {
 	PageArgs
 	Query string `json:"query" jsonschema:"text to search for in movie titles and descriptions, up to 200 characters"`
@@ -266,36 +257,10 @@ type RelatedMoviesArgs struct {
 }
 
 func registerMovieCatalogTools(s *Server) {
-	const pageNote = " Takes limit and page."
-
-	Register(s, Spec{
-		Name: "fetch_popular_movies", Title: "Fetch popular movies", Access: Read,
-		Description: "List the most popular movies on Trakt, by rating and votes." + pageNote,
-	}, fetchPopularMovies)
-	Register(s, Spec{
-		Name: "fetch_anticipated_movies", Title: "Fetch anticipated movies", Access: Read,
-		Description: "List the most anticipated upcoming movies, with the number of lists each is on." + pageNote,
-	}, fetchAnticipatedMovies)
-	Register(s, Spec{
-		Name: "fetch_favorited_movies", Title: "Fetch favorited movies", Access: Read,
-		Description: "List the movies favorited by the most users in a period (daily, weekly, monthly, yearly, all)." + pageNote,
-	}, fetchFavoritedMovies)
-	Register(s, Spec{
-		Name: "fetch_played_movies", Title: "Fetch most played movies", Access: Read,
-		Description: "List the movies with the most plays in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchPlayedMovies)
-	Register(s, Spec{
-		Name: "fetch_watched_movies", Title: "Fetch most watched movies", Access: Read,
-		Description: "List the movies watched by the most users in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchWatchedMovies)
 	Register(s, Spec{
 		Name: "fetch_boxoffice_movies", Title: "Fetch box office movies", Access: Read,
 		Description: "List the top movies of the last weekend's US box office with their revenue. Trakt returns the whole list: no limit or page.",
 	}, fetchBoxOfficeMovies)
-	Register(s, Spec{
-		Name: "search_movies", Title: "Search movies", Access: Read,
-		Description: "Search movies by text. Returns each match's relevance score, title, year and ids." + pageNote,
-	}, searchMovies)
 }
 
 func fetchPopularMovies(ctx context.Context, c *trakt.UserClient, in MovieListArgs) (Listing[Movie], error) {

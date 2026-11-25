@@ -108,6 +108,15 @@ func (r PersonRef) path() (string, error) {
 	return string(id), err
 }
 
+// ListPersonCreditsArgs are the arguments of list_person_credits.
+type ListPersonCreditsArgs struct {
+	TypeArg
+	ID string `json:"id" jsonschema:"Trakt slug (bryan-cranston), numeric Trakt id (1) or IMDb person id (nm0186505) of the person"`
+}
+
+// creditHandlers hold the handler of each type of credits.
+var creditHandlers = typeHandlers[PersonRef]{movie: widen(fetchPersonMovies), show: widen(fetchPersonShows)}
+
 // PersonSummaryArgs are the arguments of fetch_person_summary.
 type PersonSummaryArgs struct {
 	PersonRef
@@ -305,13 +314,24 @@ func registerPeopleTools(s *Server) {
 		Description: "Get one person's details: name, ids, biography (cut), birthday, death, birthplace, homepage and social ids." + untrustedNote,
 	}, fetchPersonSummary)
 	Register(s, Spec{
-		Name: "fetch_person_movies", Title: "Fetch person movies", Access: Read,
-		Description: "List the movies a person acted in (with the character) or worked on (grouped by department with the job). Long credit lists are cut." + untrustedNote,
-	}, fetchPersonMovies)
-	Register(s, Spec{
-		Name: "fetch_person_shows", Title: "Fetch person shows", Access: Read,
-		Description: "List the TV shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
-	}, fetchPersonShows)
+		Name: "list_person_credits", Title: "List person credits", Access: Read,
+		Description: "List the movies or TV shows a person acted in or worked on, returned as {type, item}. " +
+			"type movie: item has cast (character and movie) and crew grouped by department (job and movie). " +
+			"type show: item has cast (character, episode count, series-regular flag and TV show) and crew grouped by department (job, episode count and TV show). " +
+			"Long credit lists are cut. type is movie or show (a TV show). id is the person's Trakt slug, Trakt id or IMDb person id." + untrustedNote,
+	}, listPersonCredits)
+}
+
+func listPersonCredits(ctx context.Context, c *trakt.UserClient, in ListPersonCreditsArgs) (Typed, error) {
+	if err := checkType(in.Type, typeMovie, typeShow); err != nil {
+		return Typed{}, err
+	}
+
+	if _, err := idArg(fieldID, in.ID, Slug|Numeric|IMDbPerson); err != nil {
+		return Typed{}, err
+	}
+
+	return creditHandlers.call(ctx, c, in.Type, PersonRef{PersonID: in.ID})
 }
 
 func fetchPersonSummary(ctx context.Context, c *trakt.UserClient, in PersonSummaryArgs) (Person, error) {

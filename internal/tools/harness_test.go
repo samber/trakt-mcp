@@ -41,7 +41,7 @@ const (
 	// keyStatus is the structured-log and metric label key holding the call outcome.
 	keyStatus = "status"
 
-	toolTrending   = "fetch_trending_movies"
+	toolTrending   = "list_trending"
 	toolGetSummary = "get_summary"
 )
 
@@ -549,4 +549,9 @@ func offlineDeps() Deps {
 		Limiter: limits.New(testRateBudget, testRateBudget),
 		Version: "test",
 	}
+}
+
+// trendingArgs are the arguments of list_trending for movies, with extra.
+func trendingArgs(extra map[string]any) map[string]any {
+	return merge(typeArg(typeMovie), extra)
 }

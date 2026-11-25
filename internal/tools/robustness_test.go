@@ -139,7 +139,7 @@ func TestRegisterDuplicateNamePanics(t *testing.T) {
 		}
 	}()
 
-	newServer(offlineDeps(), []func(*Server){registerMovieTools, registerMovieTools})
+	newServer(offlineDeps(), []func(*Server){registerRankingTools, registerRankingTools})
 }
 
 func TestContextErrorsMapping(t *testing.T) {
@@ -168,7 +168,7 @@ func TestFailedCallLogsOneLine(t *testing.T) {
 
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusBadRequest, `{"error_description":"BODY-TEXT"}`, nil)
-	h.fail(toolTrending, map[string]any{}, "Trakt rejected the request (status 400)")
+	h.fail(toolTrending, trendingArgs(nil), "Trakt rejected the request (status 400)")
 
 	if n := len(h.logs.lines(t, "tool call failed")); n != 0 {
 		t.Errorf("separate failure lines = %d, want 0", n)
@@ -190,7 +190,7 @@ func TestInvalidInputIsCountedAndLogged(t *testing.T) {
 	h := newHarness(t)
 
 	// limit must be an integer: the input schema refuses it before any handler.
-	res := h.call(toolTrending, map[string]any{fieldLimit: "ten"})
+	res := h.call(toolTrending, trendingArgs(map[string]any{fieldLimit: "ten"}))
 	if !res.IsError {
 		t.Fatalf("result = %q, want a schema rejection", resultText(res))
 	}
@@ -220,8 +220,10 @@ func TestListOverviewIsShorter(t *testing.T) {
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusOK, `[{"watchers": 1, "movie": `+movieJSON("m", long)+`}]`, nil)
 
-	var out Listing[TrendingMovie]
-	h.ok(toolTrending, map[string]any{}, &out)
+	var typedRes typedOut[Listing[TrendingMovie]]
+	h.ok(toolTrending, trendingArgs(nil), &typedRes)
+
+	out := typedRes.Item
 
 	if len(out.Items) != 1 {
 		t.Fatalf("items = %+v", out.Items)

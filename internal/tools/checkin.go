@@ -35,7 +35,7 @@ const (
 	msgCheckinActive = "a check-in is already in progress; cancel it with cancel_checkin or wait for it to expire, then retry"
 )
 
-// ShowCheckinArgs are the arguments of checkin_to_show.
+// ShowCheckinArgs are the arguments of the TV show handler of checkin.
 type ShowCheckinArgs struct {
 	ShowID    string `json:"show_id,omitempty"    jsonschema:"Trakt slug (breaking-bad), numeric Trakt id or IMDb id; or give show_title and show_year instead"`
 	ShowTitle string `json:"show_title,omitempty" jsonschema:"show title, with show_year, when show_id is not known"`
@@ -45,10 +45,21 @@ type ShowCheckinArgs struct {
 	Message   string `json:"message,omitempty"    jsonschema:"message shared with the check-in, at most 280 characters"`
 }
 
-// MovieCheckinArgs are the arguments of checkin_to_movie.
+// MovieCheckinArgs are the arguments of the movie handler of checkin.
 type MovieCheckinArgs struct {
 	MovieID string `json:"movie_id"          jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 	Message string `json:"message,omitempty" jsonschema:"message shared with the check-in, at most 280 characters"`
+}
+
+// CheckinArgs are the arguments of checkin.
+type CheckinArgs struct {
+	TypeArg
+	ID        string `json:"id,omitempty"         jsonschema:"Trakt slug, numeric Trakt id or IMDb id of the movie or TV show; for type show, give show_title and show_year instead when the id is not known"`
+	ShowTitle string `json:"show_title,omitempty" jsonschema:"type show only: show title, with show_year, instead of id"`
+	ShowYear  int    `json:"show_year,omitempty"  jsonschema:"type show only: year the show started, with show_title"`
+	Season    *int   `json:"season,omitempty"     jsonschema:"type show only, required there: season number, 0 to 999; 0 is the specials"`
+	Episode   *int   `json:"episode,omitempty"    jsonschema:"type show only, required there: episode number in the season, 1 to 9999"`
+	Message   string `json:"message,omitempty"    jsonschema:"message shared with the check-in, at most 280 characters"`
 }
 
 // CancelCheckinArgs are the arguments of cancel_checkin: none.
@@ -77,19 +88,16 @@ func (CancelResult) resultCount() int { return 1 }
 
 func registerCheckinTools(s *Server) {
 	Register(s, Spec{
-		Name:  "checkin_to_show",
-		Title: "Check in to an episode",
-		Description: "Tell Trakt the user is watching an episode of a TV show now, by show_id or by show_title and show_year, plus season and episode. " +
-			"If a check-in is already active, returns already_checked_in with its expiry instead of failing.",
+		Name:  "checkin",
+		Title: "Check in",
+		Description: "Tell Trakt the user is watching a movie or an episode of a TV show now. " +
+			"type movie: id is the movie's id. " +
+			"type show: id is the TV show's id, or give show_title and show_year instead; season (0 is the specials) and episode are required. " +
+			"show_title, show_year, season and episode apply to type show only. message is shared with the check-in, at most 280 characters. " +
+			"If a check-in is already active, returns already_checked_in with its expiry instead of failing. " +
+			"type is movie or show (a TV show).",
 		Access: Write,
-	}, checkinToShow)
-	Register(s, Spec{
-		Name:  "checkin_to_movie",
-		Title: "Check in to a movie",
-		Description: "Tell Trakt the user is watching a movie now. " +
-			"If a check-in is already active, returns already_checked_in with its expiry instead of failing.",
-		Access: Write,
-	}, checkinToMovie)
+	}, checkinTo)
 	Register(s, Spec{
 		Name:        "cancel_checkin",
 		Title:       "Cancel check-in",
@@ -140,7 +148,7 @@ func refByID(field, raw string) (*checkinRef, error) {
 	return &checkinRef{IDs: &ids}, nil
 }
 
-// showRef validates the show of checkin_to_show: show_id alone, or
+// showRef validates the show of a TV show check-in: show_id alone, or
 // show_title with show_year; both at once are ambiguous.
 func showRef(in ShowCheckinArgs) (*checkinRef, error) {
 	byTitle := in.ShowTitle != "" || in.ShowYear != 0
@@ -162,6 +170,71 @@ func showRef(in ShowCheckinArgs) (*checkinRef, error) {
 	}
 
 	return &checkinRef{Title: title, Year: in.ShowYear}, nil
+}
+
+func checkinTo(ctx context.Context, c *trakt.UserClient, in CheckinArgs) (CheckinResult, error) {
+	if err := checkType(in.Type, typeMovie, typeShow); err != nil {
+		return CheckinResult{}, err
+	}
+
+	if in.Type == typeMovie {
+		return checkinMovieArgs(ctx, c, in)
+	}
+
+	return checkinShowArgs(ctx, c, in)
+}
+
+// checkinMovieArgs checks in to a movie: the id, then the arguments only a TV
+// show takes, which are refused rather than ignored.
+func checkinMovieArgs(ctx context.Context, c *trakt.UserClient, in CheckinArgs) (CheckinResult, error) {
+	if _, err := idArg(fieldID, in.ID, itemIDKinds); err != nil {
+		return CheckinResult{}, err
+	}
+
+	for _, extra := range []struct {
+		field string
+		given bool
+	}{
+		{field: fieldShowTitle, given: in.ShowTitle != ""},
+		{field: fieldShowYear, given: in.ShowYear != 0},
+		{field: fieldSeason, given: in.Season != nil},
+		{field: fieldEpisode, given: in.Episode != nil},
+	} {
+		if extra.given {
+			return CheckinResult{}, invalidArgument(extra.field)
+		}
+	}
+
+	return checkinToMovie(ctx, c, MovieCheckinArgs{MovieID: in.ID, Message: in.Message})
+}
+
+// checkinShowArgs checks in to an episode: the show by id or by title and
+// year, never both, then the season and the episode, which are required.
+func checkinShowArgs(ctx context.Context, c *trakt.UserClient, in CheckinArgs) (CheckinResult, error) {
+	byTitle := in.ShowTitle != "" || in.ShowYear != 0
+
+	if (in.ID != "") == byTitle {
+		return CheckinResult{}, invalidArgument(fieldID)
+	}
+
+	if in.ID != "" {
+		if _, err := idArg(fieldID, in.ID, itemIDKinds); err != nil {
+			return CheckinResult{}, err
+		}
+	}
+
+	if err := checkOptional(in.Season, true, fieldSeason, checkSeason); err != nil {
+		return CheckinResult{}, err
+	}
+
+	if err := checkOptional(in.Episode, true, fieldEpisode, checkEpisode); err != nil {
+		return CheckinResult{}, err
+	}
+
+	return checkinToShow(ctx, c, ShowCheckinArgs{
+		ShowID: in.ID, ShowTitle: in.ShowTitle, ShowYear: in.ShowYear,
+		Season: deref(in.Season), Episode: deref(in.Episode), Message: in.Message,
+	})
 }
 
 func checkinToShow(ctx context.Context, c *trakt.UserClient, in ShowCheckinArgs) (CheckinResult, error) {

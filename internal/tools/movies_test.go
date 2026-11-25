@@ -75,9 +75,15 @@ func pilotTrending(t *testing.T) {
 		"X-Pagination-Page": "1", "X-Pagination-Page-Count": "4", "X-Pagination-Item-Count": "12", "X-Pagination-Limit": "3",
 	})
 
-	var out Listing[TrendingMovie]
+	var typedRes typedOut[Listing[TrendingMovie]]
 
-	res := h.ok(toolTrending, map[string]any{fieldLimit: 3, fieldPage: 1}, &out)
+	res := h.ok(toolTrending, trendingArgs(map[string]any{fieldLimit: 3, fieldPage: 1}), &typedRes)
+
+	out := typedRes.Item
+
+	if typedRes.Type != typeMovie {
+		t.Errorf("type = %q, want %q", typedRes.Type, typeMovie)
+	}
 
 	if len(out.Items) != 3 || out.Items[0].Watchers != 12 || out.Items[0].Movie.Title != "A" ||
 		out.Items[0].Movie.IDs != (MovieIDs{Trakt: 1, Slug: "a", IMDb: "tt1", TMDB: 11}) {
@@ -98,15 +104,17 @@ func requireGenresArrays(t *testing.T, output string) {
 	t.Helper()
 
 	var wire struct {
-		Items []struct {
-			Movie map[string]json.RawMessage `json:"movie"`
-		} `json:"items"`
+		Item struct {
+			Items []struct {
+				Movie map[string]json.RawMessage `json:"movie"`
+			} `json:"items"`
+		} `json:"item"`
 	}
 	if err := json.Unmarshal([]byte(output), &wire); err != nil {
 		t.Fatal(err)
 	}
 
-	for i, item := range wire.Items {
+	for i, item := range wire.Item.Items {
 		if g := string(item.Movie["genres"]); !strings.HasPrefix(g, "[") {
 			t.Errorf("item %d genres = %s, want an array", i, g)
 		}
@@ -134,9 +142,9 @@ func pilotTrendingNullBody(t *testing.T) {
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusOK, `null`, nil)
 
-	res := h.ok(toolTrending, map[string]any{}, nil)
-	if got := resultText(res); got != `{"items":[]}` {
-		t.Errorf("output = %s, want {\"items\":[]}", got)
+	res := h.ok(toolTrending, trendingArgs(nil), nil)
+	if got := resultText(res); got != `{"type":"movie","item":{"items":[]}}` {
+		t.Errorf("output = %s, want an empty movie list", got)
 	}
 }
 
@@ -241,8 +249,8 @@ func TestMovieToolsCapReplySize(t *testing.T) {
 	h.trakt.respond(trendingRoute, http.StatusOK, trendingJSON()+pad, nil)
 	h.trakt.respond("GET /movies/481", http.StatusOK, `{"title": "The Matrix", "ids": {"trakt": 481, "slug": "the-matrix-1999"}}`+pad, nil)
 
-	if res := h.call("fetch_trending_movies", map[string]any{fieldLimit: 3}); !res.IsError {
-		t.Error("fetch_trending_movies: oversized answer accepted")
+	if res := h.call(toolTrending, trendingArgs(map[string]any{fieldLimit: 3})); !res.IsError {
+		t.Error("list_trending: oversized answer accepted")
 	}
 
 	if res := h.call(toolGetSummary, movieItem("481")); !res.IsError {

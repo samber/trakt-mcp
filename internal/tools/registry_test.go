@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -28,13 +29,14 @@ const (
 	// writeHold keeps each test write inside its handler long enough for the
 	// others to arrive while it runs.
 	writeHold = 30 * time.Millisecond
-	// trendingRoute is the fake Trakt route of fetch_trending_movies.
+	// trendingRoute is the fake Trakt route of list_trending for movies.
 	trendingRoute = "GET /movies/trending"
 )
 
 // TestShowToolDescriptionsSayTVShow keeps the word "show" from reading as a
-// movie: every tool about shows, seasons or episodes, by name or by taking
-// an ItemRef (type and id arguments), must say TV show/series.
+// movie: every tool about shows, seasons or episodes, by name, by taking an
+// ItemRef (type and id arguments) or by a type argument that accepts show
+// (ItemRef or bare TypeArg), must say TV show/series.
 func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 	t.Parallel()
 
@@ -44,7 +46,7 @@ func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 
 	for _, spec := range srv.Specs() {
 		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") &&
-			!takesItemRef(listed[spec.Name]) {
+			!takesItemRef(listed[spec.Name]) && !typeAcceptsShow(listed[spec.Name]) {
 			continue
 		}
 
@@ -60,12 +62,58 @@ func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 		t.Fatal("no show, season or episode tool found")
 	}
 
-	// get_summary is selected by its ItemRef only; without this the schema
-	// lookup could silently select nothing.
+	requireSelectorControls(t, listed)
+}
+
+// requireSelectorControls fails unless the selectors above find the tools they
+// are meant to: without it a schema lookup could silently select nothing.
+// get_summary is selected by its ItemRef only. The bare type tools are
+// selected by their type property only: list_trending and search take no id,
+// and neither does list_recommendations.
+func requireSelectorControls(t *testing.T, listed map[string]*mcp.Tool) {
+	t.Helper()
+
 	if !takesItemRef(listed[toolGetSummary]) {
 		t.Fatalf("%s: type and id properties not found in the listed input schema", toolGetSummary)
 	}
+
+	for _, name := range []string{toolTrending, toolSearch, toolListRecommendations} {
+		if !typeAcceptsShow(listed[name]) || takesItemRef(listed[name]) {
+			t.Fatalf("%s: want a type property accepting show and no id in the listed input schema", name)
+		}
+	}
 }
+
+// typeAcceptsShow reports whether the listed tool has a type argument whose
+// description names show among its values.
+func typeAcceptsShow(tool *mcp.Tool) bool {
+	if tool == nil {
+		return false
+	}
+
+	schema, ok := tool.InputSchema.(map[string]any)
+	if !ok {
+		return false
+	}
+
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	prop, ok := props[argType].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	desc, _ := prop["description"].(string)
+
+	return typeShowWord.MatchString(desc)
+}
+
+// typeShowWord matches the singular value show, not the plural shows that the
+// type filters of lists and collections take.
+var typeShowWord = regexp.MustCompile(`\bshow\b`)
 
 // takesItemRef reports whether the listed tool takes an ItemRef: a type
 // argument naming the media type and an id. A type argument alone also
@@ -111,7 +159,7 @@ var accessByPrefix = map[string]Access{
 
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
-var untrustedTextTools = []string{"list_item_lists", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists", "create_list", "update_list", "fetch_note", "fetch_user_notes", "create_note", "update_note", "fetch_favorites", "fetch_movie_releases"}
+var untrustedTextTools = []string{"list_item_lists", "list_person_credits", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists", "create_list", "update_list", "fetch_note", "fetch_user_notes", "create_note", "update_note", "fetch_favorites", "fetch_movie_releases"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()
@@ -284,9 +332,9 @@ func TestRateLimitedToolError(t *testing.T) {
 
 		h := newHarness(t, withLimiter(limits.New(1, testRateBudget)))
 		h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-		h.ok(toolTrending, map[string]any{}, nil)
+		h.ok(toolTrending, trendingArgs(nil), nil)
 
-		res := h.call(toolTrending, map[string]any{})
+		res := h.call(toolTrending, trendingArgs(nil))
 		if !res.IsError || !strings.HasPrefix(resultText(res), "rate limited, retry after ") || !strings.HasSuffix(resultText(res), " s") {
 			t.Fatalf("second read = %q, want rate limited with a delay in seconds", resultText(res))
 		}
@@ -305,7 +353,7 @@ func TestRateLimitedToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.trakt.respond(trendingRoute, http.StatusTooManyRequests, `{}`, map[string]string{"Retry-After": "7"})
-		h.fail(toolTrending, map[string]any{}, "rate limited, retry after 7 s")
+		h.fail(toolTrending, trendingArgs(nil), "rate limited, retry after 7 s")
 
 		if rec := toolLine(t, h.logs, toolTrending); rec[keyStatus] != statusRateLimited || rec["trakt_status"] != float64(http.StatusTooManyRequests) {
 			t.Errorf("log line = %v, want rate_limited with trakt_status 429", rec)
@@ -322,9 +370,9 @@ func TestGlobalBudgetSpentIsRateLimited(t *testing.T) {
 
 	h := newHarness(t, withLimiter(limits.New(testRateBudget, testRateBudget, limits.WithGlobal(1))))
 	h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-	h.ok(toolTrending, map[string]any{}, nil)
+	h.ok(toolTrending, trendingArgs(nil), nil)
 
-	res := h.call(toolTrending, map[string]any{})
+	res := h.call(toolTrending, trendingArgs(nil))
 	if !res.IsError || !strings.HasPrefix(resultText(res), "rate limited, retry after ") {
 		t.Fatalf("call over the global budget = %q, want rate limited", resultText(res))
 	}
@@ -346,7 +394,7 @@ func TestUpstreamAuthToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.clients.setErr(trakt.ErrUpstreamAuth)
-		h.fail(toolTrending, map[string]any{}, msgUpstreamAuth)
+		h.fail(toolTrending, trendingArgs(nil), msgUpstreamAuth)
 	})
 
 	t.Run("trakt refuses the token", func(t *testing.T) {
@@ -354,7 +402,7 @@ func TestUpstreamAuthToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.trakt.respond(trendingRoute, http.StatusUnauthorized, `{"error":"invalid_token"}`, nil)
-		h.fail(toolTrending, map[string]any{}, msgUpstreamAuth)
+		h.fail(toolTrending, trendingArgs(nil), msgUpstreamAuth)
 	})
 }
 
@@ -508,7 +556,7 @@ func TestToolCallUnreachableIsWarn(t *testing.T) {
 	closed.Close()
 
 	h := newHarness(t, withAPIBaseURL(closed.URL))
-	h.fail(toolTrending, map[string]any{}, msgUnreachable)
+	h.fail(toolTrending, trendingArgs(nil), msgUnreachable)
 
 	rec := toolLine(t, h.logs, toolTrending)
 	if rec[keyStatus] != statusError || rec["trakt_status"] != float64(0) || rec["level"] != "WARN" ||
@@ -550,7 +598,7 @@ func TestToolCallMetrics(t *testing.T) {
 
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-	h.ok(toolTrending, map[string]any{}, nil)
+	h.ok(toolTrending, trendingArgs(nil), nil)
 
 	checks := []struct {
 		name   string

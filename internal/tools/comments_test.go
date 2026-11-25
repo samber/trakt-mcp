@@ -33,10 +33,10 @@ const (
 
 // newToolNames are the tools of the movie, people and comment groups.
 var newToolNames = []string{
-	toolFetchPopularMovies, toolFetchAnticipatedMovies, toolFetchFavoritedMovies, toolFetchPlayedMovies, toolFetchWatchedMovies,
-	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolListVideos, toolListRelated, toolListPeople,
+	toolListPopular, toolListAnticipated, toolListFavorited, toolListPlayed, toolListWatched,
+	toolFetchBoxofficeMovies, toolSearch, toolGetRatings, toolListVideos, toolListRelated, toolListPeople,
 	toolListComments,
-	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows,
+	toolFetchPersonSummary, toolListPersonCredits,
 	toolFetchComment, toolFetchCommentReplies,
 }
 
@@ -620,8 +620,8 @@ func TestNewToolsAreAllReadOnly(t *testing.T) {
 		}
 	}
 
-	if len(newToolNames) != 17 {
-		t.Errorf("newToolNames holds %d tools, want 17", len(newToolNames))
+	if len(newToolNames) != 16 {
+		t.Errorf("newToolNames holds %d tools, want 16", len(newToolNames))
 	}
 }
 
