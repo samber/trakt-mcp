@@ -179,6 +179,42 @@ func waitDeleted(t *testing.T, st *store.Store, users ...store.User) {
 	}
 }
 
+// waitFor polls cond until it holds, failing the test after waitTimeout.
+// Run purges users first, then revokes their grants, then purges clients:
+// stopping the run loop before the last step of interest lets its cancelled
+// context abort that step.
+func waitFor(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+
+	deadline := time.Now().Add(waitTimeout)
+
+	for !cond() {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+
+		time.Sleep(pollEvery)
+	}
+}
+
+// waitClientGone polls until the client no longer exists.
+func waitClientGone(t *testing.T, st *store.Store, clientID string) {
+	t.Helper()
+
+	waitFor(t, "client "+clientID+" to be purged", func() bool {
+		_, err := st.ClientByID(context.Background(), clientID)
+
+		switch {
+		case errors.Is(err, store.ErrNotFound):
+			return true
+		case err != nil:
+			t.Fatalf("ClientByID: %v", err)
+		}
+
+		return false
+	})
+}
+
 func TestJobs_PurgesInactiveAndRevokes(t *testing.T) {
 	t.Parallel()
 
@@ -186,6 +222,7 @@ func TestJobs_PurgesInactiveAndRevokes(t *testing.T) {
 	f := newFixture(t, rv)
 	stop := startRun(t, f, inactiveClock())
 	waitDeleted(t, f.st, f.withToken, f.withoutToken)
+	waitClientGone(t, f.st, "client-1")
 	stop()
 
 	if got := rv.revoked(); !slices.Equal(got, []string{"refresh-a"}) {
@@ -208,6 +245,7 @@ func TestJobs_RevokeFailureStillDeletes(t *testing.T) {
 	f := newFixture(t, rv)
 	stop := startRun(t, f, inactiveClock())
 	waitDeleted(t, f.st, f.withToken, f.withoutToken)
+	waitFor(t, "the revoke call", func() bool { return len(rv.revoked()) >= 1 })
 	stop()
 
 	if got := rv.revoked(); len(got) != 1 {
