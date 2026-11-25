@@ -70,6 +70,27 @@ func widen[A, T any](f func(context.Context, *trakt.UserClient, A) (T, error)) f
 	}
 }
 
+// pluralMediaFilter maps each singular media type word to the plural value of
+// Trakt's list filters.
+var pluralMediaFilter = map[string]string{
+	typeMovie:   mediaMovies,
+	typeShow:    mediaShows,
+	typeSeason:  mediaSeasons,
+	typeEpisode: mediaEpisodes,
+}
+
+// normalizeMediaFilter turns the singular media types movie, show, season and
+// episode into the plural value of a list filter, so a model that learned
+// type=movie elsewhere can reuse it. Any other value, including a different
+// case, passes through unchanged and is left to the tool's own validation.
+func normalizeMediaFilter(value string) string {
+	if plural, ok := pluralMediaFilter[value]; ok {
+		return plural
+	}
+
+	return value
+}
+
 // checkType fails with an invalid-argument error naming the type field when
 // value is not one of allowed. The match is exact: no default, no case
 // folding, so "" and "Movie" are refused.

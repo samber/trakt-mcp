@@ -46,7 +46,7 @@ type NoteRefArgs struct {
 
 // UserNotesArgs are the arguments of list_user_notes.
 type UserNotesArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (default all)"`
+	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (singular movie, show, season or episode also accepted; default all)"`
 	PageArgs
 }
 
@@ -291,7 +291,7 @@ func fetchNote(ctx context.Context, c *trakt.UserClient, in NoteRefArgs) (Note, 
 var noteTypes = listItemTypes
 
 func fetchUserNotes(ctx context.Context, c *trakt.UserClient, in UserNotesArgs) (Listing[UserNote], error) {
-	typ, err := oneOf(fieldType, in.Type, mediaAll, noteTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), mediaAll, noteTypes)
 	if err != nil {
 		return Listing[UserNote]{}, err
 	}

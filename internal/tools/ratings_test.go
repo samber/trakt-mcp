@@ -74,7 +74,7 @@ func TestRatingsUsesShortPathWhenUnfiltered(t *testing.T) {
 			name: "paged", tool: toolFetchRatings, args: merge(pagedArgs, nil), route: "GET " + routeSyncRatings, body: emptyList,
 			wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		},
-		{name: "bad type", tool: toolFetchRatings, args: map[string]any{argType: itemMovie}, wantErr: invalid(fieldType)},
+		{name: "bad type", tool: toolFetchRatings, args: map[string]any{argType: typeUpperCase}, wantErr: invalid(fieldType)},
 		{name: "rating 0", tool: toolFetchRatings, args: map[string]any{keyRating: 0}, wantErr: invalid(fieldRating)},
 		{name: "rating 11", tool: toolFetchRatings, args: map[string]any{keyRating: maxRating + 1}, wantErr: invalid(fieldRating)},
 	}
@@ -124,4 +124,25 @@ func TestRatingRange(t *testing.T) {
 			t.Errorf("body = %+v, want one movie without rating", got)
 		}
 	})
+}
+
+// TestRatingsSingularType checks the singular media types of the ratings
+// filter.
+func TestRatingsSingularType(t *testing.T) {
+	t.Parallel()
+
+	cases := singularFilterCases(singularFilter{
+		tool:      toolFetchRatings,
+		args:      func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:      func(plural string) string { return routeSyncRatings + "/" + plural },
+		accepted:  ratingTypes,
+		emptyPath: routeSyncRatings,
+	})
+
+	cases = append(cases, argCase{
+		name: "singular with rating", tool: toolFetchRatings, args: map[string]any{argType: itemSeason, keyRating: minRating},
+		route: "GET /sync/ratings/seasons/1", body: emptyList, wantPath: "/sync/ratings/seasons/1",
+	})
+
+	runArgCases(t, cases)
 }

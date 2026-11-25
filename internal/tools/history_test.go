@@ -274,3 +274,16 @@ func TestUserWatchedPagesLocally(t *testing.T) {
 		t.Errorf("page = %+v, want 2 pages of 2 items", out.Page)
 	}
 }
+
+// TestUserWatchedSingularType checks the singular media types of the watched
+// list filter.
+func TestUserWatchedSingularType(t *testing.T) {
+	t.Parallel()
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:     toolFetchUserWatched,
+		args:     func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:     func(plural string) string { return "/sync/watched/" + plural },
+		accepted: []string{mediaMovies, mediaShows},
+	}))
+}

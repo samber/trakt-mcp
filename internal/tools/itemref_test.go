@@ -1,6 +1,9 @@
 package tools
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // pathItem prefixes the output paths of a Typed result: the per-type
 // output sits under its item key.
@@ -158,4 +161,101 @@ func TestItemRefConversions(t *testing.T) {
 	if got := ref.episodeRef(); got.ShowID != testShowSlug || got.Season != 3 || got.Episode != 7 {
 		t.Errorf("episodeRef = %+v", got)
 	}
+}
+
+func TestNormalizeMediaFilter(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct{ in, want string }{
+		{typeMovie, mediaMovies},
+		{typeShow, mediaShows},
+		{typeSeason, mediaSeasons},
+		{typeEpisode, mediaEpisodes},
+		// Plural values and other words pass through untouched.
+		{mediaMovies, mediaMovies},
+		{mediaShows, mediaShows},
+		{mediaSeasons, mediaSeasons},
+		{mediaEpisodes, mediaEpisodes},
+		{mediaAll, mediaAll},
+		{mediaPeople, mediaPeople},
+		{mediaMedia, mediaMedia},
+		{itemPerson, itemPerson},
+		// The match is exact: no case folding, no trimming, no lists.
+		{typeUpperCase, typeUpperCase},
+		{"MOVIE", "MOVIE"},
+		{typeUpperCaseShow, typeUpperCaseShow},
+		{"SEASON", "SEASON"},
+		{"Episode", "Episode"},
+		{" movie", " movie"},
+		{"movie ", "movie "},
+		{"movie,show", "movie,show"},
+		{"", ""},
+		{"x", "x"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			t.Parallel()
+
+			if got := normalizeMediaFilter(tc.in); got != tc.want {
+				t.Errorf("normalizeMediaFilter(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// singularFilter describes a tool whose type argument is a plural list
+// filter, for singularFilterCases.
+type singularFilter struct {
+	tool string
+	// args builds the arguments of a call with the given type.
+	args func(typ string) map[string]any
+	// path is the Trakt path a call with the given plural filter must reach.
+	path func(plural string) string
+	// accepted lists the plural values the tool accepts.
+	accepted []string
+	// emptyPath is the Trakt path of a call with an empty type; empty means
+	// the tool refuses an empty type.
+	emptyPath string
+}
+
+// singularFilterCases builds the cases every plural list filter must pass:
+// each singular media type is accepted exactly when its plural is, Trakt
+// receives the plural, and values that are not exact lowercase singulars
+// keep their own outcome.
+func singularFilterCases(f singularFilter) []argCase {
+	ok := func(name, typ, path string) argCase {
+		return argCase{name: name, tool: f.tool, args: f.args(typ), route: "GET " + path, body: emptyList, wantPath: path}
+	}
+	refused := func(name, typ string) argCase {
+		return argCase{name: name, tool: f.tool, args: f.args(typ), wantErr: invalid(fieldType)}
+	}
+
+	var cases []argCase
+
+	for _, plural := range f.accepted {
+		cases = append(cases, ok("plural "+plural, plural, f.path(plural)))
+	}
+
+	for _, s := range []struct{ singular, plural string }{
+		{itemMovie, mediaMovies}, {itemShow, mediaShows}, {itemSeason, mediaSeasons}, {itemEpisode, mediaEpisodes},
+	} {
+		if slices.Contains(f.accepted, s.plural) {
+			cases = append(cases, ok("singular "+s.singular, s.singular, f.path(s.plural)))
+		} else {
+			cases = append(cases, refused("singular "+s.singular+" not accepted", s.singular))
+		}
+	}
+
+	if f.emptyPath != "" {
+		cases = append(cases, ok(caseNameEmpty, "", f.emptyPath))
+	} else {
+		cases = append(cases, refused(caseNameEmpty, ""))
+	}
+
+	return append(cases,
+		refused("capitalized singular", typeUpperCase),
+		refused("capitalized show", typeUpperCaseShow),
+		refused("person", itemPerson),
+	)
 }

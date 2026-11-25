@@ -103,3 +103,16 @@ func TestCollectedAtSent(t *testing.T) {
 		t.Errorf("body = %+v, want collected_at %s", got, testWatchedAt)
 	}
 }
+
+// TestCollectionSingularType checks the singular media types of the
+// collection filter.
+func TestCollectionSingularType(t *testing.T) {
+	t.Parallel()
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:     toolFetchCollection,
+		args:     func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:     func(plural string) string { return "/sync/collection/" + plural },
+		accepted: collectionTypes,
+	}))
+}

@@ -267,3 +267,19 @@ func TestNoteOutputBounded(t *testing.T) {
 		t.Errorf("note = %+v, want bounded text", out)
 	}
 }
+
+// TestUserNotesSingularType checks the singular media types of the notes
+// filter.
+func TestUserNotesSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return "/users/me/notes/" + plural }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:      toolFetchUserNotes,
+		args:      func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:      path,
+		accepted:  noteTypes,
+		emptyPath: path(mediaAll),
+	}))
+}

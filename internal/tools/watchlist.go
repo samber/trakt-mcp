@@ -30,7 +30,7 @@ var (
 
 // WatchlistArgs are the arguments of list_watchlist.
 type WatchlistArgs struct {
-	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons or episodes (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons or episodes (singular movie, show, season or episode also accepted; default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
@@ -56,7 +56,7 @@ func registerWatchlistTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_watchlist",
 		Title:       "List watchlist",
-		Description: "List the user's watchlist, optionally of one type, sorted by rank or another field, with the user's notes.",
+		Description: "List the user's watchlist of movies, TV shows, seasons and episodes, optionally of one type, sorted by rank or another field, with the user's notes.",
 		Access:      Read,
 	}, fetchWatchlist)
 	Register(s, Spec{
@@ -106,7 +106,7 @@ func parseSyncListQuery(types []string, typ, sortBy, sortHow string) (syncListQu
 		err error
 	)
 
-	if q.typ, err = oneOf(fieldType, typ, mediaAll, types); err != nil {
+	if q.typ, err = oneOf(fieldType, normalizeMediaFilter(typ), mediaAll, types); err != nil {
 		return q, err
 	}
 

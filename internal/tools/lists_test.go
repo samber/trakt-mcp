@@ -187,7 +187,7 @@ func TestListToolArguments(t *testing.T) {
 		{name: "items id empty", tool: toolFetchListItems, args: map[string]any{argListID: ""}, wantErr: invalid(argListID)},
 		{name: "items user traversal", tool: toolFetchListItems, args: listID(map[string]any{argUser: traversalID}), wantErr: invalid(argUser)},
 		{name: "items type unknown", tool: toolFetchListItems, args: items(map[string]any{argType: "x"}), wantErr: invalid(fieldType)},
-		{name: "items type singular", tool: toolFetchListItems, args: items(map[string]any{argType: itemMovie}), wantErr: invalid(fieldType)},
+		{name: "items type capitalized singular", tool: toolFetchListItems, args: items(map[string]any{argType: typeUpperCase}), wantErr: invalid(fieldType)},
 		{name: "items sort unknown", tool: toolFetchListItems, args: items(map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
 		{name: "items sort traversal", tool: toolFetchListItems, args: items(map[string]any{argSort: "rank/../x"}), wantErr: invalid(fieldSort)},
 		{name: "items direction unknown", tool: toolFetchListItems, args: items(map[string]any{argSortHow: "up"}), wantErr: invalid(fieldSortHow)},
@@ -304,4 +304,22 @@ func TestListTextIsBounded(t *testing.T) {
 			t.Errorf("item = %+v, want bounded text", i)
 		}
 	})
+}
+
+// TestListItemsSingularType checks the singular media types of the list
+// items filter.
+func TestListItemsSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return pathUserListItems + plural + "/added/asc" }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool: toolFetchListItems,
+		args: func(typ string) map[string]any {
+			return map[string]any{argListID: testListSlug, argUser: testOtherUser, argType: typ, argSort: listSortAdded}
+		},
+		path:      path,
+		accepted:  listItemTypes,
+		emptyPath: path(mediaAll),
+	}))
 }

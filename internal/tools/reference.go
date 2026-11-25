@@ -28,7 +28,7 @@ var referenceTypes = []string{mediaMovies, mediaShows}
 // ReferenceArgs are the arguments of list_genres, list_countries,
 // list_languages and list_certifications.
 type ReferenceArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"plural: movies or shows (TV shows); default movies"`
+	Type string `json:"type,omitempty" jsonschema:"plural: movies or shows (TV shows; singular movie or show also accepted); default movies"`
 }
 
 // NetworksArgs are the arguments of list_networks: none.
@@ -111,7 +111,7 @@ func capList[T any](items []T) []T {
 
 // referenceType validates the type argument; movies is the default.
 func referenceType(in ReferenceArgs) (string, error) {
-	return oneOf(fieldType, in.Type, mediaMovies, referenceTypes)
+	return oneOf(fieldType, normalizeMediaFilter(in.Type), mediaMovies, referenceTypes)
 }
 
 // fetchReference validates the type, then parses the answer of call.

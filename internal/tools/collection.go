@@ -17,7 +17,7 @@ var collectionTypes = []string{mediaMovies, mediaShows, mediaEpisodes, mediaMedi
 
 // CollectionArgs are the arguments of list_collection.
 type CollectionArgs struct {
-	Type string `json:"type" jsonschema:"plural: movies, shows, episodes or media"`
+	Type string `json:"type" jsonschema:"plural: movies, shows, episodes or media (singular movie, show or episode also accepted)"`
 	PageArgs
 }
 
@@ -40,7 +40,7 @@ func registerCollectionTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_collection",
 		Title:       "List collection",
-		Description: "List what the user owns in their Trakt collection: movies, shows (with the number of collected episodes), episodes or media.",
+		Description: "List what the user owns in their Trakt collection: movies, TV shows (with the number of collected episodes), episodes or media.",
 		Access:      Read,
 	}, fetchCollection)
 	Register(s, Spec{
@@ -92,7 +92,7 @@ func trimCollected(c traktCollected) CollectedItem {
 }
 
 func fetchCollection(ctx context.Context, c *trakt.UserClient, in CollectionArgs) (Listing[CollectedItem], error) {
-	typ, err := oneOf(fieldType, in.Type, "", collectionTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), "", collectionTypes)
 	if err != nil || typ == "" {
 		return Listing[CollectedItem]{}, invalidArgument(fieldType)
 	}
