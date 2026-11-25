@@ -17,7 +17,7 @@ var collectionTypes = []string{mediaMovies, mediaShows, mediaEpisodes, mediaMedi
 
 // CollectionArgs are the arguments of list_collection.
 type CollectionArgs struct {
-	Type string `json:"type" jsonschema:"plural: movies, shows, episodes or media (singular movie, show or episode also accepted)"`
+	Type string `json:"type" jsonschema:"plural: movies, shows, episodes or media (shows are TV shows; singular movie, show or episode also accepted)"`
 	PageArgs
 }
 
@@ -32,28 +32,29 @@ type CollectedItem struct {
 
 // AddCollectionArgs are the arguments of add_to_collection.
 type AddCollectionArgs struct {
-	Items       []ItemArg `json:"items"                  jsonschema:"1 to 50 items; a show item covers every episode, a season or episode item only that one"`
+	Items       []ItemArg `json:"items"                  jsonschema:"1 to 50 items; a show item covers every episode of the TV show, a season or episode item only that one"`
 	CollectedAt string    `json:"collected_at,omitempty" jsonschema:"when they were collected, ISO 8601 (2024-01-31T20:00:00.000Z); default now"`
 }
 
 func registerCollectionTools(s *Server) {
 	Register(s, Spec{
-		Name:        "list_collection",
-		Title:       "List collection",
-		Description: "List what the user owns in their Trakt collection: movies, TV shows (with the number of collected episodes), episodes or media.",
-		Access:      Read,
+		Name:  "list_collection",
+		Title: "List collection",
+		Description: "List what the user owns (bought on disc or digitally) in their Trakt collection: movies, TV shows (with the number of collected episodes), episodes or media. " +
+			"Titles saved to watch later are in list_watchlist.",
+		Access: Read,
 	}, fetchCollection)
 	Register(s, Spec{
 		Name:  "add_to_collection",
 		Title: "Add to collection",
-		Description: "Add up to 50 movies, shows, seasons or episodes to the user's collection, now or at collected_at. " +
+		Description: "Add up to 50 movies, TV shows, seasons or episodes to the user's collection, now or at collected_at. " +
 			"Returns how many were added or already there, and which items Trakt did not find.",
 		Access: Write,
 	}, addToCollection)
 	Register(s, Spec{
 		Name:  "remove_from_collection",
 		Title: "Remove from collection",
-		Description: "Remove up to 50 movies, shows, seasons or episodes from the user's collection. " +
+		Description: "Remove up to 50 movies, TV shows, seasons or episodes from the user's collection. " +
 			"Returns how many were deleted and which items Trakt did not find.",
 		Access: Destroy,
 	}, removeFromCollection)

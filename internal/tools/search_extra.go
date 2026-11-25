@@ -173,7 +173,8 @@ func registerSearchExtraTools(s *Server) {
 	Register(s, Spec{
 		Name: "search", Title: "Search", Access: Read,
 		Description: "Search movies or TV shows by text, returned as {type, item}: item is a list of matches, each with relevance score, title, year and ids. " +
-			"exact true matches the title exactly instead of searching titles and descriptions. type is movie or show (a TV show)." + pageNote,
+			"exact true matches the title exactly instead of searching titles and descriptions. type is movie or show (a TV show). " +
+			"When the user does not say whether a title is a movie or a TV show, call it once with type movie and once with type show." + pageNote,
 	}, search)
 }
 

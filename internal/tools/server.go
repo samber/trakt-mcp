@@ -23,6 +23,39 @@ import (
 const (
 	// serverName is the MCP implementation name advertised to clients.
 	serverName = "trakt-mcp"
+	// serverTitle is the display name: "Trakt" alone does not tell an
+	// assistant that the server is about movies and TV shows.
+	serverTitle = "Trakt: movie and TV show tracker"
+	// serverInstructions is sent once at initialize. It holds the rules that
+	// span several tools, so an assistant routes vague requests ("what should
+	// I watch", "add it to my list") without the user naming Trakt or saying
+	// whether a title is a movie or a TV show.
+	serverInstructions = `Trakt (trakt.tv) tracks the movies and TV shows (series) a person watches. These tools read and change the connected user's Trakt account, and read Trakt's public catalog of movies, TV shows, seasons, episodes and people. Use them for any question about movies, films, TV shows, series, episodes, actors or what to watch, even when the user never says "Trakt".
+
+Words:
+- In every type argument, show means a TV show (a series), never a movie. Seasons and episodes exist only in TV shows; season 0 holds the specials.
+- Ids: tools take a Trakt slug (breaking-bad), a numeric Trakt id or an IMDb id. Take them from search results rather than guessing slugs. No tool searches people by name: take a person's id from list_people.
+
+Movie or TV show unknown:
+- Many titles exist as both (Dune, Fargo, The Office). When the user does not say which, call search with type movie and again with type show, then pick by title and year. Ask the user when both still match.
+- For "what should I watch" with no type, call list_recommendations for both types, and list_up_next for TV shows already started.
+
+User data versus Trakt-wide data:
+- The user's own: list_history, list_user_watched, list_user_ratings, list_watchlist, list_collection, list_favorites, list_user_lists, list_user_notes, get_show_progress, list_up_next, list_recommendations.
+- Every Trakt user together: get_ratings, get_stats, list_watching, list_trending, list_popular, list_watched, list_played, list_favorited, list_anticipated, list_comments.
+
+Which list:
+- "My list", "watch later", "save it": the watchlist (add_to_watchlist).
+- "I own it", "I bought the Blu-ray": the collection (add_to_collection).
+- "I watched it", "I saw it": watch history (add_to_history). "I am watching it now": checkin.
+- "My all-time favorites": favorites (add_to_favorites).
+- A custom list only when the user names one (list_user_lists, then add_list_items).
+
+Next episode:
+- The next episode the user has to watch: get_show_progress for one TV show, list_up_next for all.
+- The next episode to air on TV: get_next_episode.
+
+Tools whose description says "This changes the user's real Trakt account" write to it: confirm with the user before removing, deleting or resetting anything.`
 	// Protocol versions served (spec §5.2). The two legacy ones keep clients
 	// that open with initialize working (go-sdk PR #1345).
 	protocolVersion20260728 = "2026-07-28"
@@ -121,7 +154,8 @@ func serverCapabilities() *mcp.ServerCapabilities {
 func newServer(deps Deps, groups []func(*Server)) *Server {
 	s := &Server{
 		deps: deps,
-		mcp: mcp.NewServer(&mcp.Implementation{Name: serverName, Version: deps.Version, Icons: serverIcons()}, &mcp.ServerOptions{
+		mcp: mcp.NewServer(&mcp.Implementation{Name: serverName, Title: serverTitle, Version: deps.Version, Icons: serverIcons()}, &mcp.ServerOptions{
+			Instructions: serverInstructions,
 			Logger:       deps.logger(),
 			SchemaCache:  schemaCache,
 			Capabilities: serverCapabilities(),

@@ -45,8 +45,8 @@ Portal steps and the answers this project gives:
 Listing text (limits: name 100, one-liner 200, description 2,000 characters):
 
 - Name: `Trakt MCP`
-- One-liner: `Browse movies and shows, and manage your Trakt watchlist, history, collection and ratings from Claude.`
-- Description: `Ask Claude what is trending, find a show or movie, check cast and ratings, see which episode comes next, add titles to your watchlist, mark episodes as watched, rate what you saw, or check in to what you are watching now. Sign in with your Trakt account. Your viewing data is read and written live through the Trakt API and is never stored on the server. Tools that change your Trakt account say so, and removal tools are flagged as destructive so Claude asks first. Independent open source project, not affiliated with or endorsed by Trakt.`
+- One-liner: `Browse movies and TV shows, and manage your Trakt watchlist, history, collection and ratings from Claude.`
+- Description: `Ask Claude what is trending, find a movie or TV show, check cast and ratings, see which episode comes next, add titles to your watchlist, mark episodes as watched, rate what you saw, or check in to what you are watching now. Sign in with your Trakt account. Your viewing data is read and written live through the Trakt API and is never stored on the server. Tools that change your Trakt account say so, and removal tools are flagged as destructive so Claude asks first. Independent open source project, not affiliated with or endorsed by Trakt.`
 
 Claude's OAuth callback is `https://claude.ai/api/mcp/auth_callback`. The server accepts any `https` redirect URI from a registered or CIMD client, so nothing to allow-list.
 
@@ -79,7 +79,7 @@ Five that should work:
 
 | Prompt                                                | Tools                                 | Expected behavior                               |
 | ----------------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
-| What are the trending shows this week?                | `list_trending`                       | Returns a short list of trending shows.         |
+| What are the trending TV shows this week?             | `list_trending`                       | Returns a short list of trending TV shows.      |
 | Add Dune: Part Two to my watchlist.                   | `search`, `add_to_watchlist`          | Finds the movie, then adds it to the watchlist. |
 | What is the next episode of Severance I should watch? | `search`, `get_show_progress`         | Returns the next unwatched episode.             |
 | Mark Severance season 1 episode 1 as watched.         | `search`, `add_to_history`            | Adds one play to the user's history.            |

@@ -43,7 +43,7 @@ type UpNextArgs struct {
 
 	Sort         string `json:"sort,omitempty"          jsonschema:"a Trakt sort field, as a lowercase token; values are not documented, omit it for Trakt's default"`
 	SortHow      string `json:"sort_how,omitempty"      jsonschema:"asc or desc; omit it for Trakt's default"`
-	IncludeStats *bool  `json:"include_stats,omitempty" jsonschema:"include minutes watched, minutes left and play count of each show"`
+	IncludeStats *bool  `json:"include_stats,omitempty" jsonschema:"include minutes watched, minutes left and play count of each TV show"`
 }
 
 // UpNextStats are the watch statistics of an up next entry.
@@ -159,12 +159,12 @@ func registerUpNextTools(s *Server) {
 	Register(s, Spec{
 		Name: "hide_from_progress", Title: "Hide from progress", Access: Write,
 		Description: "Hide TV shows or seasons from the user's watched progress, so they leave the up next and progress lists. " +
-			"Items are shows or seasons only." + progressViewNote + " unhide_from_progress reverses it.",
+			"Items are TV shows or TV show seasons only." + progressViewNote + " unhide_from_progress reverses it.",
 	}, hideFromProgress)
 	Register(s, Spec{
 		Name: "unhide_from_progress", Title: "Unhide from progress", Access: Write,
 		Description: "Show TV shows or seasons again in the user's watched progress after hide_from_progress. " +
-			"Items are shows or seasons only." + progressViewNote,
+			"Items are TV shows or TV show seasons only." + progressViewNote,
 	}, unhideFromProgress)
 }
 

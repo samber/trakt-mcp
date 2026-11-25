@@ -81,7 +81,7 @@ type SmartList struct {
 // SmartListItemsArgs are the arguments of list_smart_list_items.
 type SmartListItemsArgs struct {
 	ListID  string `json:"list_id"            jsonschema:"slug or numeric Trakt id of the smart list, from list_smart_lists"`
-	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies or shows (singular movie or show also accepted); narrows a list holding both (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies or shows (shows are TV shows; singular movie or show also accepted); narrows a list holding both (default all)"`
 	SortBy  string `json:"sort_by,omitempty"  jsonschema:"rank (the list's own order, default), random, title, released, runtime, percentage, votes, imdb_rating, imdb_votes, tmdb_rating, tmdb_votes, rt_tomatometer, rt_audience, metascore or added (watchlist-sourced lists)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc for rank and title, desc otherwise)"`
 	PageArgs

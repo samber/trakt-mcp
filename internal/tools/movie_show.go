@@ -12,7 +12,7 @@ const movieShowTypesNote = "type is movie or show (a TV show). id is the movie's
 
 // ListRelatedArgs are the arguments of list_related.
 type ListRelatedArgs struct {
-	ItemRef
+	TitleRef
 	PageArgs
 }
 
@@ -39,26 +39,27 @@ func registerMovieShowTools(s *Server) {
 	}, listRelated)
 }
 
-func listAliases(ctx context.Context, c *trakt.UserClient, in ItemRef) (Listing[Alias], error) {
-	return aliasFetchers.fetch(ctx, c, in)
+func listAliases(ctx context.Context, c *trakt.UserClient, in TitleRef) (Listing[Alias], error) {
+	return aliasFetchers.fetch(ctx, c, in.itemRef())
 }
 
-func listStudios(ctx context.Context, c *trakt.UserClient, in ItemRef) (Listing[Studio], error) {
-	return studioFetchers.fetch(ctx, c, in)
+func listStudios(ctx context.Context, c *trakt.UserClient, in TitleRef) (Listing[Studio], error) {
+	return studioFetchers.fetch(ctx, c, in.itemRef())
 }
 
 func listRelated(ctx context.Context, c *trakt.UserClient, in ListRelatedArgs) (Typed, error) {
-	if err := in.check(typeMovie, typeShow); err != nil {
+	ref := in.itemRef()
+	if err := ref.check(typeMovie, typeShow); err != nil {
 		return Typed{}, err
 	}
 
 	if in.Type == typeMovie {
-		item, err := fetchRelatedMovies(ctx, c, RelatedMoviesArgs{PageArgs: in.PageArgs, MovieRef: in.movieRef()})
+		item, err := fetchRelatedMovies(ctx, c, RelatedMoviesArgs{PageArgs: in.PageArgs, MovieRef: ref.movieRef()})
 
 		return typed(in.Type, item, err)
 	}
 
-	item, err := fetchRelatedShows(ctx, c, RelatedShowsArgs{PageArgs: in.PageArgs, ShowRef: in.showRef()})
+	item, err := fetchRelatedShows(ctx, c, RelatedShowsArgs{PageArgs: in.PageArgs, ShowRef: ref.showRef()})
 
 	return typed(in.Type, item, err)
 }

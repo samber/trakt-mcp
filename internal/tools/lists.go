@@ -45,7 +45,7 @@ type ListArgs struct {
 // ListItemsArgs are the arguments of list_list_items.
 type ListItemsArgs struct {
 	ListArgs
-	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons, episodes or people (singular movie, show, season or episode also accepted; default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons, episodes or people (shows are TV shows; singular movie, show, season or episode also accepted; default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
@@ -106,7 +106,7 @@ type ListItem struct {
 	Rank     int     `json:"rank"`
 	ID       int     `json:"list_item_id"       jsonschema:"Trakt's id of this list entry, not of the title"`
 	ListedAt string  `json:"listed_at,omitempty"`
-	Type     string  `json:"type"                jsonschema:"movie, show, season, episode or person"`
+	Type     string  `json:"type"                jsonschema:"movie, show (a TV show), season, episode or person"`
 	Notes    string  `json:"notes,omitempty"     jsonschema:"the list owner's note on this entry"`
 	Person   *Person `json:"person,omitempty"`
 	MediaRef

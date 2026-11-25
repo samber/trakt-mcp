@@ -12,6 +12,9 @@ const (
 	rankingTypeNote = " item.page holds the paging. type is movie or show (a TV show). Takes limit and page."
 	// periodNote explains the period argument of the period-based rankings.
 	periodNote = " period is daily, weekly, monthly, yearly or all (default weekly)."
+	// chartNote keeps Trakt-wide charts apart from the user's own data,
+	// which "most watched" and "most played" requests often mean.
+	chartNote = " This is a chart over every Trakt user; the user's own watched movies and TV shows are in list_user_watched."
 )
 
 // ListRankingArgs are the arguments of the rankings without a period.
@@ -88,13 +91,13 @@ func registerRankingTools(s *Server) {
 		Name: "list_played", Title: "List most played", Access: Read,
 		Description: "List the movies or TV shows with the most plays in a period, returned as {type, item}: item.items is a list of " +
 			"{watcher_count, play_count, collected_count, collector_count, movie} (type movie) or the same with show (type show)." +
-			periodNote + rankingTypeNote,
+			periodNote + rankingTypeNote + chartNote,
 	}, listPlayed)
 	Register(s, Spec{
 		Name: "list_watched", Title: "List most watched", Access: Read,
 		Description: "List the movies or TV shows watched by the most users in a period, returned as {type, item}: item.items is a list of " +
 			"{watcher_count, play_count, collected_count, collector_count, movie} (type movie) or the same with show (type show)." +
-			periodNote + rankingTypeNote,
+			periodNote + rankingTypeNote + chartNote,
 	}, listWatched)
 }
 

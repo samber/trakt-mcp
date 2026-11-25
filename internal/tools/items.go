@@ -62,13 +62,13 @@ const (
 
 // ItemArg is one item of a batch write tool, as the caller sends it.
 type ItemArg struct {
-	Type string `json:"type" jsonschema:"movie, show, season or episode"`
+	Type string `json:"type" jsonschema:"movie, show (a TV show), season or episode"`
 	ID   string `json:"id"   jsonschema:"numeric Trakt id or IMDb id (tt0903747); a Trakt slug (breaking-bad) also works for movie and show"`
 }
 
 // ItemsArgs are the arguments of a batch write tool that takes items only.
 type ItemsArgs struct {
-	Items []ItemArg `json:"items" jsonschema:"1 to 50 items; a show item covers the whole show, a season or episode item only that one"`
+	Items []ItemArg `json:"items" jsonschema:"1 to 50 items; a show item covers the whole TV show, a season or episode item only that one"`
 }
 
 // Item is a validated item of a batch write. Only Type and ID are returned

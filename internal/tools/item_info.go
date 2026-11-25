@@ -79,12 +79,12 @@ func registerItemInfoTools(s *Server) {
 	Register(s, Spec{
 		Name: "get_ratings", Title: "Get ratings", Access: Read,
 		Description: "Get a movie's, TV show's, TV show season's or TV show episode's average rating, vote count and " +
-			"the number of votes for each rating from 1 to 10. " + itemTypesNote,
+			"the number of votes for each rating from 1 to 10, over every Trakt user. The user's own ratings are in list_user_ratings. " + itemTypesNote,
 	}, getRatings)
 	Register(s, Spec{
 		Name: "get_stats", Title: "Get stats", Access: Read,
 		Description: "Get a movie's, TV show's, TV show season's or TV show episode's counters: watchers, plays, " +
-			"collectors, comments, lists and votes. " + itemTypesNote,
+			"collectors, comments, lists and votes, over every Trakt user, not the user's own. " + itemTypesNote,
 	}, getStats)
 	Register(s, Spec{
 		Name: "list_watching", Title: "List watchers", Access: Read,

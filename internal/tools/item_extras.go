@@ -46,7 +46,7 @@ func registerItemExtraTools(s *Server) {
 			"replies, rating, review flag and author. Takes sort, limit and page. " + itemTypesNote + commentNote,
 	}, listComments)
 	Register(s, Spec{
-		Name: "list_people", Title: "List people", Access: Read,
+		Name: "list_people", Title: "List cast and crew", Access: Read,
 		Description: "Get the cast (name, character) and crew grouped by department of a movie, TV show, TV show season or " +
 			"TV show episode. Long credit lists are cut. include_guest_stars applies to type show only. " + itemTypesNote,
 	}, listPeople)

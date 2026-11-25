@@ -72,12 +72,12 @@ var (
 	unhideFetchers = itemFetchers[UnhideRecommendationResult]{movie: unhideMovieRecommendation, show: unhideShowRecommendation}
 )
 
-func hideRecommendation(ctx context.Context, c *trakt.UserClient, in ItemRef) (HideRecommendationResult, error) {
-	return hideFetchers.fetch(ctx, c, in)
+func hideRecommendation(ctx context.Context, c *trakt.UserClient, in TitleRef) (HideRecommendationResult, error) {
+	return hideFetchers.fetch(ctx, c, in.itemRef())
 }
 
-func unhideRecommendation(ctx context.Context, c *trakt.UserClient, in ItemRef) (UnhideRecommendationResult, error) {
-	return unhideFetchers.fetch(ctx, c, in)
+func unhideRecommendation(ctx context.Context, c *trakt.UserClient, in TitleRef) (UnhideRecommendationResult, error) {
+	return unhideFetchers.fetch(ctx, c, in.itemRef())
 }
 
 // recommendationHandlers holds the handler of each type that can be

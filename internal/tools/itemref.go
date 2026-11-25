@@ -24,18 +24,29 @@ const itemIDKinds = Slug | Numeric | IMDbTitle
 // TypeArg is the type argument of a tool that takes no id: the media type of
 // the list it returns or acts on.
 type TypeArg struct {
-	Type string `json:"type" jsonschema:"movie or show; the tool description lists the values it accepts"`
+	Type string `json:"type" jsonschema:"movie or show (a TV show); the tool description lists the values it accepts"`
 }
 
 // ItemRef names one movie, TV show, season or episode. Season is required
 // for a season or an episode, Episode for an episode only; both are
 // rejected for any other type, never ignored.
 type ItemRef struct {
-	Type    string `json:"type"              jsonschema:"movie, show, season or episode; the tool description lists the values it accepts"`
+	Type    string `json:"type"              jsonschema:"movie, show (a TV show), season or episode; the tool description lists the values it accepts"`
 	ID      string `json:"id"                jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747) of the movie or TV show; for a season or an episode, the TV show's id"`
 	Season  *int   `json:"season,omitempty"  jsonschema:"season number, 0 to 999 (0 is the specials); required for type season or episode, refused otherwise"`
 	Episode *int   `json:"episode,omitempty" jsonschema:"episode number in the season, 1 to 9999; required for type episode, refused otherwise"`
 }
+
+// TitleRef names one movie or TV show, for tools that take no season or
+// episode: its schema then offers only the arguments those tools accept.
+type TitleRef struct {
+	Type string `json:"type" jsonschema:"movie or show (a TV show)"`
+	ID   string `json:"id"   jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747) of the movie or TV show"`
+}
+
+// itemRef is r as an ItemRef with no season or episode, so it goes through
+// the same validation and dispatch as every other item.
+func (r TitleRef) itemRef() ItemRef { return ItemRef{Type: r.Type, ID: r.ID} }
 
 // typeHandlers holds the handler of a movie and of a TV show for a tool that
 // takes a bare type argument and whose result shape differs by type. The

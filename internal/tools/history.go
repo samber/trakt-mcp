@@ -58,7 +58,7 @@ var (
 
 // UserWatchedArgs are the arguments of list_user_watched.
 type UserWatchedArgs struct {
-	Type string `json:"type" jsonschema:"plural: movies or shows (singular movie or show also accepted)"`
+	Type string `json:"type" jsonschema:"plural: movies or shows (shows are TV shows; singular movie or show also accepted)"`
 	PageArgs
 }
 
@@ -72,8 +72,8 @@ type WatchedItem struct {
 
 // HistoryArgs are the arguments of list_history.
 type HistoryArgs struct {
-	HistoryType string `json:"history_type,omitempty" jsonschema:"movies, shows, seasons or episodes; omit for every type"`
-	ItemID      string `json:"item_id,omitempty"      jsonschema:"numeric Trakt id of one movie, show, season or episode to list only its plays; requires history_type"`
+	HistoryType string `json:"history_type,omitempty" jsonschema:"movies, shows (TV shows), seasons or episodes; omit for every type"`
+	ItemID      string `json:"item_id,omitempty"      jsonschema:"numeric Trakt id of one movie, TV show, season or episode to list only its plays; requires history_type"`
 	StartAt     string `json:"start_at,omitempty"     jsonschema:"only plays at or after this time: ISO 8601 (2024-01-31T20:00:00.000Z) or a date (2024-01-31, from 00:00 UTC)"`
 	EndAt       string `json:"end_at,omitempty"       jsonschema:"only plays at or before this time: ISO 8601 or a date (whole day included, until 23:59:59.999 UTC)"`
 	PageArgs
@@ -90,7 +90,7 @@ type HistoryEntry struct {
 
 // AddHistoryArgs are the arguments of add_to_history.
 type AddHistoryArgs struct {
-	Items     []ItemArg `json:"items"                jsonschema:"1 to 50 items; a show item marks every aired episode, a season item every episode of that season"`
+	Items     []ItemArg `json:"items"                jsonschema:"1 to 50 items; a show item marks every aired episode of the TV show, a season item every episode of that season"`
 	WatchedAt string    `json:"watched_at,omitempty" jsonschema:"when: ISO 8601 (2024-01-31T20:00:00.000Z), unknown, or released (episodes only: the air date); default now"`
 }
 
@@ -168,7 +168,7 @@ func (RemovedPlayback) resultCount() int { return 1 }
 func registerHistoryTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_user_watched",
-		Title:       "List watched movies or shows",
+		Title:       "List my watched movies and TV shows",
 		Description: "List every movie or TV show the user has watched, most recently watched first, with play count and last watch time. This is the user's own watched history; Trakt-wide charts are in list_watched.",
 		Access:      Read,
 	}, fetchUserWatched)
@@ -176,28 +176,30 @@ func registerHistoryTools(s *Server) {
 		Name:  "list_history",
 		Title: "List watch history",
 		Description: "List the user's plays, newest first, optionally of one type or one item and within a date range. " +
-			"Each entry has a history id, the time and how it was recorded.",
+			"Each entry has a history id, the time and how it was recorded. " +
+			"To check whether the user saw one title, pass its history_type and numeric Trakt id (item_id) from search.",
 		Access: Read,
 	}, fetchHistory)
 	Register(s, Spec{
 		Name:  "add_to_history",
 		Title: "Add to watch history",
-		Description: "Mark up to 50 movies, shows, seasons or episodes as watched, now or at watched_at. " +
-			"Returns how many plays were added and which items Trakt did not find.",
+		Description: "Mark up to 50 movies, TV shows, seasons or episodes as watched, now or at watched_at. " +
+			"Returns how many plays were added and which items Trakt did not find. For what the user is watching right now, use checkin.",
 		Access: Write,
 	}, addToHistory)
 	Register(s, Spec{
 		Name:  "remove_from_history",
 		Title: "Remove from watch history",
-		Description: "Remove every play of up to 50 movies, shows, seasons or episodes from the user's history. " +
+		Description: "Remove every play of up to 50 movies, TV shows, seasons or episodes from the user's history. " +
 			"Returns how many plays were deleted and which items Trakt did not find.",
 		Access: Destroy,
 	}, removeFromHistory)
 	Register(s, Spec{
 		Name:  "get_show_progress",
-		Title: "Get show progress",
+		Title: "Get TV show progress",
 		Description: "Get the user's progress on one TV show: episodes aired and watched, percentage, next episode to watch, " +
-			"and per-season counts (every episode with verbose).",
+			"and per-season counts (every episode with verbose). For every TV show the user is watching at once, use list_up_next; " +
+			"for the next episode to air on TV, use get_next_episode.",
 		Access: Read,
 	}, fetchShowProgress)
 	Register(s, Spec{
