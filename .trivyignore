@@ -1,0 +1,2 @@
+# Trivy findings to ignore, one ID per line (CVE-…, AVD-…), each with a
+# comment saying why. Referenced by .github/workflows/security.yml.
