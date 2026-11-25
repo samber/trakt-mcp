@@ -1,0 +1,5 @@
+{
+  "id": 4242, "notes": "Great opening scene", "privacy": "friends", "spoiler": true,
+  "created_at": "2024-02-01T10:00:00.000Z", "updated_at": "2024-02-02T11:00:00.000Z",
+  "item": {"type": "movie", "movie": {"title": "Heat", "year": 1995, "ids": {"trakt": 481, "slug": "heat-1995", "imdb": "tt0113277", "tmdb": 949}}}
+}

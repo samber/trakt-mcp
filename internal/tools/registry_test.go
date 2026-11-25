@@ -32,6 +32,32 @@ const (
 	trendingRoute = "GET /movies/trending"
 )
 
+// TestShowToolDescriptionsSayTVShow keeps the word "show" from reading as a
+// movie: every tool about shows, seasons or episodes must say TV show/series.
+func TestShowToolDescriptionsSayTVShow(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(offlineDeps())
+	checked := 0
+
+	for _, spec := range srv.Specs() {
+		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") {
+			continue
+		}
+
+		checked++
+		desc := strings.ToLower(spec.Description)
+
+		if !strings.Contains(desc, "tv show") && !strings.Contains(desc, "tv series") {
+			t.Errorf("%s: description must say TV show or TV series: %q", spec.Name, spec.Description)
+		}
+	}
+
+	if checked == 0 {
+		t.Fatal("no show, season or episode tool found")
+	}
+}
+
 // destroyPrefixes are the tool name prefixes that must be Destroy (spec §8).
 var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 
@@ -40,13 +66,14 @@ var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 // Read) and a new prefix must be added here deliberately.
 var accessByPrefix = map[string]Access{
 	"fetch_": Read, "search_": Read,
-	"add_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write,
+	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "reorder_": Write,
+	"reset_": Write, "undo_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
 
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
-var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists"}
+var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists", "fetch_movie_lists", "fetch_show_lists", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists", "create_list", "update_list", "fetch_note", "fetch_user_notes", "create_note", "update_note", "fetch_favorites", "fetch_movie_releases"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()

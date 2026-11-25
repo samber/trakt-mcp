@@ -152,10 +152,26 @@ func parsePerson(body []byte) (Person, error) {
 		return Person{}, err
 	}
 
+	return trimPerson(raw), nil
+}
+
+// trimPerson trims a person of any Trakt response, bounding its text.
+func trimPerson(raw traktPerson) Person {
+	return trimPersonBio(raw, maxBiographyRunes)
+}
+
+// trimEmbeddedPerson trims a person embedded in a list item or a note, where
+// a full biography per entry would flood the model's context: the biography
+// is cut to maxListOverviewRunes.
+func trimEmbeddedPerson(raw traktPerson) Person {
+	return trimPersonBio(raw, maxListOverviewRunes)
+}
+
+func trimPersonBio(raw traktPerson, maxBio int) Person {
 	return Person{
 		Name:       boundText(raw.Name, maxTitleRunes),
 		IDs:        PersonIDs{Trakt: raw.IDs.Trakt, Slug: raw.IDs.Slug, IMDb: deref(raw.IDs.IMDb), TMDB: deref(raw.IDs.TMDB)},
-		Biography:  boundText(deref(raw.Biography), maxBiographyRunes),
+		Biography:  boundText(deref(raw.Biography), maxBio),
 		Birthday:   deref(raw.Birthday),
 		Death:      deref(raw.Death),
 		Birthplace: boundText(deref(raw.Birthplace), maxTitleRunes),
@@ -166,7 +182,7 @@ func parsePerson(body []byte) (Person, error) {
 			Instagram: deref(raw.SocialIDs.Instagram),
 			Wikipedia: deref(raw.SocialIDs.Wikipedia),
 		},
-	}, nil
+	}
 }
 
 type traktMovieRole struct {
@@ -294,7 +310,7 @@ func registerPeopleTools(s *Server) {
 	}, fetchPersonMovies)
 	Register(s, Spec{
 		Name: "fetch_person_shows", Title: "Fetch person shows", Access: Read,
-		Description: "List the shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
+		Description: "List the TV shows a person acted in (with character, episode count and series-regular flag) or worked on (grouped by department with job and episode count). Long credit lists are cut." + untrustedNote,
 	}, fetchPersonShows)
 }
 

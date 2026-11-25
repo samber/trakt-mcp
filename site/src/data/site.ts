@@ -43,7 +43,19 @@ export const OPERATOR_EMAIL = 'hello@samuel-berthe.fr';
 export const NOT_AFFILIATED =
   'Trakt MCP is an independent open source project, not affiliated with or endorsed by Trakt.';
 
-export type ToolGroup = 'history' | 'library' | 'checkin' | 'shows' | 'episodes' | 'movies' | 'people';
+export type ToolGroup =
+  | 'history'
+  | 'library'
+  | 'lists'
+  | 'notes'
+  | 'checkin'
+  | 'calendars'
+  | 'lookup'
+  | 'shows'
+  | 'episodes'
+  | 'movies'
+  | 'extras'
+  | 'people';
 
 export type Tool = {
   /** MCP tool name, exactly as registered in internal/tools; scripts/check-dist.mjs compares them. */
@@ -62,6 +74,13 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_show_progress', summary: 'See how far you are in a show and what comes next.', group: 'history' },
   { name: 'fetch_playback_progress', summary: 'See what you paused halfway.', group: 'history' },
   { name: 'remove_playback_item', summary: 'Clear a paused playback entry.', group: 'history' },
+  { name: 'fetch_show_collection_progress', summary: 'See how much of a show you have collected and what to collect next.', group: 'history' },
+  { name: 'reset_show_progress', summary: 'Restart a show from now to rewatch it (Trakt VIP).', group: 'history' },
+  { name: 'undo_reset_show_progress', summary: 'Undo the last reset of a show so earlier plays count again (Trakt VIP).', group: 'history' },
+  { name: 'fetch_up_next', summary: 'See the shows you are watching, each with its next episode to watch.', group: 'history' },
+  { name: 'fetch_hidden_progress', summary: 'See the shows and seasons you hid from your progress.', group: 'history' },
+  { name: 'hide_from_progress', summary: 'Hide shows or seasons from your progress and up next.', group: 'history' },
+  { name: 'unhide_from_progress', summary: 'Bring hidden shows or seasons back into your progress.', group: 'history' },
 
   // Watchlist, collection, ratings, smart lists.
   { name: 'fetch_watchlist', summary: 'Read your watchlist, filtered by type and sorted as you like.', group: 'library' },
@@ -75,6 +94,32 @@ export const TOOLS: readonly Tool[] = [
   { name: 'remove_ratings', summary: 'Remove ratings you gave.', group: 'library' },
   { name: 'fetch_smart_lists', summary: 'Read your smart lists and the filters behind each.', group: 'library' },
   { name: 'fetch_smart_list_items', summary: 'See the movies and shows a smart list holds right now.', group: 'library' },
+  { name: 'update_watchlist_item', summary: 'Set or clear the note on a watchlist entry (Trakt VIP).', group: 'library' },
+  { name: 'reorder_watchlist', summary: 'Put your watchlist in the order you want.', group: 'library' },
+
+  // Custom lists.
+  { name: 'fetch_user_lists', summary: 'Read your custom lists, or the public lists of another user.', group: 'lists' },
+  { name: 'fetch_list', summary: 'Read one custom list: name, privacy and item count.', group: 'lists' },
+  { name: 'fetch_list_items', summary: 'See the movies, shows and people on a list.', group: 'lists' },
+  { name: 'fetch_trending_lists', summary: 'Lists people are liking right now.', group: 'lists' },
+  { name: 'fetch_popular_lists', summary: 'The most popular lists.', group: 'lists' },
+  { name: 'create_list', summary: 'Create a custom list (privacy: private, link, friends or public).', group: 'lists' },
+  { name: 'update_list', summary: 'Rename a list or change its description and privacy (private, link, friends or public).', group: 'lists' },
+  { name: 'add_list_items', summary: 'Add movies, shows, seasons or episodes to a list.', group: 'lists' },
+  { name: 'remove_list_items', summary: 'Remove items from a list.', group: 'lists' },
+  { name: 'delete_list', summary: 'Delete a custom list.', group: 'lists' },
+
+  // Notes (free accounts keep few) and favorites.
+  { name: 'fetch_note', summary: 'Read one of your notes (free accounts keep few notes).', group: 'notes' },
+  { name: 'fetch_user_notes', summary: 'List your notes, optionally for one kind of item (free accounts keep few notes).', group: 'notes' },
+  { name: 'create_note', summary: 'Attach a note to a movie, show, season, episode or person (free accounts keep few notes).', group: 'notes' },
+  { name: 'update_note', summary: 'Edit a note (free accounts keep few notes).', group: 'notes' },
+  { name: 'delete_note', summary: 'Delete a note (free accounts keep few notes).', group: 'notes' },
+  { name: 'fetch_favorites', summary: 'Read your favorite movies and shows.', group: 'notes' },
+  { name: 'add_to_favorites', summary: 'Add movies or shows to your favorites, with an optional note.', group: 'notes' },
+  { name: 'update_favorite', summary: 'Set or clear the note on a favorite, or move it to a new rank.', group: 'notes' },
+  { name: 'reorder_favorites', summary: 'Put your favorites in the order you want.', group: 'notes' },
+  { name: 'remove_from_favorites', summary: 'Remove items from your favorites.', group: 'notes' },
 
   // Check-ins and recommendations.
   { name: 'checkin_to_show', summary: 'Check in to the episode you are watching now.', group: 'checkin' },
@@ -86,6 +131,29 @@ export const TOOLS: readonly Tool[] = [
   { name: 'hide_show_recommendation', summary: 'Stop recommending a show.', group: 'checkin' },
   { name: 'unhide_movie_recommendation', summary: 'Bring a hidden movie recommendation back.', group: 'checkin' },
   { name: 'unhide_show_recommendation', summary: 'Bring a hidden show recommendation back.', group: 'checkin' },
+
+  // Calendars and where to watch.
+  { name: 'fetch_calendar_shows', summary: 'Episodes airing in a date window, for your shows or all shows.', group: 'calendars' },
+  { name: 'fetch_calendar_new_shows', summary: 'New shows whose first season starts in a date window.', group: 'calendars' },
+  { name: 'fetch_calendar_show_premieres', summary: 'Season premieres in a date window.', group: 'calendars' },
+  { name: 'fetch_calendar_show_finales', summary: 'Season finales in a date window.', group: 'calendars' },
+  { name: 'fetch_calendar_movies', summary: 'Movies released in cinemas in a date window.', group: 'calendars' },
+  { name: 'fetch_calendar_dvd', summary: 'Movies coming out on DVD or Blu-ray in a date window.', group: 'calendars' },
+  { name: 'fetch_calendar_streaming', summary: 'Movies arriving on streaming in a date window.', group: 'calendars' },
+  { name: 'fetch_movie_watchnow', summary: 'Where to watch a movie in your country.', group: 'calendars' },
+  { name: 'fetch_show_watchnow', summary: 'Where to watch a show in your country.', group: 'calendars' },
+  { name: 'fetch_episode_watchnow', summary: 'Where to watch an episode in your country.', group: 'calendars' },
+  { name: 'fetch_watchnow_sources', summary: 'Every streaming provider Trakt knows.', group: 'calendars' },
+
+  // Search by id and reference data.
+  { name: 'search_by_id', summary: 'Find a title or person from its Trakt, IMDb, TMDB or TVDB id.', group: 'lookup' },
+  { name: 'search_movies_exact', summary: 'Find a movie by its exact title.', group: 'lookup' },
+  { name: 'search_shows_exact', summary: 'Find a show by its exact title.', group: 'lookup' },
+  { name: 'fetch_genres', summary: 'List the genres (name and slug) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_countries', summary: 'List the countries (name and code) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_languages', summary: 'List the languages (name and code) Trakt uses for movies or shows.', group: 'lookup' },
+  { name: 'fetch_certifications', summary: 'List the content ratings Trakt uses, for every country.', group: 'lookup' },
+  { name: 'fetch_networks', summary: 'List the TV networks Trakt knows.', group: 'lookup' },
 
   // Catalog: shows.
   { name: 'fetch_trending_shows', summary: 'Shows people are watching right now.', group: 'shows' },
@@ -139,6 +207,24 @@ export const TOOLS: readonly Tool[] = [
   { name: 'fetch_movie_people', summary: 'Cast and crew of a movie.', group: 'movies' },
   { name: 'fetch_movie_comments', summary: 'Comments on a movie.', group: 'movies' },
 
+  // Catalog: movie and show extras.
+  { name: 'fetch_movie_stats', summary: 'Watcher, play and collection counts of a movie.', group: 'extras' },
+  { name: 'fetch_movie_watching', summary: 'Who is watching a movie right now.', group: 'extras' },
+  { name: 'fetch_movie_translations', summary: 'Translated titles and overviews of a movie.', group: 'extras' },
+  { name: 'fetch_movie_aliases', summary: 'Alternative titles of a movie.', group: 'extras' },
+  { name: 'fetch_movie_studios', summary: 'Studios behind a movie.', group: 'extras' },
+  { name: 'fetch_movie_lists', summary: 'Public lists that contain a movie.', group: 'extras' },
+  { name: 'fetch_movie_releases', summary: 'Release dates of a movie by country.', group: 'extras' },
+  { name: 'fetch_show_stats', summary: 'Watcher, play and collection counts of a show.', group: 'extras' },
+  { name: 'fetch_show_watching', summary: 'Who is watching a show right now.', group: 'extras' },
+  { name: 'fetch_show_translations', summary: 'Translated titles and overviews of a show.', group: 'extras' },
+  { name: 'fetch_show_aliases', summary: 'Alternative titles of a show.', group: 'extras' },
+  { name: 'fetch_show_studios', summary: 'Studios behind a show.', group: 'extras' },
+  { name: 'fetch_show_lists', summary: 'Public lists that contain a show.', group: 'extras' },
+  { name: 'fetch_show_next_episode', summary: 'The next episode of a show to air.', group: 'extras' },
+  { name: 'fetch_show_last_episode', summary: 'The latest episode of a show that aired.', group: 'extras' },
+  { name: 'fetch_show_certifications', summary: 'Age ratings of a show by country.', group: 'extras' },
+
   // Catalog: people and comments.
   { name: 'fetch_person_summary', summary: 'Details of an actor, director or crew member.', group: 'people' },
   { name: 'fetch_person_movies', summary: 'The movies a person worked on.', group: 'people' },
@@ -149,20 +235,49 @@ export const TOOLS: readonly Tool[] = [
 ];
 
 export const TOOL_GROUPS: readonly { group: ToolGroup; title: string; description: string }[] = [
-  { group: 'history', title: 'What you watched', description: 'Log, review and undo your watch history, and see your progress in a show.' },
+  {
+    group: 'history',
+    title: 'What you watched',
+    description: 'Log, review and undo your watch history, track progress, see what is up next and restart a show.',
+  },
   {
     group: 'library',
     title: 'Your lists and ratings',
-    description: 'Watchlist, collection, ratings and smart lists: read them, add to them, remove from them.',
+    description: 'Watchlist, collection, ratings and smart lists: read them, add to them, remove from them, reorder the watchlist.',
+  },
+  {
+    group: 'lists',
+    title: 'Custom lists',
+    description: 'Browse, create, edit and delete lists, and see which lists are trending.',
+  },
+  {
+    group: 'notes',
+    title: 'Notes and favorites',
+    description: 'Keep notes on titles and people and curate your favorites.',
   },
   {
     group: 'checkin',
     title: 'Check in and discover',
     description: 'Check in to what you are watching now, and get recommendations you can hide.',
   },
+  {
+    group: 'calendars',
+    title: 'Calendars and where to watch',
+    description: 'What airs or releases when, and which streaming services carry a title.',
+  },
+  {
+    group: 'lookup',
+    title: 'Find and look up',
+    description: 'Search by id or exact title, and list genres, countries, languages, ratings and networks.',
+  },
   { group: 'shows', title: 'Browse shows', description: 'Trending, popular and anticipated shows, search, details, ratings and cast.' },
   { group: 'episodes', title: 'Seasons and episodes', description: 'Episode lists, ratings, stats, cast, videos, translations and comments.' },
   { group: 'movies', title: 'Browse movies', description: 'Trending, popular and box office movies, search, details, ratings and cast.' },
+  {
+    group: 'extras',
+    title: 'More on movies and shows',
+    description: 'Stats, translations, aliases, studios, releases, next and last episode.',
+  },
   { group: 'people', title: 'People and comments', description: 'Actors and crew, and what the community says.' },
 ];
 

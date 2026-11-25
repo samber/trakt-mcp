@@ -61,7 +61,7 @@ var historyCases = []accountCase{
 	{
 		tool: toolFetchShowProgress, args: showShow(testShowSlug), route: routeShowProgress, fixture: "show_progress", object: true,
 		want: map[string]any{
-			"aired": 8, "completed": 6, "percentage": 75, "last_watched_at": testWatchedAt,
+			pathAired: 8, "completed": 6, "percentage": 75, "last_watched_at": testWatchedAt,
 			"next_episode.season": 1, "next_episode.number": 7, "next_episode.title": "A No-Rough-Stuff-Type Deal",
 			"last_episode.number": 6, "seasons.0.number": 1, "seasons.0.aired": 7, "seasons.0.completed": 6, "seasons.0.percentage": 85.7,
 			"seasons.1.number": 2, "seasons.1.percentage": 0, "hidden_seasons": []any{5},
@@ -166,7 +166,7 @@ func TestShowProgressFlags(t *testing.T) {
 			name: "flags", tool: toolFetchShowProgress,
 			args:  merge(showShow(testShowSlug), map[string]any{argHidden: true, argSpecials: true, argCountSpecials: false, argLastActivity: lastActivityWatched}),
 			route: routeShowProgress, body: emptyObject,
-			wantQuery: map[string]string{argHidden: "true", argSpecials: "true", argCountSpecials: "false", argLastActivity: lastActivityWatched},
+			wantQuery: map[string]string{argHidden: queryTrue, argSpecials: queryTrue, argCountSpecials: queryFalse, argLastActivity: lastActivityWatched},
 		},
 		{
 			name: "defaults", tool: toolFetchShowProgress, args: showShow(testShowSlug), route: routeShowProgress, body: emptyObject,

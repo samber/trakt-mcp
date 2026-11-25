@@ -1,0 +1,30 @@
+[
+  {
+    "username": "sean",
+    "private": false,
+    "deleted": false,
+    "ids": {
+      "slug": "sean",
+      "trakt": 1
+    },
+    "name": "Sean"
+  },
+  {
+    "username": "hidden",
+    "private": true,
+    "deleted": false,
+    "ids": {
+      "slug": "hidden",
+      "trakt": 2
+    }
+  },
+  {
+    "username": "gone",
+    "private": false,
+    "deleted": true,
+    "ids": {
+      "slug": null,
+      "trakt": 3
+    }
+  }
+]

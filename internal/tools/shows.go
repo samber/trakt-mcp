@@ -637,55 +637,55 @@ func registerShowTools(s *Server) {
 
 	Register(s, Spec{
 		Name: "fetch_trending_shows", Title: "Fetch trending shows", Access: Read,
-		Description: "List the shows most watched on Trakt right now, with how many people are watching each." + pageNote,
+		Description: "List the TV shows most watched on Trakt right now, with how many people are watching each." + pageNote,
 	}, fetchTrendingShows)
 	Register(s, Spec{
 		Name: "fetch_popular_shows", Title: "Fetch popular shows", Access: Read,
-		Description: "List the most popular shows on Trakt, by rating and votes." + pageNote,
+		Description: "List the most popular TV shows on Trakt, by rating and votes." + pageNote,
 	}, fetchPopularShows)
 	Register(s, Spec{
 		Name: "fetch_anticipated_shows", Title: "Fetch anticipated shows", Access: Read,
-		Description: "List the most anticipated upcoming shows, with the number of lists each is on." + pageNote,
+		Description: "List the most anticipated upcoming TV shows, with the number of lists each is on." + pageNote,
 	}, fetchAnticipatedShows)
 	Register(s, Spec{
 		Name: "fetch_favorited_shows", Title: "Fetch favorited shows", Access: Read,
-		Description: "List the shows favorited by the most users in a period (daily, weekly, monthly, yearly, all)." + pageNote,
+		Description: "List the TV shows favorited by the most users in a period (daily, weekly, monthly, yearly, all)." + pageNote,
 	}, fetchFavoritedShows)
 	Register(s, Spec{
 		Name: "fetch_played_shows", Title: "Fetch most played shows", Access: Read,
-		Description: "List the shows with the most plays in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
+		Description: "List the TV shows with the most plays in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
 	}, fetchPlayedShows)
 	Register(s, Spec{
 		Name: "fetch_watched_shows", Title: "Fetch most watched shows", Access: Read,
-		Description: "List the shows watched by the most users in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
+		Description: "List the TV shows watched by the most users in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
 	}, fetchWatchedShows)
 	Register(s, Spec{
 		Name: "search_shows", Title: "Search shows", Access: Read,
-		Description: "Search shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
+		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchShows)
 	Register(s, Spec{
 		Name: "fetch_show_ratings", Title: "Fetch show ratings", Access: Read,
-		Description: "Get a show's average rating, vote count and the number of votes for each rating from 1 to 10.",
+		Description: "Get a TV show's average rating, vote count and the number of votes for each rating from 1 to 10.",
 	}, fetchShowRatings)
 	Register(s, Spec{
 		Name: "fetch_show_summary", Title: "Fetch show summary", Access: Read,
-		Description: "Get one show's details: year, ids, rating, overview, runtime, certification, network, status, first air date and genres.",
+		Description: "Get one TV show's details: year, ids, rating, overview, runtime, certification, network, status, first air date and genres.",
 	}, fetchShowSummary)
 	Register(s, Spec{
 		Name: "fetch_show_videos", Title: "Fetch show videos", Access: Read,
-		Description: "List a show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
+		Description: "List a TV show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
 	}, fetchShowVideos)
 	Register(s, Spec{
 		Name: "fetch_related_shows", Title: "Fetch related shows", Access: Read,
-		Description: "List shows related to a show." + pageNote,
+		Description: "List TV shows related to this one." + pageNote,
 	}, fetchRelatedShows)
 	Register(s, Spec{
 		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,
-		Description: "List a show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",
+		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",
 	}, fetchShowSeasons)
 	Register(s, Spec{
 		Name: "fetch_show_people", Title: "Fetch show people", Access: Read,
-		Description: "Get a show's cast (name, character) and crew grouped by department, optionally with guest stars. Long credit lists are cut.",
+		Description: "Get a TV show's cast (name, character) and crew grouped by department, optionally with guest stars. Long credit lists are cut.",
 	}, fetchShowPeople)
 }
 

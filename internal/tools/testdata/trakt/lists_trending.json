@@ -1,0 +1,33 @@
+[
+  {
+    "like_count": 50,
+    "comment_count": 3,
+    "list": {
+      "name": "Heist night",
+      "description": "Films about robberies.",
+      "privacy": "public",
+      "type": "official",
+      "created_at": "2023-05-01T10:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z",
+      "item_count": 12,
+      "comment_count": 2,
+      "likes": 34,
+      "ids": {"trakt": 777, "slug": "heist-night"},
+      "user": {"username": "sean", "ids": {"slug": "sean", "trakt": 1}}
+    }
+  },
+  {
+    "like_count": 7,
+    "comment_count": 0,
+    "list": {
+      "name": "Empty",
+      "description": null,
+      "item_count": 0,
+      "comment_count": 0,
+      "likes": 0,
+      "updated_at": "2024-01-02T00:00:00.000Z",
+      "ids": {"trakt": 778, "slug": "empty"},
+      "user": {"username": "ann", "ids": {"slug": "ann", "trakt": 4}}
+    }
+  }
+]

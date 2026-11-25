@@ -1,0 +1,26 @@
+[
+  {
+    "released": "2026-11-27",
+    "movie": {
+      "title": "The Matrix",
+      "year": 1999,
+      "ids": { "trakt": 481, "slug": "the-matrix-1999", "imdb": "tt0133093", "tmdb": 603 },
+      "overview": "A hacker learns the truth.",
+      "runtime": 136,
+      "certification": "R",
+      "rating": 8.7,
+      "votes": 90000,
+      "genres": ["scifi", "thriller"],
+      "released": "1999-03-31"
+    }
+  },
+  {
+    "released": "2026-11-28",
+    "movie": {
+      "title": "Untitled Sequel",
+      "year": 2026,
+      "ids": { "trakt": 999001, "slug": "untitled-sequel-2026", "imdb": null, "tmdb": null },
+      "genres": null
+    }
+  }
+]

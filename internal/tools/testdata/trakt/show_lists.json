@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Best seasons",
+    "description": "My favourites.",
+    "privacy": "public",
+    "type": "personal",
+    "item_count": 12,
+    "likes": 34,
+    "comment_count": 2,
+    "updated_at": "2024-01-01T00:00:00.000Z",
+    "ids": {
+      "trakt": 777,
+      "slug": "best-seasons"
+    },
+    "user": {
+      "username": "sean",
+      "ids": {
+        "slug": "sean",
+        "trakt": 1
+      },
+      "private": false,
+      "deleted": false
+    }
+  },
+  {
+    "name": "Empty",
+    "description": null,
+    "item_count": 0,
+    "likes": 0,
+    "comment_count": 0,
+    "updated_at": "2024-01-02T00:00:00.000Z",
+    "ids": {
+      "trakt": 778,
+      "slug": "empty"
+    },
+    "user": {
+      "username": "ann",
+      "ids": {
+        "slug": "ann",
+        "trakt": 4
+      },
+      "private": false,
+      "deleted": false
+    }
+  }
+]

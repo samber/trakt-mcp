@@ -1,0 +1,26 @@
+{
+  "season": 1,
+  "number": 2,
+  "title": "Pilot",
+  "overview": "Walter learns something.",
+  "rating": 8.6,
+  "votes": 300,
+  "runtime": 58,
+  "first_aired": "2008-01-20T02:00:00.000Z",
+  "episode_type": "series_premiere",
+  "number_abs": 1,
+  "ids": {
+    "trakt": 62118,
+    "tvdb": 349232,
+    "imdb": "tt0959621",
+    "tmdb": 62085
+  },
+  "images": {
+    "screenshot": [
+      "dropped"
+    ]
+  },
+  "available_translations": [
+    "en"
+  ]
+}

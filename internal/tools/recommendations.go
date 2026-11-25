@@ -47,8 +47,8 @@ func registerRecommendationTools(s *Server) {
 	Register(s, Spec{
 		Name:  "fetch_show_recommendations",
 		Title: "Fetch show recommendations",
-		Description: "List shows Trakt recommends to the user from their watching history, optionally leaving out " +
-			"collected or watchlisted shows. Takes limit (no page: Trakt returns one list).",
+		Description: "List TV shows Trakt recommends to the user from their watching history, optionally leaving out " +
+			"ones the user already collected or watchlisted. Takes limit (no page: Trakt returns one list).",
 		Access: Read,
 	}, fetchShowRecommendations)
 	Register(s, Spec{
@@ -60,7 +60,7 @@ func registerRecommendationTools(s *Server) {
 	Register(s, Spec{
 		Name:        "hide_show_recommendation",
 		Title:       "Hide show recommendation",
-		Description: "Hide one show from the user's future recommendations; unhide_show_recommendation reverses it.",
+		Description: "Hide one TV show from the user's future recommendations; unhide_show_recommendation reverses it.",
 		Access:      Write,
 	}, hideShowRecommendation)
 	Register(s, Spec{
@@ -72,7 +72,7 @@ func registerRecommendationTools(s *Server) {
 	Register(s, Spec{
 		Name:        "unhide_show_recommendation",
 		Title:       "Unhide show recommendation",
-		Description: "Let a show the user hid from recommendations be recommended again.",
+		Description: "Let a TV show the user hid from recommendations be recommended again.",
 		Access:      Write,
 	}, unhideShowRecommendation)
 }

@@ -196,7 +196,7 @@ func registerHistoryTools(s *Server) {
 	Register(s, Spec{
 		Name:  "fetch_show_progress",
 		Title: "Fetch show progress",
-		Description: "Get the user's progress on one show: episodes aired and watched, percentage, next episode to watch, " +
+		Description: "Get the user's progress on one TV show: episodes aired and watched, percentage, next episode to watch, " +
 			"and per-season counts (every episode with verbose).",
 		Access: Read,
 	}, fetchShowProgress)
