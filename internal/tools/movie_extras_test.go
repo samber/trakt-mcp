@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	toolMovieAliases  = "fetch_movie_aliases"
-	toolMovieStudios  = "fetch_movie_studios"
+	toolListAliases   = "list_aliases"
+	toolListStudios   = "list_studios"
 	toolMovieReleases = "fetch_movie_releases"
 
 	// Output paths of the first item, named to keep the literals unique.
@@ -41,12 +41,12 @@ var movieExtraCases = []catalogCase{
 		absent: []string{pathFirstTagline, pathSecondTitle},
 	},
 	{
-		tool: toolMovieAliases, args: movieArgs(nil), route: movieRoute("/aliases"), fixture: "movie_aliases",
+		tool: toolListAliases, args: movieItem(testMovieSlug), route: movieRoute("/aliases"), fixture: "movie_aliases",
 		want:   map[string]any{pathFirstTitle: "Matrix", pathFirstCountry: "fr", "items.1.title": "The Matrix Reloaded"},
 		absent: []string{"items.0.extra", "items.1.country"},
 	},
 	{
-		tool: toolMovieStudios, args: movieArgs(nil), route: movieRoute("/studios"), fixture: "movie_studios",
+		tool: toolListStudios, args: movieItem(testMovieSlug), route: movieRoute("/studios"), fixture: "movie_studios",
 		want: map[string]any{
 			pathFirstItemName: "Warner Bros.", pathFirstCountry: "us", pathFirstIDTrakt: 12, pathFirstIDSlug: "warner-bros", pathFirstIDTMDB: 174,
 			"items.1.name": "Village Roadshow",
@@ -76,8 +76,8 @@ func TestMovieExtraToolArguments(t *testing.T) {
 	cases := []argCase{
 		{name: "movie id traversal", tool: toolGetStats, args: movieItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "movie id empty", tool: toolListWatching, args: movieItem(""), wantErr: invalid(fieldID)},
-		{name: "movie id person imdb", tool: toolMovieStudios, args: movieRef(personIMDb), wantErr: invalid(fieldMovieID)},
-		{name: "movie id too long", tool: toolMovieAliases, args: movieRef(strings.Repeat("a", 129)), wantErr: invalid(fieldMovieID)},
+		{name: "movie id person imdb", tool: toolListStudios, args: movieItem(personIMDb), wantErr: invalid(fieldID)},
+		{name: "movie id too long", tool: toolListAliases, args: movieItem(strings.Repeat("a", 129)), wantErr: invalid(fieldID)},
 		{name: "movie id upper case", tool: toolListItemLists, args: movieItem("The-Matrix"), wantErr: invalid(fieldID)},
 		{name: "movie id numeric", tool: toolGetStats, args: movieItem("481"), route: "GET /movies/481/stats", body: emptyObject},
 		{name: "language fr", tool: toolListTranslations, args: merge(movieItem(testMovieSlug), map[string]any{argLanguage: "fr"}), route: movieRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},
@@ -114,8 +114,8 @@ func TestMovieExtraTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolGetStats, movieItem(testMovieSlug), movieRoute("/stats"), notAnArray)
 	runUpstreamFailures(t, toolListWatching, movieItem(testMovieSlug), movieRoute("/watching"), notAList)
 	runUpstreamFailures(t, toolListTranslations, movieItem(testMovieSlug), movieRoute("/translations"), notAList)
-	runUpstreamFailures(t, toolMovieAliases, movieArgs(nil), movieRoute("/aliases"), notAList)
-	runUpstreamFailures(t, toolMovieStudios, movieArgs(nil), movieRoute("/studios"), notAList)
+	runUpstreamFailures(t, toolListAliases, movieItem(testMovieSlug), movieRoute("/aliases"), notAList)
+	runUpstreamFailures(t, toolListStudios, movieItem(testMovieSlug), movieRoute("/studios"), notAList)
 	runUpstreamFailures(t, toolListItemLists, movieItem(testMovieSlug), movieRoute(pathMovieListsAll), notAList)
 	runUpstreamFailures(t, toolMovieReleases, movieArgs(map[string]any{fieldCountry: testCountry}), routeMovieReleasesFR, notAList)
 }
@@ -145,7 +145,7 @@ func TestMovieExtraTextIsBounded(t *testing.T) {
 
 	var studios Listing[Studio]
 
-	h.ok(toolMovieStudios, movieArgs(nil), &studios)
+	h.ok(toolListStudios, movieItem(testMovieSlug), &studios)
 
 	if s := studios.Items[0]; len([]rune(s.Name)) > maxTitleRunes || len([]rune(s.Country)) > maxCountryFieldRunes || len([]rune(s.IDs.Slug)) > maxSlugRunes {
 		t.Errorf("studio = %+v, want bounded text", s)
@@ -156,7 +156,7 @@ func TestMovieExtraTextIsBounded(t *testing.T) {
 
 	var aliases Listing[Alias]
 
-	h.ok(toolMovieAliases, movieArgs(nil), &aliases)
+	h.ok(toolListAliases, movieItem(testMovieSlug), &aliases)
 
 	if a := aliases.Items[0]; len([]rune(a.Title)) > maxTitleRunes || len([]rune(a.Country)) > maxCountryFieldRunes {
 		t.Errorf("alias = %+v, want bounded text", a)

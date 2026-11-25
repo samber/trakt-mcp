@@ -259,7 +259,7 @@ type MovieVideosArgs struct {
 	EmbedMarkdown *bool `json:"embed_markdown,omitempty" jsonschema:"also return each video as a ready markdown link (default true)"`
 }
 
-// RelatedMoviesArgs are the arguments of fetch_related_movies.
+// RelatedMoviesArgs are the arguments of the movie handler of list_related.
 type RelatedMoviesArgs struct {
 	PageArgs
 	MovieRef
@@ -296,10 +296,6 @@ func registerMovieCatalogTools(s *Server) {
 		Name: "search_movies", Title: "Search movies", Access: Read,
 		Description: "Search movies by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchMovies)
-	Register(s, Spec{
-		Name: "fetch_related_movies", Title: "Fetch related movies", Access: Read,
-		Description: "List movies related to a movie." + pageNote,
-	}, fetchRelatedMovies)
 }
 
 func fetchPopularMovies(ctx context.Context, c *trakt.UserClient, in MovieListArgs) (Listing[Movie], error) {

@@ -7,8 +7,6 @@ import (
 )
 
 const (
-	toolShowAliases        = "fetch_show_aliases"
-	toolShowStudios        = "fetch_show_studios"
 	toolShowNextEpisode    = "fetch_show_next_episode"
 	toolShowLastEpisode    = "fetch_show_last_episode"
 	toolShowCertifications = "fetch_show_certifications"
@@ -53,12 +51,12 @@ var showExtraCases = []catalogCase{
 		absent: []string{pathFirstTagline, pathSecondTitle},
 	},
 	{
-		tool: toolShowAliases, args: showShow(testShowSlug), route: showExtraRoute("/aliases"), fixture: "show_aliases",
+		tool: toolListAliases, args: showItem(testShowSlug), route: showExtraRoute("/aliases"), fixture: "show_aliases",
 		want:   map[string]any{pathFirstTitle: titleMatrix, pathFirstCountry: "fr", pathSecondTitle: "The Matrix Reloaded"},
 		absent: []string{pathFirstExtra, pathSecondCountry},
 	},
 	{
-		tool: toolShowStudios, args: showShow(testShowSlug), route: showExtraRoute("/studios"), fixture: "show_studios",
+		tool: toolListStudios, args: showItem(testShowSlug), route: showExtraRoute("/studios"), fixture: "show_studios",
 		want: map[string]any{
 			pathFirstItemName: "Warner Bros.", pathFirstCountry: "us", pathFirstIDTrakt: 12, pathFirstIDSlug: "warner-bros", pathFirstIDTMDB: 174,
 			pathSecondName: "Village Roadshow",
@@ -93,8 +91,8 @@ func TestShowExtraToolArguments(t *testing.T) {
 	cases := []argCase{
 		{name: "show extra show id traversal", tool: toolGetStats, args: showItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "show id empty", tool: toolListWatching, args: showItem(""), wantErr: invalid(fieldID)},
-		{name: "show extra show id person imdb", tool: toolShowStudios, args: withShow(personIMDb), wantErr: invalid(fieldShowID)},
-		{name: "show id too long", tool: toolShowAliases, args: withShow(strings.Repeat("a", 129)), wantErr: invalid(fieldShowID)},
+		{name: "show extra show id person imdb", tool: toolListStudios, args: showItem(personIMDb), wantErr: invalid(fieldID)},
+		{name: "show id too long", tool: toolListAliases, args: showItem(strings.Repeat("a", 129)), wantErr: invalid(fieldID)},
 		{name: "show id upper case", tool: toolListItemLists, args: showItem("Breaking-Bad"), wantErr: invalid(fieldID)},
 		{name: "show id empty next episode", tool: toolShowNextEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
 		{name: "show id empty last episode", tool: toolShowLastEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
@@ -202,8 +200,8 @@ func TestShowExtraTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolGetStats, showItem(testShowSlug), showExtraRoute("/stats"), notAnArray)
 	runUpstreamFailures(t, toolListWatching, showItem(testShowSlug), showExtraRoute("/watching"), notAList)
 	runUpstreamFailures(t, toolListTranslations, showItem(testShowSlug), showExtraRoute("/translations"), notAList)
-	runUpstreamFailures(t, toolShowAliases, args, showExtraRoute("/aliases"), notAList)
-	runUpstreamFailures(t, toolShowStudios, args, showExtraRoute("/studios"), notAList)
+	runUpstreamFailures(t, toolListAliases, showItem(testShowSlug), showExtraRoute("/aliases"), notAList)
+	runUpstreamFailures(t, toolListStudios, showItem(testShowSlug), showExtraRoute("/studios"), notAList)
 	runUpstreamFailures(t, toolListItemLists, showItem(testShowSlug), showExtraRoute(pathShowListsAll), notAList)
 	runUpstreamFailures(t, toolShowNextEpisode, args, showExtraRoute("/next_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowLastEpisode, args, showExtraRoute("/last_episode"), notAnArray)
@@ -250,7 +248,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var studios Listing[Studio]
 
-	h.ok(toolShowStudios, showShow(testShowSlug), &studios)
+	h.ok(toolListStudios, showItem(testShowSlug), &studios)
 
 	if s := studios.Items[0]; len([]rune(s.Name)) > maxTitleRunes || len([]rune(s.Country)) > maxCountryFieldRunes || len([]rune(s.IDs.Slug)) > maxSlugRunes {
 		t.Errorf("studio = %+v, want bounded text", s)
@@ -261,7 +259,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var aliases Listing[Alias]
 
-	h.ok(toolShowAliases, showShow(testShowSlug), &aliases)
+	h.ok(toolListAliases, showItem(testShowSlug), &aliases)
 
 	if a := aliases.Items[0]; len([]rune(a.Title)) > maxTitleRunes || len([]rune(a.Country)) > maxCountryFieldRunes {
 		t.Errorf("alias = %+v, want bounded text", a)

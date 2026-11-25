@@ -129,6 +129,15 @@ func requireLegacyToolsRemoved(t *testing.T, suffixes ...string) {
 		}
 	}
 
+	requireToolsRemoved(t, legacy...)
+}
+
+// requireToolsRemoved requires the named tools to be gone: not registered,
+// so a client still calling them gets an unknown-tool error and no Trakt
+// request is made.
+func requireToolsRemoved(t *testing.T, legacy ...string) {
+	t.Helper()
+
 	for _, spec := range NewServer(offlineDeps()).Specs() {
 		if slices.Contains(legacy, spec.Name) {
 			t.Errorf("%s is still registered", spec.Name)

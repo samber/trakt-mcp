@@ -9,13 +9,19 @@ import (
 	"github.com/samber/trakt-mcp/internal/trakt/api"
 )
 
-// RecommendationArgs are the arguments of fetch_movie_recommendations and
-// fetch_show_recommendations. Trakt does not paginate recommendations: one
-// request returns up to limit items, so there is no page argument.
+// RecommendationArgs are the arguments of the movie and TV show handlers of
+// list_recommendations. Trakt does not paginate recommendations: one request
+// returns up to limit items, so there is no page argument.
 type RecommendationArgs struct {
 	Limit             int   `json:"limit,omitempty"              jsonschema:"number of recommendations to return, 1 to 100 (default 10)"`
 	IgnoreCollected   *bool `json:"ignore_collected,omitempty"   jsonschema:"leave out items already in the user's collection (Trakt's default is false)"`
 	IgnoreWatchlisted *bool `json:"ignore_watchlisted,omitempty" jsonschema:"leave out items already on the user's watchlist (Trakt's default is false)"`
+}
+
+// ListRecommendationsArgs are the arguments of list_recommendations.
+type ListRecommendationsArgs struct {
+	TypeArg
+	RecommendationArgs
 }
 
 // HideRecommendationResult confirms a hidden recommendation.
@@ -38,43 +44,56 @@ func (UnhideRecommendationResult) resultCount() int { return 1 }
 
 func registerRecommendationTools(s *Server) {
 	Register(s, Spec{
-		Name:  "fetch_movie_recommendations",
-		Title: "Fetch movie recommendations",
-		Description: "List movies Trakt recommends to the user from their watching history, optionally leaving out " +
-			"collected or watchlisted movies. Takes limit (no page: Trakt returns one list).",
+		Name:  "list_recommendations",
+		Title: "List recommendations",
+		Description: "List the movies or TV shows Trakt recommends to the user from their watching history, returned as " +
+			"{type, item}: item is a list of movies (type movie) or TV shows (type show), optionally leaving out collected " +
+			"or watchlisted ones. Takes limit (no page: Trakt returns one list). type is movie or show (a TV show).",
 		Access: Read,
-	}, fetchMovieRecommendations)
+	}, listRecommendations)
 	Register(s, Spec{
-		Name:  "fetch_show_recommendations",
-		Title: "Fetch show recommendations",
-		Description: "List TV shows Trakt recommends to the user from their watching history, optionally leaving out " +
-			"ones the user already collected or watchlisted. Takes limit (no page: Trakt returns one list).",
-		Access: Read,
-	}, fetchShowRecommendations)
-	Register(s, Spec{
-		Name:        "hide_movie_recommendation",
-		Title:       "Hide movie recommendation",
-		Description: "Hide one movie from the user's future recommendations; unhide_movie_recommendation reverses it.",
+		Name:        "hide_recommendation",
+		Title:       "Hide recommendation",
+		Description: "Hide one movie or TV show from the user's future recommendations; unhide_recommendation reverses it. " + movieShowTypesNote,
 		Access:      Write,
-	}, hideMovieRecommendation)
+	}, hideRecommendation)
 	Register(s, Spec{
-		Name:        "hide_show_recommendation",
-		Title:       "Hide show recommendation",
-		Description: "Hide one TV show from the user's future recommendations; unhide_show_recommendation reverses it.",
+		Name:        "unhide_recommendation",
+		Title:       "Unhide recommendation",
+		Description: "Let a movie or TV show the user hid from recommendations be recommended again. " + movieShowTypesNote,
 		Access:      Write,
-	}, hideShowRecommendation)
-	Register(s, Spec{
-		Name:        "unhide_movie_recommendation",
-		Title:       "Unhide movie recommendation",
-		Description: "Let a movie the user hid from recommendations be recommended again.",
-		Access:      Write,
-	}, unhideMovieRecommendation)
-	Register(s, Spec{
-		Name:        "unhide_show_recommendation",
-		Title:       "Unhide show recommendation",
-		Description: "Let a TV show the user hid from recommendations be recommended again.",
-		Access:      Write,
-	}, unhideShowRecommendation)
+	}, unhideRecommendation)
+}
+
+// hideFetchers and unhideFetchers hold the handler of each type that can be
+// hidden from the recommendations.
+var (
+	hideFetchers   = itemFetchers[HideRecommendationResult]{movie: hideMovieRecommendation, show: hideShowRecommendation}
+	unhideFetchers = itemFetchers[UnhideRecommendationResult]{movie: unhideMovieRecommendation, show: unhideShowRecommendation}
+)
+
+func hideRecommendation(ctx context.Context, c *trakt.UserClient, in ItemRef) (HideRecommendationResult, error) {
+	return hideFetchers.fetch(ctx, c, in)
+}
+
+func unhideRecommendation(ctx context.Context, c *trakt.UserClient, in ItemRef) (UnhideRecommendationResult, error) {
+	return unhideFetchers.fetch(ctx, c, in)
+}
+
+func listRecommendations(ctx context.Context, c *trakt.UserClient, in ListRecommendationsArgs) (Typed, error) {
+	if err := checkType(in.Type, typeMovie, typeShow); err != nil {
+		return Typed{}, err
+	}
+
+	if in.Type == typeMovie {
+		item, err := fetchMovieRecommendations(ctx, c, in.RecommendationArgs)
+
+		return typed(in.Type, item, err)
+	}
+
+	item, err := fetchShowRecommendations(ctx, c, in.RecommendationArgs)
+
+	return typed(in.Type, item, err)
 }
 
 // recommendationLimit validates limit with the same bounds as list tools.
@@ -175,7 +194,7 @@ func unhideMovieRecommendation(ctx context.Context, c *trakt.UserClient, in Movi
 		return UnhideRecommendationResult{}, err
 	}
 
-	return unhideRecommendation(ctx, c, itemMovie, id)
+	return removeHiddenRecommendation(ctx, c, itemMovie, id)
 }
 
 func unhideShowRecommendation(ctx context.Context, c *trakt.UserClient, in ShowRef) (UnhideRecommendationResult, error) {
@@ -184,12 +203,12 @@ func unhideShowRecommendation(ctx context.Context, c *trakt.UserClient, in ShowR
 		return UnhideRecommendationResult{}, err
 	}
 
-	return unhideRecommendation(ctx, c, itemShow, id)
+	return removeHiddenRecommendation(ctx, c, itemShow, id)
 }
 
-// unhideRecommendation removes one validated item from the user's hidden
+// removeHiddenRecommendation removes one validated item from the user's hidden
 // recommendations, through the same sync body as the batch writes.
-func unhideRecommendation(ctx context.Context, c *trakt.UserClient, typ, id string) (UnhideRecommendationResult, error) {
+func removeHiddenRecommendation(ctx context.Context, c *trakt.UserClient, typ, id string) (UnhideRecommendationResult, error) {
 	res, err := writeItems([]Item{{Type: typ, ID: ID(id)}}, func(body io.Reader) (*http.Response, error) {
 		return c.API().PostUsersHiddenRemoveSectionWithBody(ctx, api.PostUsersHiddenRemoveSectionParamsSectionRecommendations, jsonContentType, body)
 	})

@@ -13,7 +13,8 @@ type ListTranslationsArgs struct {
 }
 
 // itemFetchers holds the handler of each media type for a tool whose result
-// has the same shape for every type.
+// has the same shape for every type. A type left without a handler is not
+// accepted by the tool.
 type itemFetchers[T any] struct {
 	movie   func(context.Context, *trakt.UserClient, MovieRef) (T, error)
 	show    func(context.Context, *trakt.UserClient, ShowRef) (T, error)
@@ -21,9 +22,31 @@ type itemFetchers[T any] struct {
 	episode func(context.Context, *trakt.UserClient, EpisodeRef) (T, error)
 }
 
-// fetch validates ref, then calls the handler of its type.
+// allowed lists the types f has a handler for.
+func (f itemFetchers[T]) allowed() []string {
+	var types []string
+
+	for _, h := range []struct {
+		typ string
+		set bool
+	}{
+		{typ: typeMovie, set: f.movie != nil},
+		{typ: typeShow, set: f.show != nil},
+		{typ: typeSeason, set: f.season != nil},
+		{typ: typeEpisode, set: f.episode != nil},
+	} {
+		if h.set {
+			types = append(types, h.typ)
+		}
+	}
+
+	return types
+}
+
+// fetch validates ref against the types f has a handler for, then calls the
+// handler of its type.
 func (f itemFetchers[T]) fetch(ctx context.Context, c *trakt.UserClient, ref ItemRef) (T, error) {
-	if err := ref.check(typeMovie, typeShow, typeSeason, typeEpisode); err != nil {
+	if err := ref.check(f.allowed()...); err != nil {
 		var zero T
 
 		return zero, err

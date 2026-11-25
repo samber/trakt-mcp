@@ -51,7 +51,6 @@ const (
 	toolFetchFavoritedShows   = "fetch_favorited_shows"
 	toolFetchPlayedShows      = "fetch_played_shows"
 	toolFetchPopularShows     = "fetch_popular_shows"
-	toolFetchRelatedShows     = "fetch_related_shows"
 	toolSearchShows           = "search_shows"
 	toolFetchShowSeasons      = "fetch_show_seasons"
 	toolFetchTrendingShows    = "fetch_trending_shows"
@@ -245,9 +244,9 @@ var showCases = []catalogCase{
 		},
 	},
 	{
-		tool: toolFetchRelatedShows, args: merge(showShow(testShowSlug), pagedArgs), route: "GET /shows/breaking-bad/related", fixture: "show_related", headers: pagedHeaders,
+		tool: toolListRelated, args: merge(showItem(testShowSlug), pagedArgs), route: "GET /shows/breaking-bad/related", fixture: "show_related", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
-		want:      map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, pathSecondTitle: testShowTitle, pathPageCount: 3},
+		want:      merge(map[string]any{argType: typeShow}, inItem(map[string]any{pathFirstTitle: "Better Call Saul", "items.0.genres": []any{}, pathSecondTitle: testShowTitle, pathPageCount: 3})),
 	},
 	{
 		tool: toolFetchShowSeasons, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/seasons", fixture: "show_seasons",
@@ -480,7 +479,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "id slash", tool: toolGetRatings, args: showItem("a/b"), wantErr: invalid(fieldID)},
 		{name: "id query injection", tool: toolListPeople, args: showItem("x?extended=full"), wantErr: invalid(fieldID)},
 		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},
-		{name: "id upper case", tool: toolFetchRelatedShows, args: showShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
+		{name: "id upper case", tool: toolListRelated, args: showItem("Breaking-Bad"), wantErr: invalid(fieldID)},
 		{name: "summary not extended", tool: toolGetSummary, args: merge(showItem("1388"), map[string]any{queryExtended: false}), route: "GET /shows/1388", body: emptyObject, noQuery: []string{queryExtended}},
 		{name: "query empty", tool: toolSearchShows, args: map[string]any{fieldQuery: ""}, wantErr: invalid(fieldQuery)},
 		{name: "query blank", tool: toolSearchShows, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},

@@ -33,4 +33,5 @@ var catalog = []func(*Server){
 	registerSummaryTools,
 	registerItemInfoTools,
 	registerItemExtraTools,
+	registerMovieShowTools,
 }

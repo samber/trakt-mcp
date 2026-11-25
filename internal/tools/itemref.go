@@ -17,6 +17,12 @@ const (
 // numbered inside their show.
 const itemIDKinds = Slug | Numeric | IMDbTitle
 
+// TypeArg is the type argument of a tool that takes no id: the media type of
+// the list it returns or acts on.
+type TypeArg struct {
+	Type string `json:"type" jsonschema:"movie or show; the tool description lists the values it accepts"`
+}
+
 // ItemRef names one movie, TV show, season or episode. Season is required
 // for a season or an episode, Episode for an episode only; both are
 // rejected for any other type, never ignored.

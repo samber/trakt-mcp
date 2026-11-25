@@ -8,23 +8,19 @@ import (
 )
 
 const (
-	toolFetchMovieRecommendations = "fetch_movie_recommendations"
-	toolFetchShowRecommendations  = "fetch_show_recommendations"
-	toolHideMovieRecommendation   = "hide_movie_recommendation"
-	toolHideShowRecommendation    = "hide_show_recommendation"
-	toolUnhideMovieRecommendation = "unhide_movie_recommendation"
-	toolUnhideShowRecommendation  = "unhide_show_recommendation"
+	toolListRecommendations  = "list_recommendations"
+	toolHideRecommendation   = "hide_recommendation"
+	toolUnhideRecommendation = "unhide_recommendation"
 
 	// Routes keep the trailing slash the generated client sends for the
 	// recommendation lists.
 	routeMovieRecommendations = "GET /recommendations/movies/"
 	routeShowRecommendations  = "GET /recommendations/shows/"
-	routeHiddenRecsRemove     = "POST /users/hidden/recommendations/remove"
+	pathHiddenRecsRemove      = "/users/hidden/recommendations/remove"
+	routeHiddenRecsRemove     = "POST " + pathHiddenRecsRemove
 
 	argIgnoreCollected   = "ignore_collected"
 	argIgnoreWatchlisted = "ignore_watchlisted"
-	argShowID            = "show_id"
-	argMovieID           = "movie_id"
 
 	// queryTrue and queryFalse are booleans as they appear in a query string.
 	queryTrue  = "true"
@@ -39,48 +35,45 @@ const (
 
 func init() {
 	accountCaseSets = append(accountCaseSets, recommendationCases)
-	accountAccess[toolFetchMovieRecommendations] = Read
-	accountAccess[toolFetchShowRecommendations] = Read
-	accountAccess[toolHideMovieRecommendation] = Write
-	accountAccess[toolHideShowRecommendation] = Write
-	accountAccess[toolUnhideMovieRecommendation] = Write
-	accountAccess[toolUnhideShowRecommendation] = Write
+	accountAccess[toolListRecommendations] = Read
+	accountAccess[toolHideRecommendation] = Write
+	accountAccess[toolUnhideRecommendation] = Write
 }
 
 var recommendationCases = []accountCase{
 	{
-		tool: toolFetchMovieRecommendations, args: map[string]any{}, route: routeMovieRecommendations, fixture: "recommendations_movies",
-		want: map[string]any{
+		tool: toolListRecommendations, args: typeArg(typeMovie), route: routeMovieRecommendations, fixture: "recommendations_movies",
+		want: merge(map[string]any{argType: typeMovie}, inItem(map[string]any{
 			pathFirstTitle: testMovieTitle, pathFirstIDSlug: testMovieSlug, pathFirstIDTrakt: 481,
 			"items.1.title": "Untitled", pathSecondGenres: []any{},
-		},
-		absent: []string{testFavoritedBy, "items.1.year", "items.0.ids.plex"},
+		})),
+		absent: inItemPaths([]string{testFavoritedBy, "items.1.year", "items.0.ids.plex"}),
 	},
 	{
-		tool: toolFetchShowRecommendations, args: map[string]any{}, route: routeShowRecommendations, fixture: "recommendations_shows",
-		want: map[string]any{
+		tool: toolListRecommendations, args: typeArg(typeShow), route: routeShowRecommendations, fixture: "recommendations_shows",
+		want: merge(map[string]any{argType: typeShow}, inItem(map[string]any{
 			pathFirstTitle: testShowTitle, pathFirstIDSlug: testShowSlug, "items.0.network": "AMC",
 			pathSecondTitle: "Better Call Saul", pathSecondGenres: []any{},
-		},
-		absent: []string{testFavoritedBy, "items.1.overview"},
+		})),
+		absent: inItemPaths([]string{testFavoritedBy, "items.1.overview"}),
 	},
 	{
-		tool: toolHideMovieRecommendation, args: map[string]any{argMovieID: testMovieSlug},
+		tool: toolHideRecommendation, args: movieItem(testMovieSlug),
 		route: "DELETE /recommendations/movies/" + testMovieSlug, status: http.StatusNoContent, object: true,
 		want: map[string]any{keyHidden: true, argType: itemMovie, argID: testMovieSlug},
 	},
 	{
-		tool: toolHideShowRecommendation, args: map[string]any{argShowID: testShowSlug},
+		tool: toolHideRecommendation, args: showItem(testShowSlug),
 		route: "DELETE /recommendations/shows/" + testShowSlug, status: http.StatusNoContent, object: true,
 		want: map[string]any{keyHidden: true, argType: itemShow, argID: testShowSlug},
 	},
 	{
-		tool: toolUnhideMovieRecommendation, args: map[string]any{argMovieID: testMovieSlug},
+		tool: toolUnhideRecommendation, args: movieItem(testMovieSlug),
 		route: routeHiddenRecsRemove, fixture: "hidden_recommendations_remove", object: true,
 		want: map[string]any{keyUnhidden: true, argType: itemMovie, argID: testMovieSlug},
 	},
 	{
-		tool: toolUnhideShowRecommendation, args: map[string]any{argShowID: testShowSlug},
+		tool: toolUnhideRecommendation, args: showItem(testShowSlug),
 		route: routeHiddenRecsRemove, fixture: "hidden_recommendations_not_found", object: true,
 		want: map[string]any{keyUnhidden: false, argType: itemShow, argID: testShowSlug},
 	},
@@ -94,43 +87,45 @@ func TestIgnoreCollectedWatchlistedFlags(t *testing.T) {
 
 	cases := []argCase{}
 
-	for _, rt := range []struct{ tool, route string }{
-		{toolFetchMovieRecommendations, routeMovieRecommendations},
-		{toolFetchShowRecommendations, routeShowRecommendations},
+	for _, rt := range []struct{ typ, route string }{
+		{typeMovie, routeMovieRecommendations},
+		{typeShow, routeShowRecommendations},
 	} {
+		with := func(extra map[string]any) map[string]any { return merge(typeArg(rt.typ), extra) }
+
 		cases = append(cases,
 			argCase{
-				name: rt.tool + " defaults", tool: rt.tool, args: map[string]any{}, route: rt.route, body: emptyList,
+				name: rt.typ + " defaults", tool: toolListRecommendations, args: with(nil), route: rt.route, body: emptyList,
 				wantQuery: map[string]string{fieldLimit: strconv.Itoa(defaultLimit), queryExtended: extendedFull},
 				noQuery:   []string{argIgnoreCollected, argIgnoreWatchlisted, fieldPage},
 			},
 			argCase{
-				name: rt.tool + " both true", tool: rt.tool, args: map[string]any{argIgnoreCollected: true, argIgnoreWatchlisted: true},
+				name: rt.typ + " both true", tool: toolListRecommendations, args: with(map[string]any{argIgnoreCollected: true, argIgnoreWatchlisted: true}),
 				route: rt.route, body: emptyList,
 				wantQuery: map[string]string{argIgnoreCollected: queryTrue, argIgnoreWatchlisted: queryTrue},
 			},
 			argCase{
-				name: rt.tool + " collected false only", tool: rt.tool, args: map[string]any{argIgnoreCollected: false},
+				name: rt.typ + " collected false only", tool: toolListRecommendations, args: with(map[string]any{argIgnoreCollected: false}),
 				route: rt.route, body: emptyList,
 				wantQuery: map[string]string{argIgnoreCollected: queryFalse},
 				noQuery:   []string{argIgnoreWatchlisted},
 			},
 			argCase{
-				name: rt.tool + " watchlisted only", tool: rt.tool, args: map[string]any{argIgnoreWatchlisted: true},
+				name: rt.typ + " watchlisted only", tool: toolListRecommendations, args: with(map[string]any{argIgnoreWatchlisted: true}),
 				route: rt.route, body: emptyList,
 				wantQuery: map[string]string{argIgnoreWatchlisted: queryTrue},
 				noQuery:   []string{argIgnoreCollected},
 			},
 			argCase{
-				name: rt.tool + " limit max", tool: rt.tool, args: map[string]any{fieldLimit: maxLimit}, route: rt.route, body: emptyList,
+				name: rt.typ + " limit max", tool: toolListRecommendations, args: with(map[string]any{fieldLimit: maxLimit}), route: rt.route, body: emptyList,
 				wantQuery: map[string]string{fieldLimit: strconv.Itoa(maxLimit)},
 			},
 			argCase{
-				name: rt.tool + " limit one", tool: rt.tool, args: map[string]any{fieldLimit: 1}, route: rt.route, body: emptyList,
+				name: rt.typ + " limit one", tool: toolListRecommendations, args: with(map[string]any{fieldLimit: 1}), route: rt.route, body: emptyList,
 				wantQuery: map[string]string{fieldLimit: "1"},
 			},
-			argCase{name: rt.tool + " limit over max", tool: rt.tool, args: map[string]any{fieldLimit: maxLimit + 1}, wantErr: invalid(fieldLimit)},
-			argCase{name: rt.tool + " limit negative", tool: rt.tool, args: map[string]any{fieldLimit: -1}, wantErr: invalid(fieldLimit)},
+			argCase{name: rt.typ + " limit over max", tool: toolListRecommendations, args: with(map[string]any{fieldLimit: maxLimit + 1}), wantErr: invalid(fieldLimit)},
+			argCase{name: rt.typ + " limit negative", tool: toolListRecommendations, args: with(map[string]any{fieldLimit: -1}), wantErr: invalid(fieldLimit)},
 		)
 	}
 
@@ -145,12 +140,12 @@ func TestRecommendationsLimitCapsOutput(t *testing.T) {
 	h := newHarness(t)
 	h.trakt.respond(routeMovieRecommendations, http.StatusOK, fixture(t, "recommendations_movies"), nil)
 
-	var out Listing[Movie]
+	var out typedOut[Listing[Movie]]
 
-	h.ok(toolFetchMovieRecommendations, map[string]any{fieldLimit: 1}, &out)
+	h.ok(toolListRecommendations, merge(typeArg(typeMovie), map[string]any{fieldLimit: 1}), &out)
 
-	if len(out.Items) != 1 || out.Items[0].Title != testMovieTitle {
-		t.Errorf("items = %+v, want only %s", out.Items, testMovieTitle)
+	if len(out.Item.Items) != 1 || out.Item.Items[0].Title != testMovieTitle {
+		t.Errorf("items = %+v, want only %s", out.Item.Items, testMovieTitle)
 	}
 }
 
@@ -161,31 +156,31 @@ func TestHideUnhideRoundTripPaths(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name, hide, unhide, arg, id, hidePath, bodyType string
-		wantIDs                                         SyncIDs
+		name, typ, id, hidePath, bodyType string
+		wantIDs                           SyncIDs
 	}{
 		{
-			name: "movie slug", hide: toolHideMovieRecommendation, unhide: toolUnhideMovieRecommendation, arg: argMovieID,
+			name: "movie slug", typ: typeMovie,
 			id: testMovieSlug, hidePath: "/recommendations/movies/" + testMovieSlug, bodyType: mediaMovies,
 			wantIDs: SyncIDs{Slug: testMovieSlug},
 		},
 		{
-			name: "movie trakt id", hide: toolHideMovieRecommendation, unhide: toolUnhideMovieRecommendation, arg: argMovieID,
+			name: "movie trakt id", typ: typeMovie,
 			id: testMovieTraktID, hidePath: "/recommendations/movies/" + testMovieTraktID, bodyType: mediaMovies,
 			wantIDs: SyncIDs{Trakt: 481},
 		},
 		{
-			name: "movie imdb", hide: toolHideMovieRecommendation, unhide: toolUnhideMovieRecommendation, arg: argMovieID,
+			name: "movie imdb", typ: typeMovie,
 			id: testMovieIMDb, hidePath: "/recommendations/movies/" + testMovieIMDb, bodyType: mediaMovies,
 			wantIDs: SyncIDs{IMDb: testMovieIMDb},
 		},
 		{
-			name: "show slug", hide: toolHideShowRecommendation, unhide: toolUnhideShowRecommendation, arg: argShowID,
+			name: "show slug", typ: typeShow,
 			id: testShowSlug, hidePath: "/recommendations/shows/" + testShowSlug, bodyType: mediaShows,
 			wantIDs: SyncIDs{Slug: testShowSlug},
 		},
 		{
-			name: "show imdb", hide: toolHideShowRecommendation, unhide: toolUnhideShowRecommendation, arg: argShowID,
+			name: "show imdb", typ: typeShow,
 			id: testShowIMDb, hidePath: "/recommendations/shows/" + testShowIMDb, bodyType: mediaShows,
 			wantIDs: SyncIDs{IMDb: testShowIMDb},
 		},
@@ -199,9 +194,9 @@ func TestHideUnhideRoundTripPaths(t *testing.T) {
 			h.trakt.respond("DELETE "+tc.hidePath, http.StatusNoContent, "", nil)
 			log := captureBodies(h, routeHiddenRecsRemove, http.StatusOK, fixture(t, "hidden_recommendations_remove"))
 
-			args := map[string]any{tc.arg: tc.id}
-			h.ok(tc.hide, args, nil)
-			h.ok(tc.unhide, args, nil)
+			args := itemArg(tc.typ, tc.id)
+			h.ok(toolHideRecommendation, args, nil)
+			h.ok(toolUnhideRecommendation, args, nil)
 
 			seen := h.trakt.seen()
 			if len(seen) != 2 {
@@ -259,16 +254,13 @@ func TestHideUnhideRejectBadIDs(t *testing.T) {
 
 	cases := []argCase{}
 
-	for _, tt := range []struct{ tool, arg string }{
-		{toolHideMovieRecommendation, argMovieID},
-		{toolUnhideMovieRecommendation, argMovieID},
-		{toolHideShowRecommendation, argShowID},
-		{toolUnhideShowRecommendation, argShowID},
-	} {
-		for _, bad := range []string{"", traversalID, personIMDb, "Breaking Bad", "481\n"} {
-			cases = append(cases, argCase{
-				name: tt.tool + " " + strconv.Quote(bad), tool: tt.tool, args: map[string]any{tt.arg: bad}, wantErr: invalid(tt.arg),
-			})
+	for _, tool := range []string{toolHideRecommendation, toolUnhideRecommendation} {
+		for _, typ := range []string{typeMovie, typeShow} {
+			for _, bad := range []string{"", traversalID, personIMDb, "Breaking Bad", "481\n"} {
+				cases = append(cases, argCase{
+					name: tool + " " + typ + " " + strconv.Quote(bad), tool: tool, args: itemArg(typ, bad), wantErr: invalid(fieldID),
+				})
+			}
 		}
 	}
 
@@ -280,5 +272,6 @@ func TestHideRecommendationNotFound(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
-	h.fail(toolHideMovieRecommendation, map[string]any{argMovieID: "unknown-movie"}, msgNotFound)
+	h.fail(toolHideRecommendation, movieItem("unknown-movie"), msgNotFound)
+	h.fail(toolHideRecommendation, showItem("unknown-show"), msgNotFound)
 }

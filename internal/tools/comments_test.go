@@ -34,18 +34,10 @@ const (
 // newToolNames are the tools of the movie, people and comment groups.
 var newToolNames = []string{
 	toolFetchPopularMovies, toolFetchAnticipatedMovies, toolFetchFavoritedMovies, toolFetchPlayedMovies, toolFetchWatchedMovies,
-	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolListVideos, toolFetchRelatedMovies, toolListPeople,
+	toolFetchBoxofficeMovies, toolSearchMovies, toolGetRatings, toolListVideos, toolListRelated, toolListPeople,
 	toolListComments,
 	toolFetchPersonSummary, toolFetchPersonMovies, toolFetchPersonShows,
 	toolFetchComment, toolFetchCommentReplies,
-}
-
-func seasonArgs(season int) map[string]any {
-	return merge(showShow(testShowSlug), map[string]any{fieldSeason: season})
-}
-
-func episodeArgs(season, episode int) map[string]any {
-	return merge(seasonArgs(season), map[string]any{fieldEpisode: episode})
 }
 
 // commentWant is what the three-comment fixtures return by default: the

@@ -621,7 +621,7 @@ type VideosArgs struct {
 	EmbedMarkdown *bool `json:"embed_markdown,omitempty" jsonschema:"also return each video as a ready markdown link (default true)"`
 }
 
-// RelatedShowsArgs are the arguments of fetch_related_shows.
+// RelatedShowsArgs are the arguments of the TV show handler of list_related.
 type RelatedShowsArgs struct {
 	PageArgs
 	ShowRef
@@ -664,10 +664,6 @@ func registerShowTools(s *Server) {
 		Name: "search_shows", Title: "Search shows", Access: Read,
 		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
 	}, searchShows)
-	Register(s, Spec{
-		Name: "fetch_related_shows", Title: "Fetch related shows", Access: Read,
-		Description: "List TV shows related to this one." + pageNote,
-	}, fetchRelatedShows)
 	Register(s, Spec{
 		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,
 		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",

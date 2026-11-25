@@ -21,7 +21,7 @@ const (
 	toolFetchWatchedMovies     = "fetch_watched_movies"
 	toolFetchBoxofficeMovies   = "fetch_boxoffice_movies"
 	toolSearchMovies           = "search_movies"
-	toolFetchRelatedMovies     = "fetch_related_movies"
+	toolListRelated            = "list_related"
 
 	pathFirstMovieTitle   = "items.0.movie.title"
 	pathFirstIDSlug       = "items.0.ids.slug"
@@ -97,9 +97,9 @@ var movieCases = []catalogCase{
 		absent: []string{"items.2"},
 	},
 	{
-		tool: toolFetchRelatedMovies, args: merge(movieRef(testMovieSlug), pagedArgs), route: "GET " + routeMovieSlug + "/related", fixture: "movie_related", headers: pagedHeaders,
+		tool: toolListRelated, args: merge(movieItem(testMovieSlug), pagedArgs), route: "GET " + routeMovieSlug + "/related", fixture: "movie_related", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
-		want:      map[string]any{pathFirstTitle: testMovieTitle, pathSecondGenres: []any{}, pathPageCount: 3},
+		want:      merge(map[string]any{argType: typeMovie}, inItem(map[string]any{pathFirstTitle: testMovieTitle, pathSecondGenres: []any{}, pathPageCount: 3})),
 	},
 	{
 		tool: toolListPeople, args: movieItem(testMovieSlug), route: "GET " + routeMovieSlug + "/people", fixture: "movie_people", object: true,
@@ -129,10 +129,10 @@ func TestMovieToolArguments(t *testing.T) {
 		{name: "id imdb title", tool: toolListPeople, args: movieItem(testMovieIMDb), route: "GET /movies/tt0133093/people", body: emptyObject, wantPath: "/movies/tt0133093/people"},
 		{name: "id imdb person", tool: toolListPeople, args: movieItem(personIMDb), wantErr: invalid(fieldID)},
 		{name: "id path traversal", tool: toolGetRatings, args: movieItem(traversalID), wantErr: invalid(fieldID)},
-		{name: "id slash", tool: toolFetchRelatedMovies, args: movieRef("a/b"), wantErr: invalid(fieldMovieID)},
+		{name: "id slash", tool: toolListRelated, args: movieItem("a/b"), wantErr: invalid(fieldID)},
 		{name: "id query injection", tool: toolListVideos, args: movieItem("x?extended=full"), wantErr: invalid(fieldID)},
 		{name: "id empty", tool: toolListPeople, args: movieItem(""), wantErr: invalid(fieldID)},
-		{name: "id upper case", tool: toolFetchRelatedMovies, args: movieRef("The-Matrix"), wantErr: invalid(fieldMovieID)},
+		{name: "id upper case", tool: toolListRelated, args: movieItem("The-Matrix"), wantErr: invalid(fieldID)},
 		{name: "query empty", tool: toolSearchMovies, args: map[string]any{fieldQuery: ""}, wantErr: invalid(fieldQuery)},
 		{name: "query blank", tool: toolSearchMovies, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},
 		{name: "query 200 runes", tool: toolSearchMovies, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes)}, route: "GET /search/movie", body: emptyList},

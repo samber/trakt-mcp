@@ -84,14 +84,6 @@ func parseMaybeEpisode(body []byte) (MaybeEpisode, error) {
 
 func registerShowExtraTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_show_aliases", Title: "Fetch show aliases", Access: Read,
-		Description: "List a TV show's alternate titles with the country each is used in.",
-	}, fetchShowAliases)
-	Register(s, Spec{
-		Name: "fetch_show_studios", Title: "Fetch show studios", Access: Read,
-		Description: "List the production studios of a TV show with country and ids.",
-	}, fetchShowStudios)
-	Register(s, Spec{
 		Name: "fetch_show_next_episode", Title: "Fetch show next episode", Access: Read,
 		Description: "Get the next episode to air of a TV series. Returns an empty object when none is scheduled.",
 	}, fetchShowNextEpisode)

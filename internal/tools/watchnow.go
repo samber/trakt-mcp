@@ -43,26 +43,32 @@ func countryArg(s string) (string, error) {
 	return s, nil
 }
 
-// WatchNowArgs are the arguments shared by the where-to-watch tools.
+// WatchNowArgs is the country argument of get_watchnow.
 type WatchNowArgs struct {
 	Country string `json:"country" jsonschema:"two-letter lower-case ISO 3166-1 country code such as fr or us"`
 }
 
-// MovieWatchNowArgs are the arguments of fetch_movie_watchnow.
+// MovieWatchNowArgs are the arguments of the movie handler of get_watchnow.
 type MovieWatchNowArgs struct {
 	MovieRef
 	WatchNowArgs
 }
 
-// ShowWatchNowArgs are the arguments of fetch_show_watchnow.
+// ShowWatchNowArgs are the arguments of the TV show handler of get_watchnow.
 type ShowWatchNowArgs struct {
 	ShowRef
 	WatchNowArgs
 }
 
-// EpisodeWatchNowArgs are the arguments of fetch_episode_watchnow.
+// EpisodeWatchNowArgs are the arguments of the episode handler of get_watchnow.
 type EpisodeWatchNowArgs struct {
 	EpisodeRef
+	WatchNowArgs
+}
+
+// GetWatchNowArgs are the arguments of get_watchnow.
+type GetWatchNowArgs struct {
+	ItemRef
 	WatchNowArgs
 }
 
@@ -228,17 +234,12 @@ type WatchSourcesArgs struct {
 
 func registerWatchNowTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_movie_watchnow", Title: "Fetch where to watch a movie", Access: Read,
-		Description: "List where a movie can be watched in a country: free, subscription, purchase (rent or buy), cable and cinema offers, each with provider and link.",
-	}, fetchMovieWatchNow)
-	Register(s, Spec{
-		Name: "fetch_show_watchnow", Title: "Fetch where to watch a TV show", Access: Read,
-		Description: "List where a TV series can be watched in a country: free, subscription, purchase (rent or buy), cable and cinema offers, each with provider and link.",
-	}, fetchShowWatchNow)
-	Register(s, Spec{
-		Name: "fetch_episode_watchnow", Title: "Fetch where to watch a TV episode", Access: Read,
-		Description: "List where one episode of a TV series can be watched in a country: free, subscription, purchase (rent or buy), cable and cinema offers, each with provider and link. Season 0 is the specials.",
-	}, fetchEpisodeWatchNow)
+		Name: "get_watchnow", Title: "Get where to watch", Access: Read,
+		Description: "List where a movie, TV show or TV show episode can be watched in a country: free, subscription, purchase " +
+			"(rent or buy), cable and cinema offers, each with provider and link. country is required. " +
+			"type is movie, show (a TV show) or episode (a TV show episode; needs season and episode, season 0 is the specials). " +
+			"id is the movie's or the TV show's id.",
+	}, getWatchNow)
 	Register(s, Spec{
 		Name: "fetch_watchnow_sources", Title: "Fetch streaming providers", Access: Read,
 		Description: "List the streaming providers Trakt knows, with provider key, name, offer type and the number of titles linked. Use it to read the provider keys of where-to-watch results. Pass country (such as fr) to keep one country's providers: without it the list is very long and is cut at " + strconv.Itoa(maxReferenceItems) + " entries (this server's cap, not Trakt's).",
@@ -252,6 +253,20 @@ func watchNow(country string, call func(country string) (*http.Response, error))
 	}
 
 	return fetchParsed(func() (*http.Response, error) { return call(country) }, parseWatchNow(country))
+}
+
+func getWatchNow(ctx context.Context, c *trakt.UserClient, in GetWatchNowArgs) (WatchNow, error) {
+	return itemFetchers[WatchNow]{
+		movie: func(ctx context.Context, c *trakt.UserClient, r MovieRef) (WatchNow, error) {
+			return fetchMovieWatchNow(ctx, c, MovieWatchNowArgs{MovieRef: r, WatchNowArgs: in.WatchNowArgs})
+		},
+		show: func(ctx context.Context, c *trakt.UserClient, r ShowRef) (WatchNow, error) {
+			return fetchShowWatchNow(ctx, c, ShowWatchNowArgs{ShowRef: r, WatchNowArgs: in.WatchNowArgs})
+		},
+		episode: func(ctx context.Context, c *trakt.UserClient, r EpisodeRef) (WatchNow, error) {
+			return fetchEpisodeWatchNow(ctx, c, EpisodeWatchNowArgs{EpisodeRef: r, WatchNowArgs: in.WatchNowArgs})
+		},
+	}.fetch(ctx, c, in.ItemRef)
 }
 
 func fetchMovieWatchNow(ctx context.Context, c *trakt.UserClient, in MovieWatchNowArgs) (WatchNow, error) {

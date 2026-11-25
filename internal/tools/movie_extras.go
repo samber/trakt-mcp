@@ -123,14 +123,6 @@ func trimRelease(r traktRelease) Release {
 
 func registerMovieExtraTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_movie_aliases", Title: "Fetch movie aliases", Access: Read,
-		Description: "List a movie's alternate titles with the country each is used in.",
-	}, fetchMovieAliases)
-	Register(s, Spec{
-		Name: "fetch_movie_studios", Title: "Fetch movie studios", Access: Read,
-		Description: "List the production studios of a movie with country and ids.",
-	}, fetchMovieStudios)
-	Register(s, Spec{
 		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
 		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note." + untrustedNote,
 	}, fetchMovieReleases)
