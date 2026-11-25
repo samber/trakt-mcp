@@ -214,7 +214,7 @@ func TestPersonNotFoundIsToolError(t *testing.T) {
 }
 
 // TestPersonCreditsRouteByType requires each type to reach its own Trakt
-// endpoint, to answer under its own type and to refuse every other type.
+// endpoint and to answer under its own type.
 func TestPersonCreditsRouteByType(t *testing.T) {
 	t.Parallel()
 

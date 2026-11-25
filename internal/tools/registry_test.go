@@ -614,7 +614,8 @@ func TestToolCallMetrics(t *testing.T) {
 	}
 }
 
-// legacyToolPrefix is the retired verb prefix; no tool may start with it.
+// legacyToolPrefix is a verb prefix no tool name may use: names start with
+// get_, list_, search, checkin or a write verb.
 const legacyToolPrefix = "fetch_"
 
 // summaryToolName is a tool that must stay registered; it anchors the

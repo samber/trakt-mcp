@@ -58,7 +58,7 @@ var (
 
 // UserWatchedArgs are the arguments of list_user_watched.
 type UserWatchedArgs struct {
-	Type string `json:"type" jsonschema:"movies or shows"`
+	Type string `json:"type" jsonschema:"plural: movies or shows"`
 	PageArgs
 }
 
@@ -169,7 +169,7 @@ func registerHistoryTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_user_watched",
 		Title:       "List watched movies or shows",
-		Description: "List every movie or show the user has watched, most recently watched first, with play count and last watch time.",
+		Description: "List every movie or show the user has watched, most recently watched first, with play count and last watch time. This is the user's own watched history; Trakt-wide charts are in list_watched.",
 		Access:      Read,
 	}, fetchUserWatched)
 	Register(s, Spec{

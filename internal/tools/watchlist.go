@@ -30,7 +30,7 @@ var (
 
 // WatchlistArgs are the arguments of list_watchlist.
 type WatchlistArgs struct {
-	Type    string `json:"type,omitempty"     jsonschema:"all, movies, shows, seasons or episodes (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons or episodes (default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs

@@ -13,7 +13,7 @@ const fieldExtended = "extended"
 // argument: Type repeats it, and Item holds the movie, TV show, season or
 // episode in the same shape the type's own handler returns.
 type Typed struct {
-	Type string `json:"type" jsonschema:"the type argument: movie, show, season or episode"`
+	Type string `json:"type" jsonschema:"repeats the type argument"`
 	Item any    `json:"item" jsonschema:"the result for that type"`
 }
 

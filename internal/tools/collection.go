@@ -17,7 +17,7 @@ var collectionTypes = []string{mediaMovies, mediaShows, mediaEpisodes, mediaMedi
 
 // CollectionArgs are the arguments of list_collection.
 type CollectionArgs struct {
-	Type string `json:"type" jsonschema:"movies, shows, episodes or media"`
+	Type string `json:"type" jsonschema:"plural: movies, shows, episodes or media"`
 	PageArgs
 }
 

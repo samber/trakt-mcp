@@ -19,7 +19,7 @@ const favoritesNature = "The favorites are the user's own top list on Trakt (lik
 
 // FavoritesArgs are the arguments of list_favorites.
 type FavoritesArgs struct {
-	Type    string `json:"type,omitempty"     jsonschema:"all, movies or shows (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies or shows (default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs

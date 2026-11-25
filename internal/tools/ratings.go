@@ -21,7 +21,7 @@ var ratingTypes = []string{mediaAll, mediaMovies, mediaShows, mediaSeasons, medi
 
 // RatingsArgs are the arguments of list_user_ratings.
 type RatingsArgs struct {
-	Type   string `json:"type,omitempty"   jsonschema:"all, movies, shows, seasons or episodes; omit for all"`
+	Type   string `json:"type,omitempty"   jsonschema:"plural: all, movies, shows, seasons or episodes; omit for all"`
 	Rating *int   `json:"rating,omitempty" jsonschema:"only items rated this, 1 to 10"`
 	PageArgs
 }
@@ -43,7 +43,7 @@ type AddRatingsArgs struct {
 func registerRatingTools(s *Server) {
 	Register(s, Spec{
 		Name:        "list_user_ratings",
-		Title:       "List ratings",
+		Title:       "List my ratings",
 		Description: "List what the user rated, optionally of one type or one rating value, with the rating and when it was given.",
 		Access:      Read,
 	}, fetchRatings)

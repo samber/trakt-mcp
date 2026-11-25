@@ -35,7 +35,7 @@ func registerMovieShowTools(s *Server) {
 	Register(s, Spec{
 		Name: "list_related", Title: "List related", Access: Read,
 		Description: "List the movies related to a movie or the TV shows related to a TV show, returned as {type, item}: " +
-			"item is a list of movies (type movie) or TV shows (type show). Takes limit and page. " + movieShowTypesNote,
+			"item.items is a list of movies (type movie) or TV shows (type show). item.page holds the paging. Takes limit and page. " + movieShowTypesNote,
 	}, listRelated)
 }
 

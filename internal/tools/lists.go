@@ -45,7 +45,7 @@ type ListArgs struct {
 // ListItemsArgs are the arguments of list_list_items.
 type ListItemsArgs struct {
 	ListArgs
-	Type    string `json:"type,omitempty"     jsonschema:"all, movies, shows, seasons, episodes or people (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons, episodes or people (default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
@@ -54,7 +54,7 @@ type ListItemsArgs struct {
 // PopularListsArgs are the arguments of the trending and popular list
 // rankings.
 type PopularListsArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"personal or official; omit it for both"`
+	Type string `json:"list_type,omitempty" jsonschema:"personal or official; omit it for both"`
 	PageArgs
 }
 
@@ -136,7 +136,7 @@ func registerListRankingTool(s *Server) {
 	Register(s, Spec{
 		Name: "list_lists", Title: "List trending or popular lists", Access: Read,
 		Description: "List custom lists from Trakt's rankings. kind picks the ranking: trending is the lists Trakt users are liking and commenting on right now, " +
-			"popular is the most popular lists. Optionally only personal or official ones (type). Takes limit and page." + untrustedNote,
+			"popular is the most popular lists. Optionally only personal or official ones (list_type). Takes limit and page." + untrustedNote,
 	}, listLists)
 }
 
@@ -318,7 +318,7 @@ func fetchPopularLists(ctx context.Context, c *trakt.UserClient, in PopularLists
 // rankedLists validates the type of a trending or popular lists call and
 // pages through the path without a type, or the one with it.
 func rankedLists(ctx context.Context, c *trakt.UserClient, in PopularListsArgs, trending bool) (Listing[TrendingList], error) {
-	typ, err := oneOf(fieldType, in.Type, "", popularListTypes)
+	typ, err := oneOf(fieldListType, in.Type, "", popularListTypes)
 	if err != nil {
 		return Listing[TrendingList]{}, err
 	}

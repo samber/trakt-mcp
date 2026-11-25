@@ -8,8 +8,7 @@ import (
 )
 
 // Values of the type argument of tools that take one item of several media
-// types. They are the singular words the batch write tools already accept,
-// so a model uses one vocabulary everywhere.
+// types; list filters keep Trakt's plural values (movies, shows).
 const (
 	typeMovie   = itemMovie
 	typeShow    = itemShow

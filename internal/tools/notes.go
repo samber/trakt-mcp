@@ -46,7 +46,7 @@ type NoteRefArgs struct {
 
 // UserNotesArgs are the arguments of list_user_notes.
 type UserNotesArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"all, movies, shows, seasons, episodes or people (default all)"`
+	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (default all)"`
 	PageArgs
 }
 

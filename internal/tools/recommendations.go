@@ -47,7 +47,7 @@ func registerRecommendationTools(s *Server) {
 		Name:  "list_recommendations",
 		Title: "List recommendations",
 		Description: "List the movies or TV shows Trakt recommends to the user from their watching history, returned as " +
-			"{type, item}: item is a list of movies (type movie) or TV shows (type show), optionally leaving out collected " +
+			"{type, item}: item.items is a list of movies (type movie) or TV shows (type show), optionally leaving out collected " +
 			"or watchlisted ones. Takes limit (no page: Trakt returns one list). type is movie or show (a TV show).",
 		Access: Read,
 	}, listRecommendations)
@@ -80,20 +80,15 @@ func unhideRecommendation(ctx context.Context, c *trakt.UserClient, in ItemRef) 
 	return unhideFetchers.fetch(ctx, c, in)
 }
 
+// recommendationHandlers holds the handler of each type that can be
+// recommended.
+var recommendationHandlers = typeHandlers[RecommendationArgs]{
+	movie: widen(fetchMovieRecommendations),
+	show:  widen(fetchShowRecommendations),
+}
+
 func listRecommendations(ctx context.Context, c *trakt.UserClient, in ListRecommendationsArgs) (Typed, error) {
-	if err := checkType(in.Type, typeMovie, typeShow); err != nil {
-		return Typed{}, err
-	}
-
-	if in.Type == typeMovie {
-		item, err := fetchMovieRecommendations(ctx, c, in.RecommendationArgs)
-
-		return typed(in.Type, item, err)
-	}
-
-	item, err := fetchShowRecommendations(ctx, c, in.RecommendationArgs)
-
-	return typed(in.Type, item, err)
+	return recommendationHandlers.call(ctx, c, in.Type, in.RecommendationArgs)
 }
 
 // recommendationLimit validates limit with the same bounds as list tools.

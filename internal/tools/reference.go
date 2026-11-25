@@ -28,7 +28,7 @@ var referenceTypes = []string{mediaMovies, mediaShows}
 // ReferenceArgs are the arguments of list_genres, list_countries,
 // list_languages and list_certifications.
 type ReferenceArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"movies or shows (TV shows); default movies"`
+	Type string `json:"type,omitempty" jsonschema:"plural: movies or shows (TV shows); default movies"`
 }
 
 // NetworksArgs are the arguments of list_networks: none.
