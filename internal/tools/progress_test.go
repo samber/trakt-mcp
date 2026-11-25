@@ -76,9 +76,9 @@ func TestCollectionProgressFlags(t *testing.T) {
 		},
 		{name: "watched is for watch progress", tool: toolFetchShowCollectionProgress, args: merge(showShow(testShowSlug), map[string]any{argLastActivity: lastActivityWatched}), wantErr: invalid(fieldLastActivity)},
 		{name: "bad activity", tool: toolFetchShowCollectionProgress, args: merge(showShow(testShowSlug), map[string]any{argLastActivity: "Collected"}), wantErr: invalid(fieldLastActivity)},
-		{name: "bad show", tool: toolFetchShowCollectionProgress, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "empty show", tool: toolFetchShowCollectionProgress, args: showShow(""), wantErr: invalid(fieldShowID)},
-		{name: "person id", tool: toolFetchShowCollectionProgress, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
+		{name: "bad show", tool: toolFetchShowCollectionProgress, args: showShow(traversalID), wantErr: invalid(fieldID)},
+		{name: "empty show", tool: toolFetchShowCollectionProgress, args: showShow(""), wantErr: invalid(fieldID)},
+		{name: "person id", tool: toolFetchShowCollectionProgress, args: showShow(personIMDb), wantErr: invalid(fieldID)},
 	})
 
 	shapes := []struct {
@@ -148,11 +148,11 @@ func TestResetProgressArguments(t *testing.T) {
 		{name: "future", tool: toolResetShowProgress, args: reset(testFarFuture), wantErr: invalid(fieldResetAt)},
 		{name: "just inside tolerance", tool: toolResetShowProgress, args: reset(time.Now().Add(maxResetFutureSkew - time.Minute).UTC().Format(time.RFC3339)), route: routeResetProgress, body: emptyObject},
 		{name: "just outside tolerance", tool: toolResetShowProgress, args: reset(time.Now().Add(maxResetFutureSkew + time.Minute).UTC().Format(time.RFC3339)), wantErr: invalid(fieldResetAt)},
-		{name: "bad show", tool: toolResetShowProgress, args: merge(showShow(traversalID), map[string]any{argResetAt: testWatchedAt}), wantErr: invalid(fieldShowID)},
-		{name: "empty show", tool: toolResetShowProgress, args: showShow(""), wantErr: invalid(fieldShowID)},
-		{name: "undo bad show", tool: toolUndoResetShowProgress, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "undo empty show", tool: toolUndoResetShowProgress, args: showShow(""), wantErr: invalid(fieldShowID)},
-		{name: "undo person id", tool: toolUndoResetShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
+		{name: "bad show", tool: toolResetShowProgress, args: merge(showShow(traversalID), map[string]any{argResetAt: testWatchedAt}), wantErr: invalid(fieldID)},
+		{name: "empty show", tool: toolResetShowProgress, args: showShow(""), wantErr: invalid(fieldID)},
+		{name: "undo bad show", tool: toolUndoResetShowProgress, args: showShow(traversalID), wantErr: invalid(fieldID)},
+		{name: "undo empty show", tool: toolUndoResetShowProgress, args: showShow(""), wantErr: invalid(fieldID)},
+		{name: "undo person id", tool: toolUndoResetShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldID)},
 	})
 }
 

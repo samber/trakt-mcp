@@ -165,7 +165,7 @@ func findNull(v any, path string) string {
 	return ""
 }
 
-func showShow(slug string) map[string]any { return map[string]any{fieldShowID: slug} }
+func showShow(slug string) map[string]any { return map[string]any{fieldID: slug} }
 
 var showCases = []catalogCase{
 	{
@@ -471,7 +471,7 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "id path traversal", tool: toolGetSummary, args: showItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "id slash", tool: toolGetRatings, args: showItem("a/b"), wantErr: invalid(fieldID)},
 		{name: "id query injection", tool: toolListPeople, args: showItem("x?extended=full"), wantErr: invalid(fieldID)},
-		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},
+		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldID)},
 		{name: "id upper case", tool: toolListRelated, args: showItem("Breaking-Bad"), wantErr: invalid(fieldID)},
 		{name: "summary not extended", tool: toolGetSummary, args: merge(showItem("1388"), map[string]any{queryExtended: false}), route: "GET /shows/1388", body: emptyObject, noQuery: []string{queryExtended}},
 		{name: "query empty", tool: toolSearch, args: searchArgs(typeShow, ""), wantErr: invalid(fieldQuery)},

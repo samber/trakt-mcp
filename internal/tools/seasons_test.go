@@ -27,7 +27,7 @@ func init() { catalogCaseSets = append(catalogCaseSets, seasonCases) }
 
 // seasonRef returns the arguments naming season 1 of the test show.
 func seasonRef(extra map[string]any) map[string]any {
-	return merge(map[string]any{fieldShowID: testShowSlug, fieldSeason: 1}, extra)
+	return merge(map[string]any{fieldID: testShowSlug, fieldSeason: 1}, extra)
 }
 
 func seasonRoute(suffix string) string { return "GET " + seasonBase + suffix }

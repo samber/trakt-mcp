@@ -96,7 +96,7 @@ type AddHistoryArgs struct {
 
 // ShowProgressArgs are the arguments of get_show_progress.
 type ShowProgressArgs struct {
-	ShowID        string `json:"show_id"                  jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID        string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 	Hidden        *bool  `json:"hidden,omitempty"         jsonschema:"include seasons the user hid (default false)"`
 	Specials      *bool  `json:"specials,omitempty"       jsonschema:"include specials as season 0 (default false)"`
 	CountSpecials *bool  `json:"count_specials,omitempty" jsonschema:"count specials in the totals when included (default true)"`

@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	// fieldPersonID names the person argument in tool errors.
-	fieldPersonID = "person_id"
 	// maxBiographyRunes bounds a biography copied from Trakt: a few
 	// paragraphs say who the person is, and the text is written by Trakt
 	// users, so it must not flood the model's context.
@@ -99,11 +97,11 @@ func (PersonShows) resultCount() int { return 1 }
 
 // PersonRef names a person.
 type PersonRef struct {
-	PersonID string `json:"person_id" jsonschema:"Trakt slug (bryan-cranston), numeric Trakt id (1) or IMDb person id (nm0186505)"`
+	PersonID string `json:"id" jsonschema:"Trakt slug (bryan-cranston), numeric Trakt id (1) or IMDb person id (nm0186505)"`
 }
 
 func (r PersonRef) path() (string, error) {
-	id, err := idArg(fieldPersonID, r.PersonID, Slug|Numeric|IMDbPerson)
+	id, err := idArg(fieldID, r.PersonID, Slug|Numeric|IMDbPerson)
 
 	return string(id), err
 }

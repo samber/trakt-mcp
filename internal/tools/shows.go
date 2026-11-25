@@ -20,7 +20,6 @@ import (
 
 // Argument names, as they appear in tool errors.
 const (
-	fieldShowID   = "show_id"
 	fieldPeriod   = "period"
 	fieldQuery    = "query"
 	fieldSeason   = "season"
@@ -417,14 +416,14 @@ func extendedFullPtr() *string {
 
 // showPath validates the show argument and returns it as a path segment.
 func showPath(raw string) (string, error) {
-	id, err := idArg(fieldShowID, raw, Slug|Numeric|IMDbTitle)
+	id, err := idArg(fieldID, raw, Slug|Numeric|IMDbTitle)
 
 	return string(id), err
 }
 
 // ShowRef names a show.
 type ShowRef struct {
-	ShowID string `json:"show_id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 }
 
 func (r ShowRef) path() (string, error) { return showPath(r.ShowID) }

@@ -18,9 +18,6 @@ const extendedFull = "full"
 // it omits otherwise.
 const extendedGuestStars = "guest_stars"
 
-// fieldMovieID names the movie argument in tool errors.
-const fieldMovieID = "movie_id"
-
 // MovieIDs are the identifiers of a movie, enough to call any other tool or
 // link it elsewhere.
 type MovieIDs struct {
@@ -104,7 +101,7 @@ type TrendingMoviesArgs struct {
 // MovieSummaryArgs are the arguments of fetchMovieSummary, which serves
 // get_summary for type movie.
 type MovieSummaryArgs struct {
-	MovieID  string `json:"movie_id"           jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
+	MovieID  string `json:"id" jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 	Extended *bool  `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification and genres (default true)"`
 }
 
@@ -125,7 +122,7 @@ type trendingMovieEntry struct {
 }
 
 func fetchMovieSummary(ctx context.Context, c *trakt.UserClient, in MovieSummaryArgs) (Movie, error) {
-	id, err := idArg(fieldMovieID, in.MovieID, Slug|Numeric|IMDbTitle)
+	id, err := idArg(fieldID, in.MovieID, Slug|Numeric|IMDbTitle)
 	if err != nil {
 		return Movie{}, err
 	}
@@ -217,11 +214,11 @@ type traktMovieHit struct {
 
 // MovieRef names a movie.
 type MovieRef struct {
-	MovieID string `json:"movie_id" jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
+	MovieID string `json:"id" jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 }
 
 func (r MovieRef) path() (string, error) {
-	id, err := idArg(fieldMovieID, r.MovieID, Slug|Numeric|IMDbTitle)
+	id, err := idArg(fieldID, r.MovieID, Slug|Numeric|IMDbTitle)
 
 	return string(id), err
 }

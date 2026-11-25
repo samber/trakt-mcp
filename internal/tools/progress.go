@@ -35,7 +35,7 @@ var collectionActivity = []string{lastActivityAired, lastActivityCollected}
 
 // CollectionProgressArgs are the arguments of get_show_collection_progress.
 type CollectionProgressArgs struct {
-	ShowID        string `json:"show_id"                  jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID        string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 	Hidden        *bool  `json:"hidden,omitempty"         jsonschema:"include seasons the user hid (default false)"`
 	Specials      *bool  `json:"specials,omitempty"       jsonschema:"include specials as season 0 (default false)"`
 	CountSpecials *bool  `json:"count_specials,omitempty" jsonschema:"count specials in the totals when included (default true)"`
@@ -77,7 +77,7 @@ type CollectionEpisodeProgress struct {
 
 // ResetProgressArgs are the arguments of reset_show_progress.
 type ResetProgressArgs struct {
-	ShowID  string `json:"show_id"           jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID  string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 	ResetAt string `json:"reset_at,omitempty" jsonschema:"RFC 3339 timestamp (2024-01-31T20:00:00Z) the rewatch starts from, not in the future; omit for now"`
 }
 

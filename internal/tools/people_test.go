@@ -19,7 +19,7 @@ const (
 	toolFetchPersonSummary = "get_person"
 	toolListPersonCredits  = "list_person_credits"
 
-	argPersonID = "person_id"
+	argPersonID = "id"
 	// thirdPartyNote is the phrase every description of a tool returning
 	// user-written Trakt text must hold.
 	thirdPartyNote = "third-party"

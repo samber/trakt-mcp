@@ -82,7 +82,7 @@ func TestLegacySummaryToolsRemoved(t *testing.T) {
 	h := newHarness(t)
 
 	for _, name := range legacy {
-		res, err := h.session.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: map[string]any{fieldMovieID: "481"}})
+		res, err := h.session.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: map[string]any{fieldID: "481"}})
 		if err == nil && (res == nil || !res.IsError) {
 			t.Errorf("%s: call succeeded, want an unknown-tool error", name)
 		}

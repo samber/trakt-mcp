@@ -453,7 +453,7 @@ func TestErrorKindMapping(t *testing.T) {
 		t.Errorf("unknown error = %q, want %q", got, msgInternal)
 	}
 
-	if got := mapError(invalidArgument("movie_id")).Error(); got != "invalid argument: movie_id" {
+	if got := mapError(invalidArgument("id")).Error(); got != "invalid argument: id" {
 		t.Errorf("validation error = %q", got)
 	}
 }

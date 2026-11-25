@@ -28,7 +28,7 @@ const (
 
 func init() { catalogCaseSets = append(catalogCaseSets, movieCases) }
 
-func movieRef(id string) map[string]any { return map[string]any{fieldMovieID: id} }
+func movieRef(id string) map[string]any { return map[string]any{fieldID: id} }
 
 var movieCases = []catalogCase{
 	{

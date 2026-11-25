@@ -177,8 +177,8 @@ func TestShowProgressFlags(t *testing.T) {
 			route: routeShowProgress, body: emptyObject, wantQuery: map[string]string{argLastActivity: lastActivityAired},
 		},
 		{name: "bad activity", tool: toolFetchShowProgress, args: merge(showShow(testShowSlug), map[string]any{argLastActivity: "collected"}), wantErr: invalid(fieldLastActivity)},
-		{name: "bad show", tool: toolFetchShowProgress, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "person id", tool: toolFetchShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
+		{name: "bad show", tool: toolFetchShowProgress, args: showShow(traversalID), wantErr: invalid(fieldID)},
+		{name: "person id", tool: toolFetchShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldID)},
 	})
 
 	t.Run("verbose", func(t *testing.T) {

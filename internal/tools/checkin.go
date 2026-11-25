@@ -37,8 +37,8 @@ const (
 
 // ShowCheckinArgs are the arguments of the TV show handler of checkin.
 type ShowCheckinArgs struct {
-	ShowID    string `json:"show_id,omitempty"    jsonschema:"Trakt slug (breaking-bad), numeric Trakt id or IMDb id; or give show_title and show_year instead"`
-	ShowTitle string `json:"show_title,omitempty" jsonschema:"show title, with show_year, when show_id is not known"`
+	ShowID    string `json:"id,omitempty" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id or IMDb id; or give show_title and show_year instead"`
+	ShowTitle string `json:"show_title,omitempty" jsonschema:"show title, with show_year, when id is not known"`
 	ShowYear  int    `json:"show_year,omitempty"  jsonschema:"year the show started, with show_title"`
 	Season    int    `json:"season"               jsonschema:"season number, 0 to 999; 0 is the specials"`
 	Episode   int    `json:"episode"              jsonschema:"episode number in the season, 1 to 9999"`
@@ -47,7 +47,7 @@ type ShowCheckinArgs struct {
 
 // MovieCheckinArgs are the arguments of the movie handler of checkin.
 type MovieCheckinArgs struct {
-	MovieID string `json:"movie_id"          jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
+	MovieID string `json:"id" jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 	Message string `json:"message,omitempty" jsonschema:"message shared with the check-in, at most 280 characters"`
 }
 
@@ -148,16 +148,16 @@ func refByID(field, raw string) (*checkinRef, error) {
 	return &checkinRef{IDs: &ids}, nil
 }
 
-// showRef validates the show of a TV show check-in: show_id alone, or
+// showRef validates the show of a TV show check-in: id alone, or
 // show_title with show_year; both at once are ambiguous.
 func showRef(in ShowCheckinArgs) (*checkinRef, error) {
 	byTitle := in.ShowTitle != "" || in.ShowYear != 0
 
 	switch {
 	case in.ShowID != "" && byTitle, in.ShowID == "" && !byTitle:
-		return nil, invalidArgument(fieldShowID)
+		return nil, invalidArgument(fieldID)
 	case in.ShowID != "":
-		return refByID(fieldShowID, in.ShowID)
+		return refByID(fieldID, in.ShowID)
 	}
 
 	title := strings.TrimSpace(in.ShowTitle)
@@ -259,7 +259,7 @@ func checkinToShow(ctx context.Context, c *trakt.UserClient, in ShowCheckinArgs)
 }
 
 func checkinToMovie(ctx context.Context, c *trakt.UserClient, in MovieCheckinArgs) (CheckinResult, error) {
-	movie, err := refByID(fieldMovieID, in.MovieID)
+	movie, err := refByID(fieldID, in.MovieID)
 	if err != nil {
 		return CheckinResult{}, err
 	}
