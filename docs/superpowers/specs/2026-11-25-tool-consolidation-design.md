@@ -231,6 +231,11 @@ type Typed struct {
 - `type` on merged tools is the singular media type (movie, show, season, episode); list
   filters keep Trakt's plural values (movies, shows). `list_lists` uses `kind` for
   trending or popular and `list_type` for personal or official.
-- Deferred follow-ups, not in this change: accept singular `movie` and `show` as synonyms in the
-  plural filters; let `checkin` accept `type: episode`; a `MovieShowRef` so movie or show only
-  tools do not expose `season` and `episode` in their schema; tool-selection evals.
+- The plural list filters also accept the singular `movie`, `show`, `season`, `episode` where
+  the plural is accepted; Trakt always receives the plural. `normalizeMediaFilter`
+  (`internal/tools/itemref.go`) maps those four exact lowercase words before validation; any
+  other value, such as `Movie` or `person`, keeps the tool's own validation. Merged tools stay
+  singular only.
+- Deferred follow-ups, not in this change: let `checkin` accept `type: episode`; a
+  `MovieShowRef` so movie or show only tools do not expose `season` and `episode` in their
+  schema; tool-selection evals.
