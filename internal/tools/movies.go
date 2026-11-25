@@ -101,7 +101,8 @@ type TrendingMoviesArgs struct {
 	PageArgs
 }
 
-// MovieSummaryArgs are the arguments of fetch_movie_summary.
+// MovieSummaryArgs are the arguments of fetchMovieSummary, which serves
+// get_summary for type movie.
 type MovieSummaryArgs struct {
 	MovieID  string `json:"movie_id"           jsonschema:"Trakt slug (the-matrix-1999), numeric Trakt id (481) or IMDb id (tt0133093)"`
 	Extended *bool  `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification and genres (default true)"`
@@ -114,12 +115,6 @@ func registerMovieTools(s *Server) {
 		Description: "List the movies most watched on Trakt right now, with how many people are watching each. Takes limit and page.",
 		Access:      Read,
 	}, fetchTrendingMovies)
-	Register(s, Spec{
-		Name:        "fetch_movie_summary",
-		Title:       "Fetch movie summary",
-		Description: "Get one movie's details: year, ids, rating, overview, runtime, certification, genres and release date.",
-		Access:      Read,
-	}, fetchMovieSummary)
 }
 
 func fetchTrendingMovies(ctx context.Context, c *trakt.UserClient, in TrendingMoviesArgs) (Listing[TrendingMovie], error) {

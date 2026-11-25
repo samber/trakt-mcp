@@ -623,16 +623,17 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 	}
 }
 
-// TestRegistryHas143Tools counts every registered tool: the 2 pilots
-// (fetch_trending_movies, fetch_movie_summary), the 11 other movie tools, 3
-// people tools and 6 comment tools, the 30 show, season and episode tools, the
+// TestRegistryHas140Tools counts every registered tool: fetch_trending_movies,
+// get_summary (movie, TV show, season and episode details), the 11 other
+// movie tools, 3 people tools and 6 comment tools, the 27 other show, season
+// and episode tools, the
 // 49 account tools (history, watchlist, watchlist edit, collection, rating,
 // check-in, recommendation, smart-list, custom list writes, favorites, note
 // writes, show progress, up next and hidden progress), the 7 calendar tools,
 // the 7 where-to-watch and search-by-id tools, the 7 movie extras, the 9 show
 // extras, the 5 custom list read tools, the 2 note read tools and the 5
 // reference data tools.
-func TestRegistryHas143Tools(t *testing.T) {
+func TestRegistryHas140Tools(t *testing.T) {
 	t.Parallel()
 
 	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2 + 3 + 3 + 5 + 4
@@ -642,7 +643,7 @@ func TestRegistryHas143Tools(t *testing.T) {
 	// the three note write tools it does.
 	const noteReadTools = 2
 
-	const want = 2 + 11 + 3 + 6 + 30 + accountTools + 7 + 7 + 7 + 9 + 5 + noteReadTools + 5
+	const want = 2 + 11 + 3 + 6 + 27 + accountTools + 7 + 7 + 7 + 9 + 5 + noteReadTools + 5
 
 	if got := len(NewServer(offlineDeps()).Specs()); got != want {
 		t.Errorf("registered tools = %d, want %d", got, want)

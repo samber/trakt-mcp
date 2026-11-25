@@ -41,8 +41,8 @@ const (
 	// keyStatus is the structured-log and metric label key holding the call outcome.
 	keyStatus = "status"
 
-	toolTrending     = "fetch_trending_movies"
-	toolMovieSummary = "fetch_movie_summary"
+	toolTrending   = "fetch_trending_movies"
+	toolGetSummary = "get_summary"
 )
 
 // fakeTrakt is an httptest Trakt API. Handlers are keyed by "METHOD /path";

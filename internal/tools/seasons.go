@@ -316,10 +316,6 @@ type SeasonListsArgs struct {
 
 func registerSeasonTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_season_info", Title: "Fetch season info", Access: Read,
-		Description: "Get one TV show season's details: number, title, overview, rating, episode count and first air date. Season 0 is the specials.",
-	}, fetchSeasonInfo)
-	Register(s, Spec{
 		Name: "fetch_season_episodes", Title: "Fetch season episodes", Access: Read,
 		Description: "List the episodes of a TV show season with number, title, overview, rating, runtime and air date.",
 	}, fetchSeasonEpisodes)

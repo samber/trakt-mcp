@@ -33,15 +33,18 @@ const (
 )
 
 // TestShowToolDescriptionsSayTVShow keeps the word "show" from reading as a
-// movie: every tool about shows, seasons or episodes must say TV show/series.
+// movie: every tool about shows, seasons or episodes, by name or by taking
+// an ItemRef (type and id arguments), must say TV show/series.
 func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 	t.Parallel()
 
 	srv := NewServer(offlineDeps())
+	listed := listTools(t, srv)
 	checked := 0
 
 	for _, spec := range srv.Specs() {
-		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") {
+		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") &&
+			!takesItemRef(listed[spec.Name]) {
 			continue
 		}
 
@@ -56,6 +59,41 @@ func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("no show, season or episode tool found")
 	}
+
+	// get_summary is selected by its ItemRef only; without this the schema
+	// lookup could silently select nothing.
+	if !takesItemRef(listed[toolGetSummary]) {
+		t.Fatalf("%s: type and id properties not found in the listed input schema", toolGetSummary)
+	}
+}
+
+// takesItemRef reports whether the listed tool takes an ItemRef: a type
+// argument naming the media type and an id. A type argument alone also
+// filters lists and collections, whose descriptions are checked by name.
+func takesItemRef(tool *mcp.Tool) bool {
+	return hasInputProperty(tool, argType) && hasInputProperty(tool, argID)
+}
+
+// hasInputProperty reports whether the listed tool's input schema has the
+// named top-level property.
+func hasInputProperty(tool *mcp.Tool, name string) bool {
+	if tool == nil {
+		return false
+	}
+
+	schema, ok := tool.InputSchema.(map[string]any)
+	if !ok {
+		return false
+	}
+
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	_, ok = props[name]
+
+	return ok
 }
 
 // destroyPrefixes are the tool name prefixes that must be Destroy (spec §8).
@@ -65,8 +103,8 @@ var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 // tool cannot be mislabeled (a fetch_ tool marked Write, an add_ tool marked
 // Read) and a new prefix must be added here deliberately.
 var accessByPrefix = map[string]Access{
-	"fetch_": Read, "search_": Read,
-	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "reorder_": Write,
+	"fetch_": Read, "search_": Read, "get_": Read, "list_": Read, "search": Read,
+	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "checkin": Write, "reorder_": Write,
 	"reset_": Write, "undo_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
@@ -382,9 +420,9 @@ func TestToolCallLogHasNoArguments(t *testing.T) {
 
 	h := newHarness(t)
 	h.trakt.respond("GET /movies/"+secretSlug, http.StatusOK, movieJSON(secretSlug, secretOverview), nil)
-	h.ok(toolMovieSummary, map[string]any{fieldMovieID: secretSlug}, nil)
+	h.ok(toolGetSummary, movieItem(secretSlug), nil)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 	if rec["level"] != "INFO" {
 		t.Errorf("level = %v, want INFO", rec["level"])
 	}
@@ -426,13 +464,13 @@ func TestToolCallLogDebugHasPayload(t *testing.T) {
 
 	h := newHarness(t, withLogLevel(slog.LevelDebug))
 	h.trakt.respond("GET /movies/the-matrix-1999", http.StatusOK, movieJSON("the-matrix-1999", "debug overview"), nil)
-	h.ok(toolMovieSummary, map[string]any{fieldMovieID: "the-matrix-1999"}, nil)
+	h.ok(toolGetSummary, movieItem("the-matrix-1999"), nil)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 
 	args, ok := rec["args"].(map[string]any)
-	if !ok || args["movie_id"] != "the-matrix-1999" {
-		t.Errorf("args = %v, want movie_id", rec["args"])
+	if !ok || args[argID] != "the-matrix-1999" {
+		t.Errorf("args = %v, want id", rec["args"])
 	}
 
 	if !strings.Contains(h.logs.String(), "debug overview") {
@@ -446,9 +484,9 @@ func TestToolCallInternalErrorHidesCause(t *testing.T) {
 	h := newHarness(t)
 	cause := errors.New("store: disk I/O error")
 	h.clients.setErr(cause)
-	h.fail(toolMovieSummary, map[string]any{fieldMovieID: "secret-arg"}, msgInternal)
+	h.fail(toolGetSummary, movieItem("secret-arg"), msgInternal)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 	if rec[keyStatus] != statusError || rec["level"] != "ERROR" || rec[keyErrorClass] != errorClassInternal ||
 		rec[keyErrorType] != "*errors.errorString" {
 		t.Errorf("line = %v, want ERROR, class internal and the cause's type", rec)

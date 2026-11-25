@@ -60,10 +60,6 @@ type EpisodeListsArgs struct {
 
 func registerEpisodeTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_episode_summary", Title: "Fetch episode summary", Access: Read,
-		Description: "Get one TV show episode's details: title, overview, rating, runtime, air date, episode type and ids.",
-	}, fetchEpisodeSummary)
-	Register(s, Spec{
 		Name: "fetch_episode_ratings", Title: "Fetch episode ratings", Access: Read,
 		Description: "Get a TV show episode's average rating, vote count and the number of votes for each rating from 1 to 10.",
 	}, fetchEpisodeRatings)

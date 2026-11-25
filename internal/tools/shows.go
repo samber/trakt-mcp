@@ -608,7 +608,8 @@ type SearchShowsArgs struct {
 	Query string `json:"query" jsonschema:"text to search for in show titles and descriptions, up to 200 characters"`
 }
 
-// ShowSummaryArgs are the arguments of fetch_show_summary.
+// ShowSummaryArgs are the arguments of fetchShowSummary, which serves
+// get_summary for type show.
 type ShowSummaryArgs struct {
 	ShowRef
 	Extended *bool `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification, genres, network and status (default true)"`
@@ -667,10 +668,6 @@ func registerShowTools(s *Server) {
 		Name: "fetch_show_ratings", Title: "Fetch show ratings", Access: Read,
 		Description: "Get a TV show's average rating, vote count and the number of votes for each rating from 1 to 10.",
 	}, fetchShowRatings)
-	Register(s, Spec{
-		Name: "fetch_show_summary", Title: "Fetch show summary", Access: Read,
-		Description: "Get one TV show's details: year, ids, rating, overview, runtime, certification, network, status, first air date and genres.",
-	}, fetchShowSummary)
 	Register(s, Spec{
 		Name: "fetch_show_videos", Title: "Fetch show videos", Access: Read,
 		Description: "List a TV show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",

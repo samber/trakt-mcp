@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	toolSeasonInfo         = "fetch_season_info"
 	toolSeasonEpisodes     = "fetch_season_episodes"
 	toolSeasonRatings      = "fetch_season_ratings"
 	toolSeasonStats        = "fetch_season_stats"
@@ -78,13 +77,13 @@ var sharedListsWant = map[string]any{
 
 var seasonCases = []catalogCase{
 	{
-		tool: toolSeasonInfo, args: seasonRef(nil), route: seasonRoute("/info"), fixture: "season_info", object: true,
+		tool: toolGetSummary, args: seasonItem(testShowSlug, 1), route: seasonRoute("/info"), fixture: "season_info", object: true,
 		wantQuery: map[string]string{queryExtended: extendedFull},
-		want: map[string]any{
+		want: inItem(map[string]any{
 			"number": 1, keyTitle: "Season 1", keyOverview: "The first season.", keyRating: 8.9, keyVotes: 500, "episode_count": 7,
 			"aired_episodes": 7, "first_aired": testFirstAired, "ids.trakt": 3961, "ids.tvdb": 30272, "ids.tmdb": 3572,
-		},
-		absent: []string{keyImages},
+		}),
+		absent: inItemPaths([]string{keyImages}),
 	},
 	{
 		tool: toolSeasonEpisodes, args: seasonRef(nil), route: seasonRoute(""), fixture: "season_episodes",
@@ -122,15 +121,15 @@ func TestSeasonToolArguments(t *testing.T) {
 	infoRoute := func(n int) string { return seasonBaseFor(n) + "/info" }
 
 	cases := []argCase{
-		{name: "season -1", tool: toolSeasonInfo, args: merge(seasonRef(nil), map[string]any{fieldSeason: -1}), wantErr: invalid(fieldSeason)},
-		{name: "season 0 is the specials", tool: toolSeasonInfo, args: merge(seasonRef(nil), map[string]any{fieldSeason: 0}), route: "GET " + infoRoute(0), body: emptyObject},
-		{name: "season 1", tool: toolSeasonInfo, args: seasonRef(nil), route: "GET " + infoRoute(1), body: emptyObject},
+		{name: "season -1", tool: toolGetSummary, args: seasonItem(testShowSlug, -1), wantErr: invalid(fieldSeason)},
+		{name: "season 0 is the specials", tool: toolGetSummary, args: seasonItem(testShowSlug, 0), route: "GET " + infoRoute(0), body: emptyObject},
+		{name: "season 1", tool: toolGetSummary, args: seasonItem(testShowSlug, 1), route: "GET " + infoRoute(1), body: emptyObject},
 		{name: "season 999", tool: toolSeasonStats, args: merge(seasonRef(nil), map[string]any{fieldSeason: 999}), route: "GET " + seasonBaseFor(999) + "/stats", body: emptyObject},
 		{name: "season 1000", tool: toolSeasonStats, args: merge(seasonRef(nil), map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
 		{name: "season 1000 episodes", tool: toolSeasonEpisodes, args: merge(seasonRef(nil), map[string]any{fieldSeason: 1000}), wantErr: invalid(fieldSeason)},
 		{name: "show id imdb", tool: toolSeasonVideos, args: merge(seasonRef(nil), map[string]any{fieldShowID: testShowIMDb}), route: "GET /shows/tt0903747/seasons/1/videos", body: emptyList},
 		{name: "show id numeric", tool: toolSeasonPeople, args: merge(seasonRef(nil), map[string]any{fieldShowID: "1388"}), route: "GET /shows/1388/seasons/1/people", body: emptyObject},
-		{name: "show id traversal", tool: toolSeasonInfo, args: merge(seasonRef(nil), map[string]any{fieldShowID: traversalID}), wantErr: invalid(fieldShowID)},
+		{name: "show id traversal", tool: toolGetSummary, args: seasonItem(traversalID, 1), wantErr: invalid(fieldID)},
 		{name: "show id person imdb", tool: toolSeasonRatings, args: merge(seasonRef(nil), map[string]any{fieldShowID: personIMDb}), wantErr: invalid(fieldShowID)},
 		{name: "show id empty", tool: toolSeasonWatching, args: merge(seasonRef(nil), map[string]any{fieldShowID: ""}), wantErr: invalid(fieldShowID)},
 		{name: "language fr", tool: toolSeasonTranslations, args: seasonRef(map[string]any{argLanguage: "fr"}), route: seasonRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: "fr"}},

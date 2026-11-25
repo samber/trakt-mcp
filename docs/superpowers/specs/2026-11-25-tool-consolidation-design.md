@@ -182,3 +182,44 @@ Optional further cuts, each trading clarity for count:
    `make test`).
 3. Rename pass.
 4. Update README, plugin, site, specs; run `make plugin-openai`.
+
+## Decisions
+
+### Output shape of merged tools (open question 1): envelope
+
+Merged tools whose result shape depends on `type` return the envelope `Typed`
+(`internal/tools/summary.go`):
+
+```go
+type Typed struct {
+	Type string `json:"type"` // repeats the type argument
+	Item any    `json:"item"` // the legacy handler's output, unchanged
+}
+```
+
+- The handler returns `(Typed, error)`; `typed(in.Type, item, err)` wraps a legacy handler's
+  result. `Typed.resultCount()` delegates to the item, so logs and metrics match the legacy tool.
+- The output schema is inferred as for every tool: `Register` calls `outputSchema[Typed]()`
+  (`jsonschema.For`). No hand-built schema. It reads
+  `{"type":"object","required":["type","item"],"properties":{"type":{"type":"string"},"item":{}}}`:
+  `item` is the empty schema, which accepts any value.
+- Evidence (spike on `get_summary`, all four types): go-sdk accepted the schema at `AddTool`,
+  `TestToolAnnotations` passed, output validation passed on real calls, and
+  `requireSerializedOutput` passed (text block equals structured content), e.g.
+  `{"type":"movie","item":{"title":"The Matrix",...}}`. The `oneOf` fallback was not needed.
+- Cost: `item` carries no field schema, so the tool description must name the fields per type.
+- Tests read output paths under `item.` (`inItem`, `inItemPaths` in `itemref_test.go`).
+- Merged tools whose types share one output type (`list_comments`, `list_videos`,
+  `list_translations`, ratings, stats) return that type directly, without the envelope.
+
+### Shared item reference
+
+- `ItemRef{Type, ID, Season *int, Episode *int}` (`internal/tools/itemref.go`) is embedded in
+  each merged tool's argument struct. `type` and `id` are required in the input schema; a call
+  without `type` fails the SDK's schema validation before the handler runs.
+- `ItemRef.check(allowed...)` validates, in order: `type` (`checkType`, exact match),
+  `id` (`invalid argument: id`), `season`, `episode`. A season or episode missing for its type,
+  or given for a type that does not take it, fails with that field's name.
+- `id` errors name `id`, not the legacy `movie_id` or `show_id`.
+- Arguments that apply to some types only are refused for the others, never ignored:
+  `get_summary` refuses `extended` with `type: season` or `episode`.

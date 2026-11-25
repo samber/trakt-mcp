@@ -56,7 +56,6 @@ const (
 	toolFetchShowPeople       = "fetch_show_people"
 	toolFetchShowRatings      = "fetch_show_ratings"
 	toolFetchShowSeasons      = "fetch_show_seasons"
-	toolFetchShowSummary      = "fetch_show_summary"
 	toolFetchShowVideos       = "fetch_show_videos"
 	toolFetchTrendingShows    = "fetch_trending_shows"
 	toolFetchWatchedShows     = "fetch_watched_shows"
@@ -232,12 +231,12 @@ var showCases = []catalogCase{
 		want: map[string]any{keyRating: 9.3, keyVotes: 1000, "distribution": []any{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0}},
 	},
 	{
-		tool: toolFetchShowSummary, args: showShow(testShowSlug), route: "GET /shows/breaking-bad", fixture: "show_summary", object: true,
+		tool: toolGetSummary, args: showItem(testShowSlug), route: "GET /shows/breaking-bad", fixture: "show_summary", object: true,
 		wantQuery: map[string]string{queryExtended: extendedFull},
-		want: map[string]any{
+		want: inItem(map[string]any{
 			keyTitle: testShowTitle, "year": 2008, "ids.trakt": 1388, "ids.imdb": testShowIMDb, keyOverview: "A chemistry teacher turns to crime.",
 			"runtime": 45, "certification": "TV-MA", "network": "AMC", "status": "ended", "genres": []any{"drama", "crime"}, "aired_episodes": 62,
-		},
+		}),
 	},
 	{
 		tool: toolFetchShowVideos, args: showShow(testShowSlug), route: "GET /shows/breaking-bad/videos", fixture: "show_videos",
@@ -476,16 +475,16 @@ func TestShowToolArguments(t *testing.T) {
 		{name: "limit 101", tool: toolFetchPopularShows, args: map[string]any{fieldLimit: 101}, wantErr: invalid(fieldLimit)},
 		{name: "limit negative", tool: toolFetchPopularShows, args: map[string]any{fieldLimit: -1}, wantErr: invalid(fieldLimit)},
 		{name: "page 0", tool: toolFetchPopularShows, args: map[string]any{fieldPage: 0}, wantErr: invalid(fieldPage)},
-		{name: "id slug", tool: toolFetchShowSummary, args: showShow("breaking-bad"), route: "GET /shows/breaking-bad", body: emptyObject, wantPath: "/shows/breaking-bad"},
-		{name: "id numeric", tool: toolFetchShowSummary, args: showShow("1388"), route: "GET /shows/1388", body: emptyObject, wantPath: "/shows/1388"},
-		{name: "id imdb", tool: toolFetchShowSummary, args: showShow(testShowIMDb), route: "GET /shows/tt0903747", body: emptyObject, wantPath: "/shows/tt0903747"},
-		{name: "id person imdb", tool: toolFetchShowSummary, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
-		{name: "id path traversal", tool: toolFetchShowSummary, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
+		{name: "id slug", tool: toolGetSummary, args: showItem("breaking-bad"), route: "GET /shows/breaking-bad", body: emptyObject, wantPath: "/shows/breaking-bad"},
+		{name: "id numeric", tool: toolGetSummary, args: showItem("1388"), route: "GET /shows/1388", body: emptyObject, wantPath: "/shows/1388"},
+		{name: "id imdb", tool: toolGetSummary, args: showItem(testShowIMDb), route: "GET /shows/tt0903747", body: emptyObject, wantPath: "/shows/tt0903747"},
+		{name: "id person imdb", tool: toolGetSummary, args: showItem(personIMDb), wantErr: invalid(fieldID)},
+		{name: "id path traversal", tool: toolGetSummary, args: showItem(traversalID), wantErr: invalid(fieldID)},
 		{name: "id slash", tool: toolFetchShowRatings, args: showShow("a/b"), wantErr: invalid(fieldShowID)},
 		{name: "id query injection", tool: toolFetchShowPeople, args: showShow("x?extended=full"), wantErr: invalid(fieldShowID)},
 		{name: "id empty", tool: toolFetchShowSeasons, args: showShow(""), wantErr: invalid(fieldShowID)},
 		{name: "id upper case", tool: toolFetchRelatedShows, args: showShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
-		{name: "summary not extended", tool: toolFetchShowSummary, args: merge(showShow("1388"), map[string]any{queryExtended: false}), route: "GET /shows/1388", body: emptyObject, noQuery: []string{queryExtended}},
+		{name: "summary not extended", tool: toolGetSummary, args: merge(showItem("1388"), map[string]any{queryExtended: false}), route: "GET /shows/1388", body: emptyObject, noQuery: []string{queryExtended}},
 		{name: "query empty", tool: toolSearchShows, args: map[string]any{fieldQuery: ""}, wantErr: invalid(fieldQuery)},
 		{name: "query blank", tool: toolSearchShows, args: map[string]any{fieldQuery: "   "}, wantErr: invalid(fieldQuery)},
 		{name: "query 200 runes", tool: toolSearchShows, args: map[string]any{fieldQuery: strings.Repeat("é", maxQueryRunes)}, route: "GET /search/show", body: emptyList},
