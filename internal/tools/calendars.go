@@ -144,35 +144,52 @@ func fetchCalendar(in CalendarArgs, call func(w calendarWindow) (*http.Response,
 	return fetchParsed(func() (*http.Response, error) { return call(w) }, parseCalendar)
 }
 
+// Values of the kind argument of list_calendar: the calendar names a user's
+// request maps to, one per Trakt calendar endpoint.
+const (
+	calendarKindShows     = mediaShows
+	calendarKindNewShows  = "new_shows"
+	calendarKindPremieres = "premieres"
+	calendarKindFinales   = "finales"
+	calendarKindMovies    = "movies"
+	calendarKindDVD       = "dvd"
+	calendarKindStreaming = "streaming"
+)
+
+// ListCalendarArgs are the arguments of list_calendar.
+type ListCalendarArgs struct {
+	Kind string `json:"kind" jsonschema:"which calendar: shows, new_shows, premieres, finales, movies, dvd or streaming; the tool description explains each"`
+	CalendarArgs
+}
+
+// calendarHandlers lists the handler of every kind of list_calendar.
+var calendarHandlers = []kindHandler[CalendarArgs, Listing[CalendarEntry]]{
+	{kind: calendarKindShows, call: fetchCalendarShows},
+	{kind: calendarKindNewShows, call: fetchCalendarNewShows},
+	{kind: calendarKindPremieres, call: fetchCalendarShowPremieres},
+	{kind: calendarKindFinales, call: fetchCalendarShowFinales},
+	{kind: calendarKindMovies, call: fetchCalendarMovies},
+	{kind: calendarKindDVD, call: fetchCalendarDVD},
+	{kind: calendarKindStreaming, call: fetchCalendarStreaming},
+}
+
 func registerCalendarTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_calendar_shows", Title: "Fetch TV show calendar", Access: Read,
-		Description: "List the TV series episodes airing in a date window, each with its episode and TV show. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
-	}, fetchCalendarShows)
-	Register(s, Spec{
-		Name: "fetch_calendar_new_shows", Title: "Fetch new TV shows calendar", Access: Read,
-		Description: "List brand-new TV series whose first season starts in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
-	}, fetchCalendarNewShows)
-	Register(s, Spec{
-		Name: "fetch_calendar_show_premieres", Title: "Fetch TV season premieres calendar", Access: Read,
-		Description: "List TV series season premieres airing in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
-	}, fetchCalendarShowPremieres)
-	Register(s, Spec{
-		Name: "fetch_calendar_show_finales", Title: "Fetch TV season finales calendar", Access: Read,
-		Description: "List TV series season and series finales airing in a date window. Scope my is the user's own TV shows, all is every TV show." + calendarCapNote,
-	}, fetchCalendarShowFinales)
-	Register(s, Spec{
-		Name: "fetch_calendar_movies", Title: "Fetch movie calendar", Access: Read,
-		Description: "List the movies with a release date in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
-	}, fetchCalendarMovies)
-	Register(s, Spec{
-		Name: "fetch_calendar_dvd", Title: "Fetch DVD and Blu-ray calendar", Access: Read,
-		Description: "List the movies released on DVD or other physical media in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
-	}, fetchCalendarDVD)
-	Register(s, Spec{
-		Name: "fetch_calendar_streaming", Title: "Fetch streaming releases calendar", Access: Read,
-		Description: "List the movies released on streaming services in a date window. Scope my is the user's own movies, all is every movie." + calendarCapNote,
-	}, fetchCalendarStreaming)
+		Name: "list_calendar", Title: "List calendar", Access: Read,
+		Description: "List what is airing or being released in a date window. kind picks the calendar: " +
+			"shows is the TV show episodes airing, each with its episode and TV show; " +
+			"new_shows is brand-new TV shows whose first season starts; " +
+			"premieres is TV show season premieres; " +
+			"finales is TV show season and series finales; " +
+			"movies is the movies with a release date; " +
+			"dvd is the movies released on DVD or other physical media; " +
+			"streaming is the movies released on streaming services. " +
+			"Scope my is the user's own TV shows and movies, all is every TV show and movie." + calendarCapNote,
+	}, listCalendar)
+}
+
+func listCalendar(ctx context.Context, c *trakt.UserClient, in ListCalendarArgs) (Listing[CalendarEntry], error) {
+	return callKind(ctx, c, in.Kind, calendarHandlers, in.CalendarArgs)
 }
 
 func fetchCalendarShows(ctx context.Context, c *trakt.UserClient, in CalendarArgs) (Listing[CalendarEntry], error) {

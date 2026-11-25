@@ -51,11 +51,29 @@ type ListItemsArgs struct {
 	PageArgs
 }
 
-// PopularListsArgs are the arguments of fetch_trending_lists and
-// fetch_popular_lists.
+// PopularListsArgs are the arguments of the trending and popular list
+// rankings.
 type PopularListsArgs struct {
 	Type string `json:"type,omitempty" jsonschema:"personal or official; omit it for both"`
 	PageArgs
+}
+
+// Values of the kind argument of list_lists.
+const (
+	listKindTrending = "trending"
+	listKindPopular  = "popular"
+)
+
+// ListListsArgs are the arguments of list_lists.
+type ListListsArgs struct {
+	Kind string `json:"kind" jsonschema:"trending or popular"`
+	PopularListsArgs
+}
+
+// listRankingHandlers lists the handler of every kind of list_lists.
+var listRankingHandlers = []kindHandler[PopularListsArgs, Listing[TrendingList]]{
+	{kind: listKindTrending, call: fetchTrendingLists},
+	{kind: listKindPopular, call: fetchPopularLists},
 }
 
 // ListDetail is a custom list as Trakt describes it. Name, description and
@@ -110,14 +128,16 @@ func registerListTools(s *Server) {
 		Description: "List the entries of a custom list: movies, TV shows, seasons, episodes and people, optionally of one type, sorted and paginated, with the owner's notes. " +
 			"Give user for a user's list; omit it to look a list up by its id alone." + untrustedNote,
 	}, fetchListItems)
+
+	registerListRankingTool(s)
+}
+
+func registerListRankingTool(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_trending_lists", Title: "Fetch trending lists", Access: Read,
-		Description: "List the custom lists Trakt users are liking and commenting on right now, optionally only personal or official ones. Takes limit and page." + untrustedNote,
-	}, fetchTrendingLists)
-	Register(s, Spec{
-		Name: "fetch_popular_lists", Title: "Fetch popular lists", Access: Read,
-		Description: "List the most popular custom lists on Trakt, optionally only personal or official ones. Takes limit and page." + untrustedNote,
-	}, fetchPopularLists)
+		Name: "list_lists", Title: "List trending or popular lists", Access: Read,
+		Description: "List custom lists from Trakt's rankings. kind picks the ranking: trending is the lists Trakt users are liking and commenting on right now, " +
+			"popular is the most popular lists. Optionally only personal or official ones (type). Takes limit and page." + untrustedNote,
+	}, listLists)
 }
 
 type traktListDetail struct {
@@ -281,6 +301,10 @@ func fetchListItems(ctx context.Context, c *trakt.UserClient, in ListItemsArgs) 
 		return c.API().GetUsersListsListItemsTypedSorted(ctx, user, listID, typ, sortBy, sortHow,
 			&api.GetUsersListsListItemsTypedSortedParams{Extended: extendedFullPtr(), Page: &page, Limit: &n})
 	})
+}
+
+func listLists(ctx context.Context, c *trakt.UserClient, in ListListsArgs) (Listing[TrendingList], error) {
+	return callKind(ctx, c, in.Kind, listRankingHandlers, in.PopularListsArgs)
 }
 
 func fetchTrendingLists(ctx context.Context, c *trakt.UserClient, in PopularListsArgs) (Listing[TrendingList], error) {
