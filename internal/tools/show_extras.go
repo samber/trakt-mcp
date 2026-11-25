@@ -9,13 +9,13 @@ import (
 	"github.com/samber/trakt-mcp/internal/trakt/api"
 )
 
-// ShowTranslationsArgs are the arguments of fetch_show_translations.
+// ShowTranslationsArgs are the arguments of the show handler of list_translations.
 type ShowTranslationsArgs struct {
 	ShowRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// ShowListsArgs are the arguments of fetch_show_lists.
+// ShowListsArgs are the arguments of the show handler of list_item_lists.
 type ShowListsArgs struct {
 	PageArgs
 	ShowRef
@@ -84,39 +84,15 @@ func parseMaybeEpisode(body []byte) (MaybeEpisode, error) {
 
 func registerShowExtraTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_show_stats", Title: "Fetch show stats", Access: Read,
-		Description: "Get a TV show's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchShowStats)
-	Register(s, Spec{
-		Name: "fetch_show_watching", Title: "Fetch show watchers", Access: Read,
-		Description: "Count the users watching a TV show right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchShowWatching)
-	Register(s, Spec{
-		Name: "fetch_show_translations", Title: "Fetch show translations", Access: Read,
-		Description: "Get a TV show's title and overview in one language (two-letter code) or in every language.",
-	}, fetchShowTranslations)
-	Register(s, Spec{
-		Name: "fetch_show_aliases", Title: "Fetch show aliases", Access: Read,
-		Description: "List a TV show's alternate titles with the country each is used in.",
-	}, fetchShowAliases)
-	Register(s, Spec{
-		Name: "fetch_show_studios", Title: "Fetch show studios", Access: Read,
-		Description: "List the production studios of a TV show with country and ids.",
-	}, fetchShowStudios)
-	Register(s, Spec{
-		Name: "fetch_show_lists", Title: "Fetch lists with a show", Access: Read,
-		Description: "List the Trakt lists that contain a TV show, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchShowLists)
-	Register(s, Spec{
-		Name: "fetch_show_next_episode", Title: "Fetch show next episode", Access: Read,
+		Name: "get_next_episode", Title: "Get show next episode", Access: Read,
 		Description: "Get the next episode to air of a TV series. Returns an empty object when none is scheduled.",
 	}, fetchShowNextEpisode)
 	Register(s, Spec{
-		Name: "fetch_show_last_episode", Title: "Fetch show last episode", Access: Read,
+		Name: "get_last_episode", Title: "Get show last episode", Access: Read,
 		Description: "Get the most recently aired episode of a TV series. Returns an empty object when none has aired.",
 	}, fetchShowLastEpisode)
 	Register(s, Spec{
-		Name: "fetch_show_certifications", Title: "Fetch show certifications", Access: Read,
+		Name: "list_show_certifications", Title: "List show certifications", Access: Read,
 		Description: "List a TV show's content certifications (such as TV-MA) with the country of each.",
 	}, fetchShowCertifications)
 }

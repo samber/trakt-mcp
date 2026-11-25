@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchFavorites      = "fetch_favorites"
+	toolFetchFavorites      = "list_favorites"
 	toolAddToFavorites      = "add_to_favorites"
 	toolUpdateFavorite      = "update_favorite"
 	toolReorderFavorites    = "reorder_favorites"
@@ -287,10 +287,24 @@ func TestFavoriteDescriptions(t *testing.T) {
 	}
 
 	if d := tools[toolFetchFavorites].Description; !strings.Contains(d, untrustedNote) {
-		t.Error("fetch_favorites description lacks untrustedNote")
+		t.Error("list_favorites description lacks untrustedNote")
 	}
 
 	if d := tools[toolAddToFavorites].Description; !strings.Contains(d, "420") {
 		t.Errorf("add_to_favorites description %q does not mention the 420 cap", d)
 	}
+}
+
+// TestFavoriteSingularType checks the singular media types of the favorites
+// filter.
+func TestFavoriteSingularType(t *testing.T) {
+	t.Parallel()
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:      toolFetchFavorites,
+		args:      func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:      func(plural string) string { return "/sync/favorites/" + plural + "/rank/asc" },
+		accepted:  favoriteTypes,
+		emptyPath: "/sync/favorites/all/rank/asc",
+	}))
 }

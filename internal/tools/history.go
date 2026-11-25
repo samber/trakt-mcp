@@ -56,9 +56,9 @@ var (
 	lastActivity  = []string{lastActivityAired, lastActivityWatched}
 )
 
-// UserWatchedArgs are the arguments of fetch_user_watched.
+// UserWatchedArgs are the arguments of list_user_watched.
 type UserWatchedArgs struct {
-	Type string `json:"type" jsonschema:"movies or shows"`
+	Type string `json:"type" jsonschema:"plural: movies or shows (singular movie or show also accepted)"`
 	PageArgs
 }
 
@@ -70,7 +70,7 @@ type WatchedItem struct {
 	MediaRef
 }
 
-// HistoryArgs are the arguments of fetch_history.
+// HistoryArgs are the arguments of list_history.
 type HistoryArgs struct {
 	HistoryType string `json:"history_type,omitempty" jsonschema:"movies, shows, seasons or episodes; omit for every type"`
 	ItemID      string `json:"item_id,omitempty"      jsonschema:"numeric Trakt id of one movie, show, season or episode to list only its plays; requires history_type"`
@@ -94,9 +94,9 @@ type AddHistoryArgs struct {
 	WatchedAt string    `json:"watched_at,omitempty" jsonschema:"when: ISO 8601 (2024-01-31T20:00:00.000Z), unknown, or released (episodes only: the air date); default now"`
 }
 
-// ShowProgressArgs are the arguments of fetch_show_progress.
+// ShowProgressArgs are the arguments of get_show_progress.
 type ShowProgressArgs struct {
-	ShowID        string `json:"show_id"                  jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID        string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 	Hidden        *bool  `json:"hidden,omitempty"         jsonschema:"include seasons the user hid (default false)"`
 	Specials      *bool  `json:"specials,omitempty"       jsonschema:"include specials as season 0 (default false)"`
 	CountSpecials *bool  `json:"count_specials,omitempty" jsonschema:"count specials in the totals when included (default true)"`
@@ -137,7 +137,7 @@ type EpisodeProgress struct {
 	LastWatchedAt string `json:"last_watched_at,omitempty"`
 }
 
-// PlaybackArgs are the arguments of fetch_playback_progress.
+// PlaybackArgs are the arguments of list_playback_progress.
 type PlaybackArgs struct {
 	PlaybackType string `json:"playback_type,omitempty" jsonschema:"movies or episodes; omit for both"`
 	PageArgs
@@ -154,7 +154,7 @@ type PlaybackItem struct {
 
 // RemovePlaybackArgs are the arguments of remove_playback_item.
 type RemovePlaybackArgs struct {
-	PlaybackID int64 `json:"playback_id" jsonschema:"playback_id from fetch_playback_progress"`
+	PlaybackID int64 `json:"playback_id" jsonschema:"playback_id from list_playback_progress"`
 }
 
 // RemovedPlayback confirms a removed playback item.
@@ -167,14 +167,14 @@ func (RemovedPlayback) resultCount() int { return 1 }
 
 func registerHistoryTools(s *Server) {
 	Register(s, Spec{
-		Name:        "fetch_user_watched",
-		Title:       "Fetch watched movies or shows",
-		Description: "List every movie or show the user has watched, most recently watched first, with play count and last watch time.",
+		Name:        "list_user_watched",
+		Title:       "List watched movies or shows",
+		Description: "List every movie or TV show the user has watched, most recently watched first, with play count and last watch time. This is the user's own watched history; Trakt-wide charts are in list_watched.",
 		Access:      Read,
 	}, fetchUserWatched)
 	Register(s, Spec{
-		Name:  "fetch_history",
-		Title: "Fetch watch history",
+		Name:  "list_history",
+		Title: "List watch history",
 		Description: "List the user's plays, newest first, optionally of one type or one item and within a date range. " +
 			"Each entry has a history id, the time and how it was recorded.",
 		Access: Read,
@@ -194,15 +194,15 @@ func registerHistoryTools(s *Server) {
 		Access: Destroy,
 	}, removeFromHistory)
 	Register(s, Spec{
-		Name:  "fetch_show_progress",
-		Title: "Fetch show progress",
+		Name:  "get_show_progress",
+		Title: "Get show progress",
 		Description: "Get the user's progress on one TV show: episodes aired and watched, percentage, next episode to watch, " +
 			"and per-season counts (every episode with verbose).",
 		Access: Read,
 	}, fetchShowProgress)
 	Register(s, Spec{
-		Name:        "fetch_playback_progress",
-		Title:       "Fetch paused playback",
+		Name:        "list_playback_progress",
+		Title:       "List paused playback",
 		Description: "List movies and episodes the user paused mid-way, with percent watched and the playback_id remove_playback_item takes.",
 		Access:      Read,
 	}, fetchPlaybackProgress)
@@ -226,7 +226,7 @@ func trimWatched(w traktWatched) WatchedItem {
 }
 
 func fetchUserWatched(ctx context.Context, c *trakt.UserClient, in UserWatchedArgs) (Listing[WatchedItem], error) {
-	typ, err := oneOf(fieldType, in.Type, "", watchedTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), "", watchedTypes)
 	if err != nil || typ == "" {
 		return Listing[WatchedItem]{}, invalidArgument(fieldType)
 	}

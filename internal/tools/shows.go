@@ -20,7 +20,6 @@ import (
 
 // Argument names, as they appear in tool errors.
 const (
-	fieldShowID   = "show_id"
 	fieldPeriod   = "period"
 	fieldQuery    = "query"
 	fieldSeason   = "season"
@@ -121,7 +120,7 @@ type PlayedShow struct {
 	Show           Show `json:"show"`
 }
 
-// SearchedShow is one match of search_shows.
+// SearchedShow is one match of search for type show.
 type SearchedShow struct {
 	Score float64 `json:"score"`
 	Title string  `json:"title"`
@@ -417,14 +416,14 @@ func extendedFullPtr() *string {
 
 // showPath validates the show argument and returns it as a path segment.
 func showPath(raw string) (string, error) {
-	id, err := idArg(fieldShowID, raw, Slug|Numeric|IMDbTitle)
+	id, err := idArg(fieldID, raw, Slug|Numeric|IMDbTitle)
 
 	return string(id), err
 }
 
 // ShowRef names a show.
 type ShowRef struct {
-	ShowID string `json:"show_id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
+	ShowID string `json:"id" jsonschema:"Trakt slug (breaking-bad), numeric Trakt id (1388) or IMDb id (tt0903747)"`
 }
 
 func (r ShowRef) path() (string, error) { return showPath(r.ShowID) }
@@ -602,91 +601,42 @@ type PeriodShowArgs struct {
 	Period string `json:"period,omitempty" jsonschema:"daily, weekly, monthly, yearly or all (default weekly)"`
 }
 
-// SearchShowsArgs are the arguments of search_shows.
+// SearchShowsArgs are the arguments of the TV show text search of search.
 type SearchShowsArgs struct {
 	PageArgs
 	Query string `json:"query" jsonschema:"text to search for in show titles and descriptions, up to 200 characters"`
 }
 
-// ShowSummaryArgs are the arguments of fetch_show_summary.
+// ShowSummaryArgs are the arguments of fetchShowSummary, which serves
+// get_summary for type show.
 type ShowSummaryArgs struct {
 	ShowRef
 	Extended *bool `json:"extended,omitempty" jsonschema:"include overview, rating, runtime, certification, genres, network and status (default true)"`
 }
 
-// VideosArgs are the arguments of fetch_show_videos.
+// VideosArgs are the arguments of the show handler of list_videos.
 type VideosArgs struct {
 	ShowRef
 	EmbedMarkdown *bool `json:"embed_markdown,omitempty" jsonschema:"also return each video as a ready markdown link (default true)"`
 }
 
-// RelatedShowsArgs are the arguments of fetch_related_shows.
+// RelatedShowsArgs are the arguments of the TV show handler of list_related.
 type RelatedShowsArgs struct {
 	PageArgs
 	ShowRef
 }
 
-// ShowPeopleArgs are the arguments of fetch_show_people.
+// ShowPeopleArgs are the arguments of the show handler of list_people.
 type ShowPeopleArgs struct {
 	ShowRef
 	IncludeGuestStars bool `json:"include_guest_stars,omitempty" jsonschema:"also return guest stars (default false)"`
 }
 
 func registerShowTools(s *Server) {
-	const pageNote = " Takes limit and page."
-
 	Register(s, Spec{
-		Name: "fetch_trending_shows", Title: "Fetch trending shows", Access: Read,
-		Description: "List the TV shows most watched on Trakt right now, with how many people are watching each." + pageNote,
-	}, fetchTrendingShows)
-	Register(s, Spec{
-		Name: "fetch_popular_shows", Title: "Fetch popular shows", Access: Read,
-		Description: "List the most popular TV shows on Trakt, by rating and votes." + pageNote,
-	}, fetchPopularShows)
-	Register(s, Spec{
-		Name: "fetch_anticipated_shows", Title: "Fetch anticipated shows", Access: Read,
-		Description: "List the most anticipated upcoming TV shows, with the number of lists each is on." + pageNote,
-	}, fetchAnticipatedShows)
-	Register(s, Spec{
-		Name: "fetch_favorited_shows", Title: "Fetch favorited shows", Access: Read,
-		Description: "List the TV shows favorited by the most users in a period (daily, weekly, monthly, yearly, all)." + pageNote,
-	}, fetchFavoritedShows)
-	Register(s, Spec{
-		Name: "fetch_played_shows", Title: "Fetch most played shows", Access: Read,
-		Description: "List the TV shows with the most plays in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchPlayedShows)
-	Register(s, Spec{
-		Name: "fetch_watched_shows", Title: "Fetch most watched shows", Access: Read,
-		Description: "List the TV shows watched by the most users in a period (daily, weekly, monthly, yearly, all), with watcher and play counts." + pageNote,
-	}, fetchWatchedShows)
-	Register(s, Spec{
-		Name: "search_shows", Title: "Search shows", Access: Read,
-		Description: "Search TV shows by text. Returns each match's relevance score, title, year and ids." + pageNote,
-	}, searchShows)
-	Register(s, Spec{
-		Name: "fetch_show_ratings", Title: "Fetch show ratings", Access: Read,
-		Description: "Get a TV show's average rating, vote count and the number of votes for each rating from 1 to 10.",
-	}, fetchShowRatings)
-	Register(s, Spec{
-		Name: "fetch_show_summary", Title: "Fetch show summary", Access: Read,
-		Description: "Get one TV show's details: year, ids, rating, overview, runtime, certification, network, status, first air date and genres.",
-	}, fetchShowSummary)
-	Register(s, Spec{
-		Name: "fetch_show_videos", Title: "Fetch show videos", Access: Read,
-		Description: "List a TV show's trailers and other videos with title, type, site, url, publication date and, by default, a ready markdown link.",
-	}, fetchShowVideos)
-	Register(s, Spec{
-		Name: "fetch_related_shows", Title: "Fetch related shows", Access: Read,
-		Description: "List TV shows related to this one." + pageNote,
-	}, fetchRelatedShows)
-	Register(s, Spec{
-		Name: "fetch_show_seasons", Title: "Fetch show seasons", Access: Read,
+		Name: "list_seasons", Title: "List show seasons", Access: Read,
 		Description: "List a TV show's seasons with number, title, episode count, rating and first air date. Season 0 is the specials.",
 	}, fetchShowSeasons)
-	Register(s, Spec{
-		Name: "fetch_show_people", Title: "Fetch show people", Access: Read,
-		Description: "Get a TV show's cast (name, character) and crew grouped by department, optionally with guest stars. Long credit lists are cut.",
-	}, fetchShowPeople)
 }
 
 // Handlers.

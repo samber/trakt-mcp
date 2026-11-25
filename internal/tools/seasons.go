@@ -300,13 +300,13 @@ func parseTranslations(body []byte) (Listing[Translation], error) {
 	return unpaged(body, trimTranslation)
 }
 
-// SeasonTranslationsArgs are the arguments of fetch_season_translations.
+// SeasonTranslationsArgs are the arguments of the season handler of list_translations.
 type SeasonTranslationsArgs struct {
 	SeasonRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// SeasonListsArgs are the arguments of fetch_season_lists.
+// SeasonListsArgs are the arguments of the season handler of list_item_lists.
 type SeasonListsArgs struct {
 	PageArgs
 	SeasonRef
@@ -316,41 +316,9 @@ type SeasonListsArgs struct {
 
 func registerSeasonTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_season_info", Title: "Fetch season info", Access: Read,
-		Description: "Get one TV show season's details: number, title, overview, rating, episode count and first air date. Season 0 is the specials.",
-	}, fetchSeasonInfo)
-	Register(s, Spec{
-		Name: "fetch_season_episodes", Title: "Fetch season episodes", Access: Read,
+		Name: "list_season_episodes", Title: "List season episodes", Access: Read,
 		Description: "List the episodes of a TV show season with number, title, overview, rating, runtime and air date.",
 	}, fetchSeasonEpisodes)
-	Register(s, Spec{
-		Name: "fetch_season_ratings", Title: "Fetch season ratings", Access: Read,
-		Description: "Get a TV show season's average rating, vote count and the number of votes for each rating from 1 to 10.",
-	}, fetchSeasonRatings)
-	Register(s, Spec{
-		Name: "fetch_season_stats", Title: "Fetch season stats", Access: Read,
-		Description: "Get a TV show season's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchSeasonStats)
-	Register(s, Spec{
-		Name: "fetch_season_people", Title: "Fetch season people", Access: Read,
-		Description: "Get a TV show season's cast (name, character) and crew grouped by department. Long credit lists are cut.",
-	}, fetchSeasonPeople)
-	Register(s, Spec{
-		Name: "fetch_season_videos", Title: "Fetch season videos", Access: Read,
-		Description: "List a TV show season's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
-	}, fetchSeasonVideos)
-	Register(s, Spec{
-		Name: "fetch_season_watching", Title: "Fetch season watchers", Access: Read,
-		Description: "Count the users watching a TV show season right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchSeasonWatching)
-	Register(s, Spec{
-		Name: "fetch_season_translations", Title: "Fetch season translations", Access: Read,
-		Description: "Get a TV show season's title and overview in one language (two-letter code) or in every language.",
-	}, fetchSeasonTranslations)
-	Register(s, Spec{
-		Name: "fetch_season_lists", Title: "Fetch lists with a season", Access: Read,
-		Description: "List the Trakt lists that contain a TV show season, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchSeasonLists)
 }
 
 func fetchSeasonInfo(ctx context.Context, c *trakt.UserClient, in SeasonRef) (Season, error) {

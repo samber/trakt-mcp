@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	toolFetchUserWatched      = "fetch_user_watched"
-	toolFetchHistory          = "fetch_history"
-	toolFetchShowProgress     = "fetch_show_progress"
-	toolFetchPlaybackProgress = "fetch_playback_progress"
+	toolFetchUserWatched      = "list_user_watched"
+	toolFetchHistory          = "list_history"
+	toolFetchShowProgress     = "get_show_progress"
+	toolFetchPlaybackProgress = "list_playback_progress"
 	toolRemovePlaybackItem    = "remove_playback_item"
 
 	argHistoryType   = "history_type"
@@ -177,8 +177,8 @@ func TestShowProgressFlags(t *testing.T) {
 			route: routeShowProgress, body: emptyObject, wantQuery: map[string]string{argLastActivity: lastActivityAired},
 		},
 		{name: "bad activity", tool: toolFetchShowProgress, args: merge(showShow(testShowSlug), map[string]any{argLastActivity: "collected"}), wantErr: invalid(fieldLastActivity)},
-		{name: "bad show", tool: toolFetchShowProgress, args: showShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "person id", tool: toolFetchShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldShowID)},
+		{name: "bad show", tool: toolFetchShowProgress, args: showShow(traversalID), wantErr: invalid(fieldID)},
+		{name: "person id", tool: toolFetchShowProgress, args: showShow(personIMDb), wantErr: invalid(fieldID)},
 	})
 
 	t.Run("verbose", func(t *testing.T) {
@@ -273,4 +273,17 @@ func TestUserWatchedPagesLocally(t *testing.T) {
 	if out.Page == nil || out.Page.PageCount != 2 || out.Page.ItemCount != 2 {
 		t.Errorf("page = %+v, want 2 pages of 2 items", out.Page)
 	}
+}
+
+// TestUserWatchedSingularType checks the singular media types of the watched
+// list filter.
+func TestUserWatchedSingularType(t *testing.T) {
+	t.Parallel()
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:     toolFetchUserWatched,
+		args:     func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:     func(plural string) string { return "/sync/watched/" + plural },
+		accepted: []string{mediaMovies, mediaShows},
+	}))
 }

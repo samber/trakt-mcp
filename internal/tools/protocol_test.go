@@ -78,11 +78,11 @@ func TestLegacyInitializeBothVersions(t *testing.T) {
 				t.Fatalf("negotiated %q, want %q", got, c.version)
 			}
 
-			var out Listing[TrendingMovie]
-			h.ok(toolTrending, map[string]any{fieldLimit: 2}, &out)
+			var out typedOut[Listing[TrendingMovie]]
+			h.ok(toolTrending, trendingArgs(map[string]any{fieldLimit: 2}), &out)
 
-			if len(out.Items) != 2 {
-				t.Errorf("items = %+v, want 2", out.Items)
+			if len(out.Item.Items) != 2 {
+				t.Errorf("items = %+v, want 2", out.Item.Items)
 			}
 
 			seen := rec.seen()

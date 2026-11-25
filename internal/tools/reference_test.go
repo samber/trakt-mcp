@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	toolFetchGenres         = "fetch_genres"
-	toolFetchCountries      = "fetch_countries"
-	toolFetchLanguages      = "fetch_languages"
-	toolFetchCertifications = "fetch_certifications"
-	toolFetchNetworks       = "fetch_networks"
+	toolFetchGenres         = "list_genres"
+	toolFetchCountries      = "list_countries"
+	toolFetchLanguages      = "list_languages"
+	toolFetchCertifications = "list_certifications"
+	toolFetchNetworks       = "list_networks"
 
 	routeGenres         = "GET /genres/movies"
 	routeCountries      = "GET /countries/movies"
@@ -141,4 +141,40 @@ func TestReferenceTraktFailures(t *testing.T) {
 		{toolFetchCertifications, map[string]any{}, routeCertifications, true},
 		{toolFetchNetworks, map[string]any{}, routeNetworks, true},
 	})
+}
+
+// TestReferenceSingularType checks the singular media types of the reference
+// data filter.
+func TestReferenceSingularType(t *testing.T) {
+	t.Parallel()
+
+	cases := singularFilterCases(singularFilter{
+		tool:      toolFetchGenres,
+		args:      typeArg,
+		path:      func(plural string) string { return "/genres/" + plural },
+		accepted:  referenceTypes,
+		emptyPath: "/genres/" + mediaMovies,
+	})
+
+	// The other reference tools share the validation: one accepted and one
+	// refused singular each shows the filter reaches them.
+	for _, tool := range []string{toolFetchCountries, toolFetchLanguages} {
+		cases = append(cases,
+			argCase{
+				name: tool + " show", tool: tool, args: typeArg(itemShow),
+				route: "GET /" + strings.TrimPrefix(tool, "list_") + "/shows", body: emptyList,
+			},
+			argCase{name: tool + " season", tool: tool, args: typeArg(itemSeason), wantErr: invalid(fieldType)},
+		)
+	}
+
+	cases = append(cases,
+		argCase{
+			name: toolFetchCertifications + " show", tool: toolFetchCertifications, args: typeArg(itemShow),
+			route: "GET /certifications/shows", body: emptyObject,
+		},
+		argCase{name: toolFetchCertifications + " season", tool: toolFetchCertifications, args: typeArg(itemSeason), wantErr: invalid(fieldType)},
+	)
+
+	runArgCases(t, cases)
 }

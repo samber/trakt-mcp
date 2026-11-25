@@ -7,15 +7,9 @@ import (
 )
 
 const (
-	toolShowStats          = "fetch_show_stats"
-	toolShowWatching       = "fetch_show_watching"
-	toolShowTranslations   = "fetch_show_translations"
-	toolShowAliases        = "fetch_show_aliases"
-	toolShowStudios        = "fetch_show_studios"
-	toolShowLists          = "fetch_show_lists"
-	toolShowNextEpisode    = "fetch_show_next_episode"
-	toolShowLastEpisode    = "fetch_show_last_episode"
-	toolShowCertifications = "fetch_show_certifications"
+	toolShowNextEpisode    = "get_next_episode"
+	toolShowLastEpisode    = "get_last_episode"
+	toolShowCertifications = "list_show_certifications"
 
 	// Output paths and values reused across the cases, named to keep each
 	// literal unique in the package.
@@ -32,7 +26,7 @@ const (
 	languageThreeChars = "fra"
 	pathSecondCountry  = "items.1.country"
 
-	// pathShowListsAll is the default list type and sort of fetch_show_lists.
+	// pathShowListsAll is the default list type and sort of list_item_lists for a show.
 	pathShowListsAll = "/lists/all/popular"
 )
 
@@ -46,10 +40,10 @@ var showExtraEpisodeWant = map[string]any{
 }
 
 var showExtraCases = []catalogCase{
-	{tool: toolShowStats, args: showShow(testShowSlug), route: showExtraRoute("/stats"), fixture: "show_stats", object: true, want: sharedStatsWant, absent: []string{keyExtra}},
-	{tool: toolShowWatching, args: showShow(testShowSlug), route: showExtraRoute("/watching"), fixture: "show_watching", want: sharedWatchingWant, absent: []string{pathSecondUser}},
+	{tool: toolGetStats, args: showItem(testShowSlug), route: showExtraRoute("/stats"), fixture: "show_stats", object: true, want: sharedStatsWant, absent: []string{keyExtra}},
+	{tool: toolListWatching, args: showItem(testShowSlug), route: showExtraRoute("/watching"), fixture: "show_watching", want: sharedWatchingWant, absent: []string{pathSecondUser}},
 	{
-		tool: toolShowTranslations, args: merge(showShow(testShowSlug), map[string]any{argLanguage: languageFrench}), route: showExtraRoute("/translations"), fixture: "show_translations",
+		tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: languageFrench}), route: showExtraRoute("/translations"), fixture: "show_translations",
 		wantQuery: map[string]string{argLanguage: languageFrench},
 		want: map[string]any{
 			"items.0.language": "fr", pathFirstCountry: "fr", pathFirstTitle: titleMatrix, pathFirstOverview: "Un hacker decouvre la verite.", "items.1.language": "de",
@@ -57,12 +51,12 @@ var showExtraCases = []catalogCase{
 		absent: []string{pathFirstTagline, pathSecondTitle},
 	},
 	{
-		tool: toolShowAliases, args: showShow(testShowSlug), route: showExtraRoute("/aliases"), fixture: "show_aliases",
+		tool: toolListAliases, args: showItem(testShowSlug), route: showExtraRoute("/aliases"), fixture: "show_aliases",
 		want:   map[string]any{pathFirstTitle: titleMatrix, pathFirstCountry: "fr", pathSecondTitle: "The Matrix Reloaded"},
 		absent: []string{pathFirstExtra, pathSecondCountry},
 	},
 	{
-		tool: toolShowStudios, args: showShow(testShowSlug), route: showExtraRoute("/studios"), fixture: "show_studios",
+		tool: toolListStudios, args: showItem(testShowSlug), route: showExtraRoute("/studios"), fixture: "show_studios",
 		want: map[string]any{
 			pathFirstItemName: "Warner Bros.", pathFirstCountry: "us", pathFirstIDTrakt: 12, pathFirstIDSlug: "warner-bros", pathFirstIDTMDB: 174,
 			pathSecondName: "Village Roadshow",
@@ -70,7 +64,7 @@ var showExtraCases = []catalogCase{
 		absent: []string{pathFirstUpdatedAt, pathSecondCountry, "items.1.ids.tmdb"},
 	},
 	{
-		tool: toolShowLists, args: merge(showShow(testShowSlug), pagedArgs), route: showExtraRoute(pathShowListsAll), fixture: "show_lists", headers: pagedHeaders,
+		tool: toolListItemLists, args: merge(showItem(testShowSlug), pagedArgs), route: showExtraRoute(pathShowListsAll), fixture: "show_lists", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		want:      merge(sharedListsWant, map[string]any{pathPageCount: 3}),
 	},
@@ -95,25 +89,25 @@ func TestShowExtraToolArguments(t *testing.T) {
 	withShow := showShow
 
 	cases := []argCase{
-		{name: "show extra show id traversal", tool: toolShowStats, args: withShow(traversalID), wantErr: invalid(fieldShowID)},
-		{name: "show id empty", tool: toolShowWatching, args: withShow(""), wantErr: invalid(fieldShowID)},
-		{name: "show extra show id person imdb", tool: toolShowStudios, args: withShow(personIMDb), wantErr: invalid(fieldShowID)},
-		{name: "show id too long", tool: toolShowAliases, args: withShow(strings.Repeat("a", 129)), wantErr: invalid(fieldShowID)},
-		{name: "show id upper case", tool: toolShowLists, args: withShow("Breaking-Bad"), wantErr: invalid(fieldShowID)},
-		{name: "show id empty next episode", tool: toolShowNextEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
-		{name: "show id empty last episode", tool: toolShowLastEpisode, args: withShow(""), wantErr: invalid(fieldShowID)},
-		{name: "show id empty certifications", tool: toolShowCertifications, args: withShow(""), wantErr: invalid(fieldShowID)},
-		{name: "show id numeric", tool: toolShowStats, args: withShow("1388"), route: "GET /shows/1388/stats", body: emptyObject},
-		{name: "show extra language fr", tool: toolShowTranslations, args: merge(showShow(testShowSlug), map[string]any{argLanguage: languageFrench}), route: showExtraRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: languageFrench}},
-		{name: "show extra language omitted means all", tool: toolShowTranslations, args: showShow(testShowSlug), route: showExtraRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
-		{name: "show extra language three letters", tool: toolShowTranslations, args: merge(showShow(testShowSlug), map[string]any{argLanguage: languageThreeChars}), wantErr: invalid(fieldLanguage)},
-		{name: "language injection", tool: toolShowTranslations, args: merge(showShow(testShowSlug), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
-		{name: "show extra lists defaults", tool: toolShowLists, args: showShow(testShowSlug), route: showExtraRoute(pathShowListsAll), body: emptyList},
-		{name: "show extra lists official by likes", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: showExtraRoute("/lists/official/likes"), body: emptyList},
-		{name: "show extra lists type unknown", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
-		{name: "show extra lists sort unknown", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
-		{name: "lists page 0", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
-		{name: "lists limit 101", tool: toolShowLists, args: merge(showShow(testShowSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
+		{name: "show extra show id traversal", tool: toolGetStats, args: showItem(traversalID), wantErr: invalid(fieldID)},
+		{name: "show id empty", tool: toolListWatching, args: showItem(""), wantErr: invalid(fieldID)},
+		{name: "show extra show id person imdb", tool: toolListStudios, args: showItem(personIMDb), wantErr: invalid(fieldID)},
+		{name: "show id too long", tool: toolListAliases, args: showItem(strings.Repeat("a", 129)), wantErr: invalid(fieldID)},
+		{name: "show id upper case", tool: toolListItemLists, args: showItem("Breaking-Bad"), wantErr: invalid(fieldID)},
+		{name: "show id empty next episode", tool: toolShowNextEpisode, args: withShow(""), wantErr: invalid(fieldID)},
+		{name: "show id empty last episode", tool: toolShowLastEpisode, args: withShow(""), wantErr: invalid(fieldID)},
+		{name: "show id empty certifications", tool: toolShowCertifications, args: withShow(""), wantErr: invalid(fieldID)},
+		{name: "show id numeric", tool: toolGetStats, args: showItem("1388"), route: "GET /shows/1388/stats", body: emptyObject},
+		{name: "show extra language fr", tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: languageFrench}), route: showExtraRoute("/translations"), body: emptyList, wantQuery: map[string]string{argLanguage: languageFrench}},
+		{name: "show extra language omitted means all", tool: toolListTranslations, args: showItem(testShowSlug), route: showExtraRoute("/translations"), body: emptyList, noQuery: []string{argLanguage}},
+		{name: "show extra language three letters", tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: languageThreeChars}), wantErr: invalid(fieldLanguage)},
+		{name: "language injection", tool: toolListTranslations, args: merge(showItem(testShowSlug), map[string]any{argLanguage: "fr&x=1"}), wantErr: invalid(fieldLanguage)},
+		{name: "show extra lists defaults", tool: toolListItemLists, args: showItem(testShowSlug), route: showExtraRoute(pathShowListsAll), body: emptyList},
+		{name: "show extra lists official by likes", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argListType: listTypeOfficial, argSort: listSortLikes}), route: showExtraRoute("/lists/official/likes"), body: emptyList},
+		{name: "show extra lists type unknown", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argListType: "x"}), wantErr: invalid(fieldListType)},
+		{name: "show extra lists sort unknown", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
+		{name: "lists page 0", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{fieldPage: 0}), wantErr: invalid(fieldPage)},
+		{name: "lists limit 101", tool: toolListItemLists, args: merge(showItem(testShowSlug), map[string]any{fieldLimit: 101}), wantErr: invalid(fieldLimit)},
 	}
 
 	runArgCases(t, cases)
@@ -203,12 +197,12 @@ func TestShowExtraTraktFailures(t *testing.T) {
 
 	args := showShow(testShowSlug)
 
-	runUpstreamFailures(t, toolShowStats, args, showExtraRoute("/stats"), notAnArray)
-	runUpstreamFailures(t, toolShowWatching, args, showExtraRoute("/watching"), notAList)
-	runUpstreamFailures(t, toolShowTranslations, args, showExtraRoute("/translations"), notAList)
-	runUpstreamFailures(t, toolShowAliases, args, showExtraRoute("/aliases"), notAList)
-	runUpstreamFailures(t, toolShowStudios, args, showExtraRoute("/studios"), notAList)
-	runUpstreamFailures(t, toolShowLists, args, showExtraRoute(pathShowListsAll), notAList)
+	runUpstreamFailures(t, toolGetStats, showItem(testShowSlug), showExtraRoute("/stats"), notAnArray)
+	runUpstreamFailures(t, toolListWatching, showItem(testShowSlug), showExtraRoute("/watching"), notAList)
+	runUpstreamFailures(t, toolListTranslations, showItem(testShowSlug), showExtraRoute("/translations"), notAList)
+	runUpstreamFailures(t, toolListAliases, showItem(testShowSlug), showExtraRoute("/aliases"), notAList)
+	runUpstreamFailures(t, toolListStudios, showItem(testShowSlug), showExtraRoute("/studios"), notAList)
+	runUpstreamFailures(t, toolListItemLists, showItem(testShowSlug), showExtraRoute(pathShowListsAll), notAList)
 	runUpstreamFailures(t, toolShowNextEpisode, args, showExtraRoute("/next_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowLastEpisode, args, showExtraRoute("/last_episode"), notAnArray)
 	runUpstreamFailures(t, toolShowCertifications, args, showExtraRoute("/certifications"), notAList)
@@ -224,7 +218,7 @@ func TestShowListOwnerIsBounded(t *testing.T) {
 
 	var lists Listing[TraktList]
 
-	h.ok(toolShowLists, showShow(testShowSlug), &lists)
+	h.ok(toolListItemLists, showItem(testShowSlug), &lists)
 
 	if o := lists.Items[0].Owner; len([]rune(o)) > maxTitleRunes {
 		t.Errorf("owner has %d runes, want at most %d", len([]rune(o)), maxTitleRunes)
@@ -254,7 +248,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var studios Listing[Studio]
 
-	h.ok(toolShowStudios, showShow(testShowSlug), &studios)
+	h.ok(toolListStudios, showItem(testShowSlug), &studios)
 
 	if s := studios.Items[0]; len([]rune(s.Name)) > maxTitleRunes || len([]rune(s.Country)) > maxCountryFieldRunes || len([]rune(s.IDs.Slug)) > maxSlugRunes {
 		t.Errorf("studio = %+v, want bounded text", s)
@@ -265,7 +259,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var aliases Listing[Alias]
 
-	h.ok(toolShowAliases, showShow(testShowSlug), &aliases)
+	h.ok(toolListAliases, showItem(testShowSlug), &aliases)
 
 	if a := aliases.Items[0]; len([]rune(a.Title)) > maxTitleRunes || len([]rune(a.Country)) > maxCountryFieldRunes {
 		t.Errorf("alias = %+v, want bounded text", a)
@@ -276,7 +270,7 @@ func TestShowExtraTextIsBounded(t *testing.T) {
 
 	var lists Listing[TraktList]
 
-	h.ok(toolShowLists, showShow(testShowSlug), &lists)
+	h.ok(toolListItemLists, showItem(testShowSlug), &lists)
 
 	if l := lists.Items[0]; len([]rune(l.Name)) > maxTitleRunes {
 		t.Errorf("list name has %d runes, want at most %d", len([]rune(l.Name)), maxTitleRunes)

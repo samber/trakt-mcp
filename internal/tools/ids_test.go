@@ -61,12 +61,12 @@ func TestParseID(t *testing.T) {
 func TestIDArgHidesInput(t *testing.T) {
 	t.Parallel()
 
-	_, err := idArg("movie_id", "../secret?x=1", Slug)
+	_, err := idArg("id", "../secret?x=1", Slug)
 	if err == nil {
 		t.Fatal("want an error")
 	}
 
-	if got := err.Error(); got != "invalid argument: movie_id" {
+	if got := err.Error(); got != "invalid argument: id" {
 		t.Errorf("error = %q, want the field only", got)
 	}
 }

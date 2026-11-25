@@ -41,12 +41,12 @@ type NoteItemArg struct {
 
 // NoteRefArgs name one note of the connected user.
 type NoteRefArgs struct {
-	NoteID int `json:"note_id" jsonschema:"id of a note, from fetch_user_notes or create_note"`
+	NoteID int `json:"note_id" jsonschema:"id of a note, from list_user_notes or create_note"`
 }
 
-// UserNotesArgs are the arguments of fetch_user_notes.
+// UserNotesArgs are the arguments of list_user_notes.
 type UserNotesArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"all, movies, shows, seasons, episodes or people (default all)"`
+	Type string `json:"type,omitempty" jsonschema:"plural: all, movies, shows, seasons, episodes or people (singular movie, show, season or episode also accepted; default all)"`
 	PageArgs
 }
 
@@ -99,7 +99,7 @@ type NoteAttachment struct {
 	Rating      int    `json:"rating,omitempty"`
 }
 
-// UserNote is an entry of fetch_user_notes: a note, what it is attached to
+// UserNote is an entry of list_user_notes: a note, what it is attached to
 // and the media object it belongs to.
 type UserNote struct {
 	Type       string          `json:"type"                  jsonschema:"movie, show, season, episode or person"`
@@ -147,11 +147,11 @@ type updateNoteBody struct {
 
 func registerNoteTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_note", Title: "Fetch note", Access: Read,
+		Name: "get_note", Title: "Get note", Access: Read,
 		Description: "Get one of the user's notes by id: its text, privacy, spoiler flag and the item it is attached to." + vipNoteNote + untrustedNote,
 	}, fetchNote)
 	Register(s, Spec{
-		Name: "fetch_user_notes", Title: "Fetch user notes", Access: Read,
+		Name: "list_user_notes", Title: "List user notes", Access: Read,
 		Description: "List the user's own notes, optionally only those on movies, TV shows, seasons, episodes or people. " +
 			"Each entry has the note and the item it belongs to. Takes limit and page." + vipNoteNote + untrustedNote,
 	}, fetchUserNotes)
@@ -291,7 +291,7 @@ func fetchNote(ctx context.Context, c *trakt.UserClient, in NoteRefArgs) (Note, 
 var noteTypes = listItemTypes
 
 func fetchUserNotes(ctx context.Context, c *trakt.UserClient, in UserNotesArgs) (Listing[UserNote], error) {
-	typ, err := oneOf(fieldType, in.Type, mediaAll, noteTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), mediaAll, noteTypes)
 	if err != nil {
 		return Listing[UserNote]{}, err
 	}

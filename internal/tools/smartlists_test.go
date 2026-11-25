@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	toolFetchSmartLists     = "fetch_smart_lists"
-	toolFetchSmartListItems = "fetch_smart_list_items"
+	toolFetchSmartLists     = "list_smart_lists"
+	toolFetchSmartListItems = "list_smart_list_items"
 
 	argUser     = "user"
 	argListID   = "list_id"
@@ -96,7 +96,7 @@ func TestSmartListItemsSortValidation(t *testing.T) {
 		argCase{name: "bad sort", tool: toolFetchSmartListItems, args: listID(map[string]any{argSortBy: "added_at"}), wantErr: invalid(argSortBy)},
 		argCase{name: "sort upper case", tool: toolFetchSmartListItems, args: listID(map[string]any{argSortBy: "Title"}), wantErr: invalid(argSortBy)},
 		argCase{name: "sort traversal", tool: toolFetchSmartListItems, args: listID(map[string]any{argSortBy: "rank/../x"}), wantErr: invalid(argSortBy)},
-		argCase{name: "smart bad type", tool: toolFetchSmartListItems, args: listID(map[string]any{argType: itemMovie}), wantErr: invalid(fieldType)},
+		argCase{name: "smart bad type", tool: toolFetchSmartListItems, args: listID(map[string]any{argType: typeUpperCase}), wantErr: invalid(fieldType)},
 		argCase{name: "type episodes", tool: toolFetchSmartListItems, args: listID(map[string]any{argType: mediaEpisodes}), wantErr: invalid(fieldType)},
 		argCase{name: "bad direction", tool: toolFetchSmartListItems, args: listID(map[string]any{argSortHow: "up"}), wantErr: invalid(fieldSortHow)},
 		argCase{name: "upper direction", tool: toolFetchSmartListItems, args: listID(map[string]any{argSortHow: "DESC"}), wantErr: invalid(fieldSortHow)},
@@ -358,4 +358,22 @@ func TestSmartListForbiddenLoggedAsRejected(t *testing.T) {
 	if rec["level"] != slog.LevelError.String() || rec[keyErrorClass] != errorClassTraktRejected {
 		t.Errorf("line = %v, want ERROR with class %s", rec, errorClassTraktRejected)
 	}
+}
+
+// TestSmartListItemsSingularType checks the singular media types of the
+// smart list items filter.
+func TestSmartListItemsSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return routeSmartListItems + plural + "/title/desc" }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool: toolFetchSmartListItems,
+		args: func(typ string) map[string]any {
+			return map[string]any{argListID: testListID, argType: typ, argSortBy: smartListSortTitle, argSortHow: sortHowDesc}
+		},
+		path:      path,
+		accepted:  smartListTypes,
+		emptyPath: path(mediaAll),
+	}))
 }

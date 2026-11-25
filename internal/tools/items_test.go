@@ -623,26 +623,27 @@ func TestAccountToolDescriptionsWarnWriteChangesAccount(t *testing.T) {
 	}
 }
 
-// TestRegistryHas143Tools counts every registered tool: the 2 pilots
-// (fetch_trending_movies, fetch_movie_summary), the 11 other movie tools, 3
-// people tools and 6 comment tools, the 30 show, season and episode tools, the
-// 49 account tools (history, watchlist, watchlist edit, collection, rating,
-// check-in, recommendation, smart-list, custom list writes, favorites, note
-// writes, show progress, up next and hidden progress), the 7 calendar tools,
-// the 7 where-to-watch and search-by-id tools, the 7 movie extras, the 9 show
-// extras, the 5 custom list read tools, the 2 note read tools and the 5
-// reference data tools.
-func TestRegistryHas143Tools(t *testing.T) {
+// TestRegistryHas90Tools counts every registered tool: the 45 account tools
+// (history, watchlist, watchlist edit, collection, rating, check-in,
+// recommendation, smart-list, custom list writes, favorites, note writes, show
+// progress, up next and hidden progress) and 45 others: the 6 rankings
+// (list_trending, list_popular, list_anticipated, list_favorited,
+// list_played, list_watched), the box office, the 2 person tools, the 2
+// comment tools, the 2 show season and episode tools, the calendar tool, the
+// 4 where-to-watch and search tools, the 1 movie extra, the 3 show extras,
+// the 3 custom list read tools and the list ranking tool, the 2 note read tools, the 5 reference data
+// tools and the 12 tools taking an item of a few or any types (get_summary,
+// get_ratings, get_stats, list_watching, list_translations, list_comments,
+// list_people, list_videos, list_item_lists, list_aliases, list_studios,
+// list_related).
+func TestRegistryHas90Tools(t *testing.T) {
 	t.Parallel()
 
-	const accountTools = 7 + 3 + 3 + 3 + 3 + 6 + 2 + 5 + 2 + 3 + 3 + 5 + 4
+	const accountTools = 7 + 3 + 3 + 3 + 2 + 3 + 2 + 5 + 2 + 3 + 3 + 5 + 4
 
-	// noteReadTools are fetch_note and fetch_user_notes: they only read, so
-	// accountAccess (the account tools under test) does not list them, unlike
-	// the three note write tools it does.
-	const noteReadTools = 2
+	const otherTools = 6 + 1 + 2 + 2 + 2 + 1 + 4 + 1 + 3 + 3 + 1 + 2 + 5 + 12
 
-	const want = 2 + 11 + 3 + 6 + 30 + accountTools + 7 + 7 + 7 + 9 + 5 + noteReadTools + 5
+	const want = accountTools + otherTools
 
 	if got := len(NewServer(offlineDeps()).Specs()); got != want {
 		t.Errorf("registered tools = %d, want %d", got, want)

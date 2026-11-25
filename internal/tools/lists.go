@@ -31,31 +31,49 @@ var (
 	popularListTypes = []string{listTypePersonal, listTypeOfficial}
 )
 
-// UserListsArgs are the arguments of fetch_user_lists.
+// UserListsArgs are the arguments of list_user_lists.
 type UserListsArgs struct {
 	User string `json:"user,omitempty" jsonschema:"Trakt user slug or numeric id whose lists to list (default me, the connected user)"`
 }
 
-// ListArgs are the arguments of fetch_list.
+// ListArgs are the arguments of get_list.
 type ListArgs struct {
 	ListID string `json:"list_id"        jsonschema:"slug or numeric Trakt id of the list"`
 	User   string `json:"user,omitempty" jsonschema:"Trakt user slug or numeric id owning the list; omit it for an official or public list looked up by id alone"`
 }
 
-// ListItemsArgs are the arguments of fetch_list_items.
+// ListItemsArgs are the arguments of list_list_items.
 type ListItemsArgs struct {
 	ListArgs
-	Type    string `json:"type,omitempty"     jsonschema:"all, movies, shows, seasons, episodes or people (default all)"`
+	Type    string `json:"type,omitempty"     jsonschema:"plural: all, movies, shows, seasons, episodes or people (singular movie, show, season or episode also accepted; default all)"`
 	Sort    string `json:"sort,omitempty"     jsonschema:"rank, added, title, released, runtime, popularity, percentage or votes (default rank)"`
 	SortHow string `json:"sort_how,omitempty" jsonschema:"asc or desc (default asc)"`
 	PageArgs
 }
 
-// PopularListsArgs are the arguments of fetch_trending_lists and
-// fetch_popular_lists.
+// PopularListsArgs are the arguments of the trending and popular list
+// rankings.
 type PopularListsArgs struct {
-	Type string `json:"type,omitempty" jsonschema:"personal or official; omit it for both"`
+	Type string `json:"list_type,omitempty" jsonschema:"personal or official; omit it for both"`
 	PageArgs
+}
+
+// Values of the kind argument of list_lists.
+const (
+	listKindTrending = "trending"
+	listKindPopular  = "popular"
+)
+
+// ListListsArgs are the arguments of list_lists.
+type ListListsArgs struct {
+	Kind string `json:"kind" jsonschema:"trending or popular"`
+	PopularListsArgs
+}
+
+// listRankingHandlers lists the handler of every kind of list_lists.
+var listRankingHandlers = []kindHandler[PopularListsArgs, Listing[TrendingList]]{
+	{kind: listKindTrending, call: fetchTrendingLists},
+	{kind: listKindPopular, call: fetchPopularLists},
 }
 
 // ListDetail is a custom list as Trakt describes it. Name, description and
@@ -96,28 +114,30 @@ type ListItem struct {
 
 func registerListTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_user_lists", Title: "Fetch user lists", Access: Read,
+		Name: "list_user_lists", Title: "List user lists", Access: Read,
 		Description: "List a user's custom lists (default: the connected user's own) with name, description, privacy, item count and likes. " +
-			"Take list ids from the result for fetch_list and fetch_list_items." + untrustedNote,
+			"Take list ids from the result for get_list and list_list_items." + untrustedNote,
 	}, fetchUserLists)
 	Register(s, Spec{
-		Name: "fetch_list", Title: "Fetch list", Access: Read,
+		Name: "get_list", Title: "Get list", Access: Read,
 		Description: "Get one custom list: name, description, privacy, sort, item count and likes. " +
 			"Give user for a user's list; omit it to look a list up by its id alone." + untrustedNote,
 	}, fetchList)
 	Register(s, Spec{
-		Name: "fetch_list_items", Title: "Fetch list items", Access: Read,
+		Name: "list_list_items", Title: "List list items", Access: Read,
 		Description: "List the entries of a custom list: movies, TV shows, seasons, episodes and people, optionally of one type, sorted and paginated, with the owner's notes. " +
 			"Give user for a user's list; omit it to look a list up by its id alone." + untrustedNote,
 	}, fetchListItems)
+
+	registerListRankingTool(s)
+}
+
+func registerListRankingTool(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_trending_lists", Title: "Fetch trending lists", Access: Read,
-		Description: "List the custom lists Trakt users are liking and commenting on right now, optionally only personal or official ones. Takes limit and page." + untrustedNote,
-	}, fetchTrendingLists)
-	Register(s, Spec{
-		Name: "fetch_popular_lists", Title: "Fetch popular lists", Access: Read,
-		Description: "List the most popular custom lists on Trakt, optionally only personal or official ones. Takes limit and page." + untrustedNote,
-	}, fetchPopularLists)
+		Name: "list_lists", Title: "List trending or popular lists", Access: Read,
+		Description: "List custom lists from Trakt's rankings. kind picks the ranking: trending is the lists Trakt users are liking and commenting on right now, " +
+			"popular is the most popular lists. Optionally only personal or official ones (list_type). Takes limit and page." + untrustedNote,
+	}, listLists)
 }
 
 type traktListDetail struct {
@@ -255,7 +275,7 @@ func fetchListItems(ctx context.Context, c *trakt.UserClient, in ListItemsArgs) 
 		return Listing[ListItem]{}, err
 	}
 
-	typ, err := oneOf(fieldType, in.Type, mediaAll, listItemTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), mediaAll, listItemTypes)
 	if err != nil {
 		return Listing[ListItem]{}, err
 	}
@@ -283,6 +303,10 @@ func fetchListItems(ctx context.Context, c *trakt.UserClient, in ListItemsArgs) 
 	})
 }
 
+func listLists(ctx context.Context, c *trakt.UserClient, in ListListsArgs) (Listing[TrendingList], error) {
+	return callKind(ctx, c, in.Kind, listRankingHandlers, in.PopularListsArgs)
+}
+
 func fetchTrendingLists(ctx context.Context, c *trakt.UserClient, in PopularListsArgs) (Listing[TrendingList], error) {
 	return rankedLists(ctx, c, in, true)
 }
@@ -294,7 +318,7 @@ func fetchPopularLists(ctx context.Context, c *trakt.UserClient, in PopularLists
 // rankedLists validates the type of a trending or popular lists call and
 // pages through the path without a type, or the one with it.
 func rankedLists(ctx context.Context, c *trakt.UserClient, in PopularListsArgs, trending bool) (Listing[TrendingList], error) {
-	typ, err := oneOf(fieldType, in.Type, "", popularListTypes)
+	typ, err := oneOf(fieldListType, in.Type, "", popularListTypes)
 	if err != nil {
 		return Listing[TrendingList]{}, err
 	}

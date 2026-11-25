@@ -27,13 +27,13 @@ const (
 	maxSlugRunes = 200
 )
 
-// MovieTranslationsArgs are the arguments of fetch_movie_translations.
+// MovieTranslationsArgs are the arguments of the movie handler of list_translations.
 type MovieTranslationsArgs struct {
 	MovieRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// MovieListsArgs are the arguments of fetch_movie_lists.
+// MovieListsArgs are the arguments of the movie handler of list_item_lists.
 type MovieListsArgs struct {
 	PageArgs
 	MovieRef
@@ -41,7 +41,7 @@ type MovieListsArgs struct {
 	Sort     string `json:"sort,omitempty"      jsonschema:"popular, likes, comments, items, added or updated (default popular)"`
 }
 
-// MovieReleasesArgs are the arguments of fetch_movie_releases.
+// MovieReleasesArgs are the arguments of list_movie_releases.
 type MovieReleasesArgs struct {
 	MovieRef
 	Country string `json:"country" jsonschema:"two-letter lower-case ISO 3166-1 country code such as fr or us"`
@@ -123,31 +123,7 @@ func trimRelease(r traktRelease) Release {
 
 func registerMovieExtraTools(s *Server) {
 	Register(s, Spec{
-		Name: "fetch_movie_stats", Title: "Fetch movie stats", Access: Read,
-		Description: "Get a movie's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchMovieStats)
-	Register(s, Spec{
-		Name: "fetch_movie_watching", Title: "Fetch movie watchers", Access: Read,
-		Description: "Count the users watching a movie right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchMovieWatching)
-	Register(s, Spec{
-		Name: "fetch_movie_translations", Title: "Fetch movie translations", Access: Read,
-		Description: "Get a movie's title and overview in one language (two-letter code) or in every language.",
-	}, fetchMovieTranslations)
-	Register(s, Spec{
-		Name: "fetch_movie_aliases", Title: "Fetch movie aliases", Access: Read,
-		Description: "List a movie's alternate titles with the country each is used in.",
-	}, fetchMovieAliases)
-	Register(s, Spec{
-		Name: "fetch_movie_studios", Title: "Fetch movie studios", Access: Read,
-		Description: "List the production studios of a movie with country and ids.",
-	}, fetchMovieStudios)
-	Register(s, Spec{
-		Name: "fetch_movie_lists", Title: "Fetch lists with a movie", Access: Read,
-		Description: "List the Trakt lists that contain a movie, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchMovieLists)
-	Register(s, Spec{
-		Name: "fetch_movie_releases", Title: "Fetch movie releases", Access: Read,
+		Name: "list_movie_releases", Title: "List movie releases", Access: Read,
 		Description: "List a movie's releases in a country: date, type (unknown, premiere, limited, theatrical, digital, physical, tv), certification and note." + untrustedNote,
 	}, fetchMovieReleases)
 }

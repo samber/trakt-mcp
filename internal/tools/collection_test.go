@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchCollection      = "fetch_collection"
+	toolFetchCollection      = "list_collection"
 	toolAddToCollection      = "add_to_collection"
 	toolRemoveFromCollection = "remove_from_collection"
 
@@ -102,4 +102,17 @@ func TestCollectedAtSent(t *testing.T) {
 	if len(got.Episodes) != 1 || got.Episodes[0].CollectedAt != testWatchedAt {
 		t.Errorf("body = %+v, want collected_at %s", got, testWatchedAt)
 	}
+}
+
+// TestCollectionSingularType checks the singular media types of the
+// collection filter.
+func TestCollectionSingularType(t *testing.T) {
+	t.Parallel()
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:     toolFetchCollection,
+		args:     func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:     func(plural string) string { return "/sync/collection/" + plural },
+		accepted: collectionTypes,
+	}))
 }

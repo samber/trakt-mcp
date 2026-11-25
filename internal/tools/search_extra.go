@@ -130,11 +130,37 @@ func lookupIDKinds(idType string) IDKinds {
 	return Numeric
 }
 
-// SearchExactArgs are the arguments of search_movies_exact and
-// search_shows_exact.
+// SearchExactArgs are the arguments of the exact title search of search.
 type SearchExactArgs struct {
 	PageArgs
 	Query string `json:"query" jsonschema:"title to match exactly, up to 200 characters"`
+}
+
+// SearchArgs are the arguments of search.
+type SearchArgs struct {
+	TypeArg
+	PageArgs
+	Query string `json:"query"           jsonschema:"text to search for in titles and descriptions, or the title to match when exact is true; up to 200 characters"`
+	Exact bool   `json:"exact,omitempty" jsonschema:"match the title exactly instead of searching titles and descriptions (default false)"`
+}
+
+// searchHandlers hold the search of each type: the text search, or the exact
+// title search when SearchArgs.Exact is set.
+var searchHandlers = typeHandlers[SearchArgs]{
+	movie: widen(func(ctx context.Context, c *trakt.UserClient, in SearchArgs) (Listing[SearchedMovie], error) {
+		if in.Exact {
+			return searchMoviesExact(ctx, c, SearchExactArgs{PageArgs: in.PageArgs, Query: in.Query})
+		}
+
+		return searchMovies(ctx, c, SearchMoviesArgs{PageArgs: in.PageArgs, Query: in.Query})
+	}),
+	show: widen(func(ctx context.Context, c *trakt.UserClient, in SearchArgs) (Listing[SearchedShow], error) {
+		if in.Exact {
+			return searchShowsExact(ctx, c, SearchExactArgs{PageArgs: in.PageArgs, Query: in.Query})
+		}
+
+		return searchShows(ctx, c, SearchShowsArgs{PageArgs: in.PageArgs, Query: in.Query})
+	}),
 }
 
 func registerSearchExtraTools(s *Server) {
@@ -145,13 +171,14 @@ func registerSearchExtraTools(s *Server) {
 		Description: "Find the movies, TV shows, episodes and people that carry an id of another system (Trakt, IMDb, TMDB or TVDB). Optionally keep one kind of result." + pageNote + untrustedNote,
 	}, searchByID)
 	Register(s, Spec{
-		Name: "search_movies_exact", Title: "Search movies by exact title", Access: Read,
-		Description: "Search movies whose title matches the query exactly. Returns each match's relevance score, title, year and ids." + pageNote,
-	}, searchMoviesExact)
-	Register(s, Spec{
-		Name: "search_shows_exact", Title: "Search TV shows by exact title", Access: Read,
-		Description: "Search TV series whose title matches the query exactly. Returns each match's relevance score, title, year and ids." + pageNote,
-	}, searchShowsExact)
+		Name: "search", Title: "Search", Access: Read,
+		Description: "Search movies or TV shows by text, returned as {type, item}: item is a list of matches, each with relevance score, title, year and ids. " +
+			"exact true matches the title exactly instead of searching titles and descriptions. type is movie or show (a TV show)." + pageNote,
+	}, search)
+}
+
+func search(ctx context.Context, c *trakt.UserClient, in SearchArgs) (Typed, error) {
+	return searchHandlers.call(ctx, c, in.Type, in)
 }
 
 func searchByID(ctx context.Context, c *trakt.UserClient, in SearchByIDArgs) (Listing[IDMatch], error) {

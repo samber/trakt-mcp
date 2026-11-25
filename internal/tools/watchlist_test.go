@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	toolFetchWatchlist      = "fetch_watchlist"
+	toolFetchWatchlist      = "list_watchlist"
 	toolAddToWatchlist      = "add_to_watchlist"
 	toolRemoveFromWatchlist = "remove_from_watchlist"
 
@@ -81,7 +81,7 @@ func TestWatchlistSortEnumsValidated(t *testing.T) {
 	cases = append(cases,
 		argCase{name: "bad sort", tool: toolFetchWatchlist, args: map[string]any{fieldSort: keyRating}, wantErr: invalid(fieldSort)},
 		argCase{name: "sort traversal", tool: toolFetchWatchlist, args: map[string]any{fieldSort: "rank/../x"}, wantErr: invalid(fieldSort)},
-		argCase{name: "bad type", tool: toolFetchWatchlist, args: map[string]any{argType: itemMovie}, wantErr: invalid(fieldType)},
+		argCase{name: "bad type", tool: toolFetchWatchlist, args: map[string]any{argType: typeUpperCase}, wantErr: invalid(fieldType)},
 		argCase{name: "bad direction", tool: toolFetchWatchlist, args: map[string]any{argSortHow: "up"}, wantErr: invalid(fieldSortHow)},
 		argCase{name: "upper direction", tool: toolFetchWatchlist, args: map[string]any{argSortHow: "ASC"}, wantErr: invalid(fieldSortHow)},
 		argCase{
@@ -175,4 +175,22 @@ func TestAccountLimitError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestWatchlistSingularType checks the singular media types of the watchlist
+// filter.
+func TestWatchlistSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return "/sync/watchlist/" + plural + "/added/desc" }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool: toolFetchWatchlist,
+		args: func(typ string) map[string]any {
+			return map[string]any{argType: typ, fieldSort: listSortAdded, argSortHow: sortHowDesc}
+		},
+		path:      path,
+		accepted:  watchlistTypes,
+		emptyPath: path(mediaAll),
+	}))
 }

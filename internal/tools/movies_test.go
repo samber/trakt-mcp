@@ -75,9 +75,15 @@ func pilotTrending(t *testing.T) {
 		"X-Pagination-Page": "1", "X-Pagination-Page-Count": "4", "X-Pagination-Item-Count": "12", "X-Pagination-Limit": "3",
 	})
 
-	var out Listing[TrendingMovie]
+	var typedRes typedOut[Listing[TrendingMovie]]
 
-	res := h.ok(toolTrending, map[string]any{fieldLimit: 3, fieldPage: 1}, &out)
+	res := h.ok(toolTrending, trendingArgs(map[string]any{fieldLimit: 3, fieldPage: 1}), &typedRes)
+
+	out := typedRes.Item
+
+	if typedRes.Type != typeMovie {
+		t.Errorf("type = %q, want %q", typedRes.Type, typeMovie)
+	}
 
 	if len(out.Items) != 3 || out.Items[0].Watchers != 12 || out.Items[0].Movie.Title != "A" ||
 		out.Items[0].Movie.IDs != (MovieIDs{Trakt: 1, Slug: "a", IMDb: "tt1", TMDB: 11}) {
@@ -98,15 +104,17 @@ func requireGenresArrays(t *testing.T, output string) {
 	t.Helper()
 
 	var wire struct {
-		Items []struct {
-			Movie map[string]json.RawMessage `json:"movie"`
-		} `json:"items"`
+		Item struct {
+			Items []struct {
+				Movie map[string]json.RawMessage `json:"movie"`
+			} `json:"items"`
+		} `json:"item"`
 	}
 	if err := json.Unmarshal([]byte(output), &wire); err != nil {
 		t.Fatal(err)
 	}
 
-	for i, item := range wire.Items {
+	for i, item := range wire.Item.Items {
 		if g := string(item.Movie["genres"]); !strings.HasPrefix(g, "[") {
 			t.Errorf("item %d genres = %s, want an array", i, g)
 		}
@@ -134,9 +142,9 @@ func pilotTrendingNullBody(t *testing.T) {
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusOK, `null`, nil)
 
-	res := h.ok(toolTrending, map[string]any{}, nil)
-	if got := resultText(res); got != `{"items":[]}` {
-		t.Errorf("output = %s, want {\"items\":[]}", got)
+	res := h.ok(toolTrending, trendingArgs(nil), nil)
+	if got := resultText(res); got != `{"type":"movie","item":{"items":[]}}` {
+		t.Errorf("output = %s, want an empty movie list", got)
 	}
 }
 
@@ -147,9 +155,14 @@ func pilotSummary(t *testing.T) {
 	long := strings.Repeat("word ", maxOverviewRunes)
 	h.trakt.respond("GET /movies/tt0133093", http.StatusOK, movieJSON("the-matrix-1999", long), nil)
 
-	var out Movie
+	var typedRes typedOut[Movie]
 
-	res := h.ok(toolMovieSummary, map[string]any{fieldMovieID: "tt0133093"}, &out)
+	res := h.ok(toolGetSummary, movieItem("tt0133093"), &typedRes)
+	out := typedRes.Item
+
+	if typedRes.Type != typeMovie {
+		t.Errorf("type = %q, want %q", typedRes.Type, typeMovie)
+	}
 
 	want := Movie{
 		Title: "The Matrix", Year: 1999,
@@ -185,11 +198,11 @@ func pilotSummaryNotExtended(t *testing.T) {
 	h := newHarness(t)
 	h.trakt.respond("GET /movies/481", http.StatusOK, `{"title": "The Matrix", "year": 1999, "ids": {"trakt": 481, "slug": "the-matrix-1999"}}`, nil)
 
-	var out Movie
-	h.ok(toolMovieSummary, map[string]any{fieldMovieID: "481", "extended": false}, &out)
+	var out typedOut[Movie]
+	h.ok(toolGetSummary, merge(movieItem("481"), map[string]any{queryExtended: false}), &out)
 
-	if out.Genres == nil || len(out.Genres) != 0 {
-		t.Errorf("genres = %#v, want []", out.Genres)
+	if out.Item.Genres == nil || len(out.Item.Genres) != 0 {
+		t.Errorf("genres = %#v, want []", out.Item.Genres)
 	}
 
 	if q := h.trakt.seen()[0].URL.Query(); q.Has("extended") {
@@ -202,7 +215,7 @@ func pilotSummaryBadIDs(t *testing.T) {
 
 	h := newHarness(t)
 	for _, id := range []string{"../users/me", "a/b", "x?extended=full", "nm0186505", "", "Matrix"} {
-		h.fail(toolMovieSummary, map[string]any{fieldMovieID: id}, "invalid argument: movie_id")
+		h.fail(toolGetSummary, movieItem(id), invalid(fieldID))
 	}
 
 	if got := len(h.trakt.seen()); got != 0 {
@@ -214,7 +227,7 @@ func pilotSummaryNotFound(t *testing.T) {
 	t.Helper()
 
 	h := newHarness(t)
-	h.fail(toolMovieSummary, map[string]any{fieldMovieID: "missing"}, msgNotFound)
+	h.fail(toolGetSummary, movieItem("missing"), msgNotFound)
 }
 
 func moviesEqual(a, b Movie) bool {
@@ -236,11 +249,11 @@ func TestMovieToolsCapReplySize(t *testing.T) {
 	h.trakt.respond(trendingRoute, http.StatusOK, trendingJSON()+pad, nil)
 	h.trakt.respond("GET /movies/481", http.StatusOK, `{"title": "The Matrix", "ids": {"trakt": 481, "slug": "the-matrix-1999"}}`+pad, nil)
 
-	if res := h.call("fetch_trending_movies", map[string]any{fieldLimit: 3}); !res.IsError {
-		t.Error("fetch_trending_movies: oversized answer accepted")
+	if res := h.call(toolTrending, trendingArgs(map[string]any{fieldLimit: 3})); !res.IsError {
+		t.Error("list_trending: oversized answer accepted")
 	}
 
-	if res := h.call("fetch_movie_summary", map[string]any{"movie_id": "481"}); !res.IsError {
-		t.Error("fetch_movie_summary: oversized answer accepted")
+	if res := h.call(toolGetSummary, movieItem("481")); !res.IsError {
+		t.Error("get_summary: oversized answer accepted")
 	}
 }

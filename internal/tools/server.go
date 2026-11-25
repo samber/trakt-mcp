@@ -63,7 +63,7 @@ type Deps struct {
 	Metrics *obs.Metrics
 
 	// onlyTools, when non-nil, registers just the named tools. Tests that call
-	// one tool set it: registering all 143 tools remarshals every input schema,
+	// one tool set it: registering every tool remarshals every input schema,
 	// which costs minutes per suite under the race detector.
 	onlyTools map[string]struct{}
 }
@@ -100,7 +100,7 @@ func NewServer(deps Deps) *Server {
 }
 
 // schemaCache shares inferred and resolved tool schemas across every Server in
-// the process. The 143 tools use a fixed set of Go types, and resolving their
+// the process. The tools use a fixed set of Go types, and resolving their
 // schemas dominates the cost of newServer: production builds one server, but
 // each test builds its own, and without the cache the race-enabled suite
 // peaks around 3 GB on CI. Cached schemas are read-only after creation.

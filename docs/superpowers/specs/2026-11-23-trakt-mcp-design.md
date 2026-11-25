@@ -14,7 +14,7 @@ The project ships as an open-source Go binary that anyone can self-host. A publi
 
 Goals:
 
-- 79 MCP tools covering the catalog reads and the user writes listed in section 8.
+- 90 MCP tools covering the catalog reads and the user writes listed in section 8.
 - Multi-tenant: one instance serves many Trakt accounts, isolated from each other.
 - Two consent screens to connect (ours, then Trakt's), no configuration on the user side.
 - Viewing history, watchlist, ratings and other Trakt data never touch disk.
@@ -152,50 +152,48 @@ Annotations: every tool has a `title` and explicit `readOnlyHint`, `destructiveH
 
 Identifiers: wherever a tool takes a show, movie or person id, it accepts the Trakt slug (`breaking-bad`), the numeric Trakt id, or an IMDb id (`tt0903747`, `nm0186505` for people). Values are validated against `^[a-z0-9-]+$`, `^[0-9]+$` and `^(tt|nm)[0-9]+$` before Trakt is called, so no path or query injection reaches the API. List tools take `limit` (default 10, max 100) and `page`; without `page` they auto-paginate up to `limit`, with `page` they return one page plus `{page, page_count, item_count}` taken from the `X-Pagination-*` headers.
 
-The tool names below follow the community Trakt MCP naming the user supplied. The user chose the full set; `fetch_person_lists` was later dropped (see 8.3), so the total is 79.
+The registry holds 90 tools. Tools that cover several kinds of item are merged and take a `type` (`movie`, `show`, `season` or `episode`, as each tool lists), with `season` and `episode` when the type needs them. Names follow `get_` (one entity), `list_` (a collection), `search` and the write verbs (`add_`, `remove_`, `update_`, `create_`, `delete_`, `reorder_`).
 
-### 8.1 Catalog: shows (13)
+### 8.1 Catalog: charts and details (24)
 
-`fetch_trending_shows`, `fetch_popular_shows`, `fetch_anticipated_shows`, `fetch_favorited_shows` (`period`), `fetch_played_shows` (`period`), `fetch_watched_shows` (`period`), `search_shows`, `fetch_show_ratings`, `fetch_show_summary` (`extended`), `fetch_show_videos` (`embed_markdown`), `fetch_related_shows`, `fetch_show_seasons`, `fetch_show_people` (`include_guest_stars`).
+Charts (`type` movie or show): `list_trending`, `list_popular`, `list_anticipated`, `list_favorited` (`period`), `list_played` (`period`), `list_watched` (`period`), `list_related`, plus `list_boxoffice`.
 
-### 8.2 Catalog: seasons (10) and episodes (9)
+Details (`type` movie, show, season or episode): `get_summary` (`extended`), `get_ratings`, `get_stats`, `list_watching`, `list_people` (`include_guest_stars`), `list_videos` (`embed_markdown`), `list_translations` (`language`), `list_item_lists` (`list_type`, `sort`; `list_type` values follow Trakt's enum, singular `watchlist`). Movie or show only: `list_aliases`, `list_studios`. Shows and seasons (these take a show `id` and no `type`): `list_seasons`, `list_season_episodes`, `get_next_episode`, `get_last_episode`, `list_show_certifications`. Movies: `list_movie_releases`.
 
-Seasons (`list_type` values follow Trakt's enum, singular `watchlist`): `fetch_season_info`, `fetch_season_episodes`, `fetch_season_ratings`, `fetch_season_stats`, `fetch_season_people`, `fetch_season_videos`, `fetch_season_watching`, `fetch_season_translations` (`language`), `fetch_season_lists` (`list_type`, `sort`), `fetch_season_comments`.
+### 8.2 Search and reference data (7)
 
-Episodes: `fetch_episode_summary`, `fetch_episode_ratings`, `fetch_episode_stats`, `fetch_episode_people`, `fetch_episode_videos`, `fetch_episode_watching`, `fetch_episode_translations`, `fetch_episode_lists`, `fetch_episode_comments`.
+`search` (`type` movie or show, `exact`), `search_by_id`, `list_genres`, `list_countries`, `list_languages`, `list_certifications`, `list_networks`.
 
-### 8.3 Catalog: movies (14), people (3), comments (3)
+### 8.3 People (2) and comments (3)
 
-Movies: `fetch_trending_movies`, `fetch_popular_movies`, `fetch_anticipated_movies`, `fetch_favorited_movies`, `fetch_played_movies`, `fetch_watched_movies`, `fetch_boxoffice_movies`, `search_movies`, `fetch_movie_ratings`, `fetch_movie_summary`, `fetch_movie_videos`, `fetch_related_movies`, `fetch_movie_people`, `fetch_movie_comments`.
+People: `get_person`, `list_person_credits` (`type` movie or show). A person-lists tool is not offered: Trakt's OpenAPI documents `GET /people/{id}/lists/...` as always returning an empty array.
 
-People: `fetch_person_summary`, `fetch_person_movies`, `fetch_person_shows`. `fetch_person_lists` is dropped: Trakt's OpenAPI documents `GET /people/{id}/lists/...` as always returning an empty array.
-
-Comments: `fetch_show_comments`, `fetch_comment`, `fetch_comment_replies`. Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false: spoiler comments are dropped). Reviews are flagged. Comment text is untrusted third-party content: tool descriptions say so, and the output wraps it in a `comment` field the model must not treat as instructions.
+Comments: `list_comments` (`type` movie, show, season or episode), `get_comment`, `list_comment_replies`. Comment tools take `sort` (`likes`, `replies`, `newest`, `oldest`) and `show_spoilers` (default false: spoiler comments are dropped). Reviews are flagged. Comment text is untrusted third-party content: tool descriptions say so, and the output wraps it in a `comment` field the model must not treat as instructions.
 
 ### 8.4 The user's account (21)
 
 | Area | Tools |
 | --- | --- |
-| Watched | `fetch_user_watched` (`type` movies or shows: last watched, play count), `fetch_history` (`history_type`, `item_id`, `start_at`, `end_at`), `add_to_history`, `remove_from_history`, `fetch_show_progress` (`hidden`, `specials`, `count_specials`, `last_activity`, `verbose`), `fetch_playback_progress` (`playback_type`), `remove_playback_item` |
-| Watchlist | `fetch_watchlist` (`type`: all, movies, shows, seasons, episodes; `sort`: rank, added, title, released, runtime, popularity, percentage, votes), `add_to_watchlist` (optional `notes`, VIP only, 500 characters), `remove_from_watchlist` |
-| Collection | `fetch_collection` (`type`), `add_to_collection`, `remove_from_collection` |
-| Ratings | `fetch_ratings`, `add_ratings`, `remove_ratings` |
-| Smart lists | `fetch_smart_lists`, `fetch_smart_list_items` (`type`, `sort_by`, `sort_how`) |
-| Check-in | `checkin_to_show` (by `show_id`, or `show_title` + `show_year`; `season`, `episode`, `message`), `checkin_to_movie`, `cancel_checkin` |
+| Watched | `list_user_watched` (`type` movies or shows: last watched, play count), `list_history` (`history_type`, `item_id`, `start_at`, `end_at`), `add_to_history`, `remove_from_history`, `get_show_progress` (`hidden`, `specials`, `count_specials`, `last_activity`, `verbose`), `get_show_collection_progress`, `list_playback_progress` (`playback_type`), `remove_playback_item` |
+| Watchlist | `list_watchlist` (`type`: all, movies, shows, seasons, episodes; `sort`: rank, added, title, released, runtime, popularity, percentage, votes), `add_to_watchlist` (optional `notes`, VIP only, 500 characters), `remove_from_watchlist` |
+| Collection | `list_collection` (`type`), `add_to_collection`, `remove_from_collection` |
+| Ratings | `list_user_ratings`, `add_ratings`, `remove_ratings` |
+| Smart lists | `list_smart_lists`, `list_smart_list_items` (`type`, `sort_by`, `sort_how`) |
+| Check-in | `checkin` (`type` movie, or show by `id` or `show_title` + `show_year`; `season`, `episode`, `message`), `cancel_checkin` |
 
-Count check: 13 + 10 + 9 + 14 + 3 + 3 + 6 + 21 = 79. If a list and a number ever disagree, the lists in this section win and the number is corrected.
+Count check: the lists in this section cover the catalog, account and recommendation tools; the registry total is 90 (`TestRegistryHas90Tools`). If a list and a number ever disagree, the lists in this section win and the number is corrected.
 
-Write tools (`add_to_history`, `remove_from_history`, `add_to_watchlist`, `remove_from_watchlist`, `add_to_collection`, `remove_from_collection`, `add_ratings`, `remove_ratings`) take typed items `{type, id}` with `type` one of `movie`, `show`, `season`, `episode`. `id` accepts a Trakt numeric id or an IMDb id; slugs are accepted for `movie` and `show` only (Trakt has no episode slugs). The tool groups items by type into the `movies`, `shows`, `seasons`, `episodes` arrays Trakt expects. A show item marks the whole show; a season or episode item marks only that one. Resolving "the last episode I watched" is the model's job through `fetch_show_progress` and `fetch_show_seasons`.
+Write tools (`add_to_history`, `remove_from_history`, `add_to_watchlist`, `remove_from_watchlist`, `add_to_collection`, `remove_from_collection`, `add_ratings`, `remove_ratings`) take typed items `{type, id}` with `type` one of `movie`, `show`, `season`, `episode`. `id` accepts a Trakt numeric id or an IMDb id; slugs are accepted for `movie` and `show` only (Trakt has no episode slugs). The tool groups items by type into the `movies`, `shows`, `seasons`, `episodes` arrays Trakt expects. A show item marks the whole show; a season or episode item marks only that one. Resolving "the last episode I watched" is the model's job through `get_show_progress` and `list_seasons`.
 
 The batch write tools take up to 50 items per call, plus an optional `watched_at` (ISO 8601, `unknown`, or `released` for episodes), `collected_at` or `rating` (1 to 10). The tool sends one Trakt request per call, never silently splitting a large batch.
 
-`fetch_smart_lists` lists a user's smart list definitions (default user `me`) through `GET /users/{id}/smart-lists`; `fetch_smart_list_items` resolves one list through `GET /smart-lists/{list_id}/items/{type}/{sort_by}/{sort_how}` (`type` all, movies or shows; `sort_by` rank, random, title, released, runtime, percentage, votes, imdb_rating, imdb_votes, tmdb_rating, tmdb_votes, rt_tomatometer, rt_audience, metascore, added; `sort_how` asc or desc; `limit`, `page`). Smart list items never go through the normal list endpoints. Finding: smart lists exist in the official API via `/users/{id}/smart-lists` and `/smart-lists/...`, verified from the OpenAPI spec; live behavior (`list_id` shape, private lists with our token) is unverified. Both endpoints are OAuth optional. Query filters would narrow a list on top of its own filters, and `watchnow` filters resolve against the list owner; the tool exposes none of them. `list_id` accepts the same bounded slug or numeric grammar as other ids.
+`list_smart_lists` lists a user's smart list definitions (default user `me`) through `GET /users/{id}/smart-lists`; `list_smart_list_items` resolves one list through `GET /smart-lists/{list_id}/items/{type}/{sort_by}/{sort_how}` (`type` all, movies or shows; `sort_by` rank, random, title, released, runtime, percentage, votes, imdb_rating, imdb_votes, tmdb_rating, tmdb_votes, rt_tomatometer, rt_audience, metascore, added; `sort_how` asc or desc; `limit`, `page`). Smart list items never go through the normal list endpoints. Finding: smart lists exist in the official API via `/users/{id}/smart-lists` and `/smart-lists/...`, verified from the OpenAPI spec; live behavior (`list_id` shape, private lists with our token) is unverified. Both endpoints are OAuth optional. Query filters would narrow a list on top of its own filters, and `watchnow` filters resolve against the list owner; the tool exposes none of them. `list_id` accepts the same bounded slug or numeric grammar as other ids.
 
-`checkin_to_movie` and `cancel_checkin` are additions to the supplied list: a check-in must be cancellable, and movies are in scope.
+`cancel_checkin` and the movie type of `checkin` are additions to the supplied list: a check-in must be cancellable, and movies are in scope.
 
-### 8.5 Recommendations (6)
+### 8.5 Recommendations (3)
 
-`fetch_movie_recommendations`, `fetch_show_recommendations` (both with `ignore_collected`, `ignore_watchlisted`), `hide_movie_recommendation`, `hide_show_recommendation`, `unhide_movie_recommendation`, `unhide_show_recommendation`.
+`list_recommendations` (`type` movie or show; `ignore_collected`, `ignore_watchlisted`), `hide_recommendation`, `unhide_recommendation`.
 
 ### 8.6 Errors returned to the assistant
 

@@ -1,6 +1,6 @@
 {
   "name": "trakt",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Browse Trakt's catalog of movies and shows, and manage your Trakt watchlist, watch history, collection, ratings, smart lists, check-ins and recommendations from ChatGPT or Codex. Hosted MCP server with OAuth sign-in through your Trakt account.",
   "author": {
     "name": "Samuel Berthe",

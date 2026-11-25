@@ -19,9 +19,9 @@ const (
 
 var ratingTypes = []string{mediaAll, mediaMovies, mediaShows, mediaSeasons, mediaEpisodes}
 
-// RatingsArgs are the arguments of fetch_ratings.
+// RatingsArgs are the arguments of list_user_ratings.
 type RatingsArgs struct {
-	Type   string `json:"type,omitempty"   jsonschema:"all, movies, shows, seasons or episodes; omit for all"`
+	Type   string `json:"type,omitempty"   jsonschema:"plural: all, movies, shows, seasons or episodes (singular movie, show, season or episode also accepted); omit for all"`
 	Rating *int   `json:"rating,omitempty" jsonschema:"only items rated this, 1 to 10"`
 	PageArgs
 }
@@ -42,9 +42,9 @@ type AddRatingsArgs struct {
 
 func registerRatingTools(s *Server) {
 	Register(s, Spec{
-		Name:        "fetch_ratings",
-		Title:       "Fetch ratings",
-		Description: "List what the user rated, optionally of one type or one rating value, with the rating and when it was given.",
+		Name:        "list_user_ratings",
+		Title:       "List my ratings",
+		Description: "List what the user rated (movies, TV shows, seasons, episodes), optionally of one type or one rating value, with the rating and when it was given.",
 		Access:      Read,
 	}, fetchRatings)
 	Register(s, Spec{
@@ -84,7 +84,7 @@ func ratingArg(r int) error {
 }
 
 func fetchRatings(ctx context.Context, c *trakt.UserClient, in RatingsArgs) (Listing[RatedItem], error) {
-	typ, err := oneOf(fieldType, in.Type, "", ratingTypes)
+	typ, err := oneOf(fieldType, normalizeMediaFilter(in.Type), "", ratingTypes)
 	if err != nil {
 		return Listing[RatedItem]{}, err
 	}

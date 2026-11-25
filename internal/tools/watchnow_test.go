@@ -8,10 +8,8 @@ import (
 )
 
 const (
-	toolMovieWatchNow   = "fetch_movie_watchnow"
-	toolShowWatchNow    = "fetch_show_watchnow"
-	toolEpisodeWatchNow = "fetch_episode_watchnow"
-	toolWatchNowSources = "fetch_watchnow_sources"
+	toolGetWatchNow     = "get_watchnow"
+	toolWatchNowSources = "list_watchnow_sources"
 
 	testCountry      = "fr"
 	routeWatchNowSrc = "GET /watchnow/sources"
@@ -37,15 +35,15 @@ var watchNowAbsent = []string{"streaming_ranks", "free.0.currency", "free.0.rent
 
 var watchNowCases = []catalogCase{
 	{
-		tool: toolMovieWatchNow, args: withCountry(movieRef(testMovieSlug), testCountry), route: "GET " + routeMovieSlug + "/watchnow/fr",
+		tool: toolGetWatchNow, args: withCountry(movieItem(testMovieSlug), testCountry), route: "GET " + routeMovieSlug + "/watchnow/fr",
 		fixture: "watchnow", object: true, want: watchNowWant, absent: watchNowAbsent,
 	},
 	{
-		tool: toolShowWatchNow, args: withCountry(showShow(testShowSlug), testCountry), route: "GET /shows/breaking-bad/watchnow/fr",
+		tool: toolGetWatchNow, args: withCountry(showItem(testShowSlug), testCountry), route: "GET /shows/breaking-bad/watchnow/fr",
 		fixture: "watchnow", object: true, want: watchNowWant,
 	},
 	{
-		tool: toolEpisodeWatchNow, args: withCountry(episodeArgs(1, 2), testCountry), route: "GET /shows/breaking-bad/seasons/1/episodes/2/watchnow/fr",
+		tool: toolGetWatchNow, args: withCountry(episodeItem(testShowSlug, 1, 2), testCountry), route: "GET /shows/breaking-bad/seasons/1/episodes/2/watchnow/fr",
 		fixture: "watchnow", object: true, want: watchNowWant,
 	},
 	{
@@ -61,20 +59,20 @@ var watchNowCases = []catalogCase{
 func TestWatchNowArguments(t *testing.T) {
 	t.Parallel()
 
-	movie := func(country string) map[string]any { return withCountry(movieRef(testMovieSlug), country) }
+	movie := func(country string) map[string]any { return withCountry(movieItem(testMovieSlug), country) }
 
 	cases := []argCase{
-		{name: "country upper case", tool: toolMovieWatchNow, args: movie("FR"), wantErr: invalid(fieldCountry)},
-		{name: "country three letters", tool: toolMovieWatchNow, args: movie("fra"), wantErr: invalid(fieldCountry)},
-		{name: "country one letter", tool: toolMovieWatchNow, args: movie("f"), wantErr: invalid(fieldCountry)},
-		{name: "country empty", tool: toolShowWatchNow, args: withCountry(showShow(testShowSlug), ""), wantErr: invalid(fieldCountry)},
-		{name: "country traversal", tool: toolEpisodeWatchNow, args: withCountry(episodeArgs(1, 2), "../"), wantErr: invalid(fieldCountry)},
-		{name: "country digits", tool: toolMovieWatchNow, args: movie("f1"), wantErr: invalid(fieldCountry)},
-		{name: "movie id traversal", tool: toolMovieWatchNow, args: withCountry(movieRef(traversalID), testCountry), wantErr: invalid(fieldMovieID)},
-		{name: "show id empty", tool: toolShowWatchNow, args: withCountry(showShow(""), testCountry), wantErr: invalid(fieldShowID)},
-		{name: "zero episode", tool: toolEpisodeWatchNow, args: withCountry(episodeArgs(1, 0), testCountry), wantErr: invalid(fieldEpisode)},
+		{name: "country upper case", tool: toolGetWatchNow, args: movie("FR"), wantErr: invalid(fieldCountry)},
+		{name: "country three letters", tool: toolGetWatchNow, args: movie("fra"), wantErr: invalid(fieldCountry)},
+		{name: "country one letter", tool: toolGetWatchNow, args: movie("f"), wantErr: invalid(fieldCountry)},
+		{name: "country empty", tool: toolGetWatchNow, args: withCountry(showItem(testShowSlug), ""), wantErr: invalid(fieldCountry)},
+		{name: "country traversal", tool: toolGetWatchNow, args: withCountry(episodeItem(testShowSlug, 1, 2), "../"), wantErr: invalid(fieldCountry)},
+		{name: "country digits", tool: toolGetWatchNow, args: movie("f1"), wantErr: invalid(fieldCountry)},
+		{name: "movie id traversal", tool: toolGetWatchNow, args: withCountry(movieItem(traversalID), testCountry), wantErr: invalid(fieldID)},
+		{name: "show id empty", tool: toolGetWatchNow, args: withCountry(showItem(""), testCountry), wantErr: invalid(fieldID)},
+		{name: "zero episode", tool: toolGetWatchNow, args: withCountry(episodeItem(testShowSlug, 1, 0), testCountry), wantErr: invalid(fieldEpisode)},
 		{
-			name: "season 0 is the specials", tool: toolEpisodeWatchNow, args: withCountry(episodeArgs(0, 1), testCountry),
+			name: "season 0 is the specials", tool: toolGetWatchNow, args: withCountry(episodeItem(testShowSlug, 0, 1), testCountry),
 			route: "GET /shows/breaking-bad/seasons/0/episodes/1/watchnow/fr", body: emptyObject,
 		},
 	}
@@ -92,7 +90,7 @@ func TestWatchNowOtherCountryIsEmpty(t *testing.T) {
 
 	var out map[string]any
 
-	h.ok(toolMovieWatchNow, withCountry(movieRef(testMovieSlug), "de"), &out)
+	h.ok(toolGetWatchNow, withCountry(movieItem(testMovieSlug), "de"), &out)
 
 	for _, group := range []string{"free", "subscription", "purchase", "cable", "cinema"} {
 		if got, ok := out[group].([]any); !ok || len(got) != 0 {
@@ -153,9 +151,9 @@ func TestWatchNowTraktFailures(t *testing.T) {
 		notAList    = `{"not":"a list"}`
 	)
 
-	runUpstreamFailures(t, toolMovieWatchNow, withCountry(movieRef(testMovieSlug), testCountry), "GET "+routeMovieSlug+"/watchnow/fr", notAnObject)
-	runUpstreamFailures(t, toolShowWatchNow, withCountry(showShow(testShowSlug), testCountry), "GET /shows/breaking-bad/watchnow/fr", notAnObject)
-	runUpstreamFailures(t, toolEpisodeWatchNow, withCountry(episodeArgs(1, 2), testCountry), "GET /shows/breaking-bad/seasons/1/episodes/2/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolGetWatchNow, withCountry(movieItem(testMovieSlug), testCountry), "GET "+routeMovieSlug+"/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolGetWatchNow, withCountry(showItem(testShowSlug), testCountry), "GET /shows/breaking-bad/watchnow/fr", notAnObject)
+	runUpstreamFailures(t, toolGetWatchNow, withCountry(episodeItem(testShowSlug, 1, 2), testCountry), "GET /shows/breaking-bad/seasons/1/episodes/2/watchnow/fr", notAnObject)
 	runUpstreamFailures(t, toolWatchNowSources, map[string]any{}, routeWatchNowSrc, notAList)
 }
 
@@ -172,7 +170,7 @@ func TestWatchNowTextIsBounded(t *testing.T) {
 
 	var out WatchNow
 
-	h.ok(toolMovieWatchNow, withCountry(movieRef(testMovieSlug), testCountry), &out)
+	h.ok(toolGetWatchNow, withCountry(movieItem(testMovieSlug), testCountry), &out)
 
 	l := out.Purchase[0]
 	if len([]rune(l.BuyPrice)) > maxPriceRunes || len([]rune(l.RentPrice)) > maxPriceRunes || len([]rune(l.Currency)) > maxCurrencyRunes {

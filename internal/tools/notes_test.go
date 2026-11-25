@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	toolFetchNote      = "fetch_note"
-	toolFetchUserNotes = "fetch_user_notes"
+	toolFetchNote      = "get_note"
+	toolFetchUserNotes = "list_user_notes"
 	toolCreateNote     = "create_note"
 	toolUpdateNote     = "update_note"
 	toolDeleteNote     = "delete_note"
@@ -266,4 +266,20 @@ func TestNoteOutputBounded(t *testing.T) {
 	if len([]rune(out.Notes)) > maxNoteRunes || len([]rune(out.Privacy)) > maxListFieldRunes || len([]rune(out.ItemType)) > maxListFieldRunes {
 		t.Errorf("note = %+v, want bounded text", out)
 	}
+}
+
+// TestUserNotesSingularType checks the singular media types of the notes
+// filter.
+func TestUserNotesSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return "/users/me/notes/" + plural }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool:      toolFetchUserNotes,
+		args:      func(typ string) map[string]any { return map[string]any{argType: typ} },
+		path:      path,
+		accepted:  noteTypes,
+		emptyPath: path(mediaAll),
+	}))
 }

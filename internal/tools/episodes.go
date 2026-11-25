@@ -44,53 +44,18 @@ func parseEpisode(body []byte) (Episode, error) {
 	return raw.trim(maxOverviewRunes), err
 }
 
-// EpisodeTranslationsArgs are the arguments of fetch_episode_translations.
+// EpisodeTranslationsArgs are the arguments of the episode handler of list_translations.
 type EpisodeTranslationsArgs struct {
 	EpisodeRef
 	Language string `json:"language,omitempty" jsonschema:"two-letter ISO 639-1 code such as fr; omit it for every language"`
 }
 
-// EpisodeListsArgs are the arguments of fetch_episode_lists.
+// EpisodeListsArgs are the arguments of the episode handler of list_item_lists.
 type EpisodeListsArgs struct {
 	PageArgs
 	EpisodeRef
 	ListType string `json:"list_type,omitempty" jsonschema:"all, personal, official, watchlist or favorites (default all)"`
 	Sort     string `json:"sort,omitempty"      jsonschema:"popular, likes, comments, items, added or updated (default popular)"`
-}
-
-func registerEpisodeTools(s *Server) {
-	Register(s, Spec{
-		Name: "fetch_episode_summary", Title: "Fetch episode summary", Access: Read,
-		Description: "Get one TV show episode's details: title, overview, rating, runtime, air date, episode type and ids.",
-	}, fetchEpisodeSummary)
-	Register(s, Spec{
-		Name: "fetch_episode_ratings", Title: "Fetch episode ratings", Access: Read,
-		Description: "Get a TV show episode's average rating, vote count and the number of votes for each rating from 1 to 10.",
-	}, fetchEpisodeRatings)
-	Register(s, Spec{
-		Name: "fetch_episode_stats", Title: "Fetch episode stats", Access: Read,
-		Description: "Get a TV show episode's counters: watchers, plays, collectors, comments, lists and votes.",
-	}, fetchEpisodeStats)
-	Register(s, Spec{
-		Name: "fetch_episode_people", Title: "Fetch episode people", Access: Read,
-		Description: "Get a TV show episode's cast (name, character) and crew grouped by department. Long credit lists are cut.",
-	}, fetchEpisodePeople)
-	Register(s, Spec{
-		Name: "fetch_episode_videos", Title: "Fetch episode videos", Access: Read,
-		Description: "List a TV show episode's trailers and other videos with title, type, site, url, publication date and a ready markdown link.",
-	}, fetchEpisodeVideos)
-	Register(s, Spec{
-		Name: "fetch_episode_watching", Title: "Fetch episode watchers", Access: Read,
-		Description: "Count the users watching a TV show episode right now and list their usernames, up to 50. Private accounts are counted, not listed.",
-	}, fetchEpisodeWatching)
-	Register(s, Spec{
-		Name: "fetch_episode_translations", Title: "Fetch episode translations", Access: Read,
-		Description: "Get a TV show episode's title and overview in one language (two-letter code) or in every language.",
-	}, fetchEpisodeTranslations)
-	Register(s, Spec{
-		Name: "fetch_episode_lists", Title: "Fetch lists with an episode", Access: Read,
-		Description: "List the Trakt lists that contain a TV show episode, by list type and sort. Takes limit and page." + untrustedNote,
-	}, fetchEpisodeLists)
 }
 
 func fetchEpisodeSummary(ctx context.Context, c *trakt.UserClient, in EpisodeRef) (Episode, error) {

@@ -7,11 +7,10 @@ import (
 )
 
 const (
-	toolFetchUserLists     = "fetch_user_lists"
-	toolFetchList          = "fetch_list"
-	toolFetchListItems     = "fetch_list_items"
-	toolFetchTrendingLists = "fetch_trending_lists"
-	toolFetchPopularLists  = "fetch_popular_lists"
+	toolFetchUserLists = "list_user_lists"
+	toolFetchList      = "get_list"
+	toolFetchListItems = "list_list_items"
+	toolListLists      = "list_lists"
 
 	// testOtherUser is a user slug other than the default "me".
 	testOtherUser = "sean"
@@ -85,7 +84,7 @@ var listCases = []catalogCase{
 		},
 	},
 	{
-		tool: toolFetchTrendingLists, args: pagedArgs, route: routeTrendingLists, fixture: "lists_trending", headers: pagedHeaders,
+		tool: toolListLists, args: merge(map[string]any{fieldKind: listKindTrending}, pagedArgs), route: routeTrendingLists, fixture: "lists_trending", headers: pagedHeaders,
 		wantQuery: map[string]string{fieldPage: "1", fieldLimit: "2"},
 		want: map[string]any{
 			"items.0.like_count": 50, "items.0.comment_count": 3, pathListWrapName: testListName, "items.0.list.ids.slug": testListSlug,
@@ -94,9 +93,72 @@ var listCases = []catalogCase{
 		absent: []string{"items.0.list.user", "items.1.list.description"},
 	},
 	{
-		tool: toolFetchPopularLists, args: map[string]any{}, route: routePopularLists, fixture: "lists_trending",
+		tool: toolListLists, args: map[string]any{fieldKind: listKindPopular}, route: routePopularLists, fixture: "lists_trending",
 		want: map[string]any{pathListWrapName: testListName, "items.0.like_count": 50},
 	},
+}
+
+// listRankingRoutes maps each kind of list_lists to its Trakt route.
+var listRankingRoutes = map[string]string{listKindTrending: routeTrendingLists, listKindPopular: routePopularLists}
+
+// TestListRankingRoutesByKind requires each kind to reach its own Trakt
+// endpoint with exactly one request.
+func TestListRankingRoutesByKind(t *testing.T) {
+	t.Parallel()
+
+	for kind, route := range listRankingRoutes {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+
+			h := newHarness(t)
+			h.trakt.respond(route, http.StatusOK, emptyList, nil)
+
+			var out Listing[TrendingList]
+
+			h.ok(toolListLists, map[string]any{fieldKind: kind}, &out)
+
+			seen := h.trakt.seen()
+			if len(seen) != 1 || seen[0].URL.Path != route[len("GET "):] {
+				t.Errorf("requests = %v, want one to %s", seen, route)
+			}
+		})
+	}
+}
+
+// TestListRankingNotFound requires a Trakt 404 to give the not-found tool
+// error for both kinds.
+func TestListRankingNotFound(t *testing.T) {
+	t.Parallel()
+
+	for kind := range listRankingRoutes {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+
+			newHarness(t).fail(toolListLists, map[string]any{fieldKind: kind}, msgNotFound)
+		})
+	}
+}
+
+// TestListRankingRefusesOtherKinds requires an unknown, empty or upper-case
+// kind to fail before any Trakt call.
+func TestListRankingRefusesOtherKinds(t *testing.T) {
+	t.Parallel()
+
+	var cases []argCase
+
+	for _, kind := range []string{"", "x", "Trending", "POPULAR", "trend", listTypeOfficial} {
+		cases = append(cases, argCase{name: "kind " + kind, tool: toolListLists, args: map[string]any{fieldKind: kind}, wantErr: invalid(fieldKind)})
+	}
+
+	runArgCases(t, cases)
+}
+
+// TestLegacyListRankingToolsRemoved requires the per-ranking list tools to be
+// gone.
+func TestLegacyListRankingToolsRemoved(t *testing.T) {
+	t.Parallel()
+
+	requireToolsRemoved(t, legacyToolPrefix+"trending_lists", legacyToolPrefix+"popular_lists")
 }
 
 func TestListToolArguments(t *testing.T) {
@@ -125,7 +187,7 @@ func TestListToolArguments(t *testing.T) {
 		{name: "items id empty", tool: toolFetchListItems, args: map[string]any{argListID: ""}, wantErr: invalid(argListID)},
 		{name: "items user traversal", tool: toolFetchListItems, args: listID(map[string]any{argUser: traversalID}), wantErr: invalid(argUser)},
 		{name: "items type unknown", tool: toolFetchListItems, args: items(map[string]any{argType: "x"}), wantErr: invalid(fieldType)},
-		{name: "items type singular", tool: toolFetchListItems, args: items(map[string]any{argType: itemMovie}), wantErr: invalid(fieldType)},
+		{name: "items type capitalized singular", tool: toolFetchListItems, args: items(map[string]any{argType: typeUpperCase}), wantErr: invalid(fieldType)},
 		{name: "items sort unknown", tool: toolFetchListItems, args: items(map[string]any{argSort: "x"}), wantErr: invalid(fieldSort)},
 		{name: "items sort traversal", tool: toolFetchListItems, args: items(map[string]any{argSort: "rank/../x"}), wantErr: invalid(fieldSort)},
 		{name: "items direction unknown", tool: toolFetchListItems, args: items(map[string]any{argSortHow: "up"}), wantErr: invalid(fieldSortHow)},
@@ -139,14 +201,14 @@ func TestListToolArguments(t *testing.T) {
 			name: "items global sorted", tool: toolFetchListItems, args: listID(map[string]any{argType: mediaEpisodes, argSort: "added"}),
 			route: "GET " + pathGlobalListItems + "episodes/added/asc", body: emptyList, wantPath: pathGlobalListItems + "episodes/added/asc",
 		},
-		{name: "popular type official", tool: toolFetchPopularLists, args: map[string]any{argType: listTypeOfficial}, route: routePopularLists + "/official", body: emptyList},
-		{name: "popular type personal", tool: toolFetchPopularLists, args: map[string]any{argType: listTypePersonal}, route: routePopularLists + "/personal", body: emptyList},
-		{name: "popular type unknown", tool: toolFetchPopularLists, args: map[string]any{argType: "x"}, wantErr: invalid(fieldType)},
-		{name: "popular type all is not a trakt type", tool: toolFetchPopularLists, args: map[string]any{argType: mediaAll}, wantErr: invalid(fieldType)},
-		{name: "trending type official", tool: toolFetchTrendingLists, args: map[string]any{argType: listTypeOfficial}, route: routeTrendingLists + "/official", body: emptyList},
-		{name: "trending type traversal", tool: toolFetchTrendingLists, args: map[string]any{argType: traversalID}, wantErr: invalid(fieldType)},
-		{name: "trending page zero", tool: toolFetchTrendingLists, args: map[string]any{fieldPage: 0}, wantErr: invalid(fieldPage)},
-		{name: "trending limit over max", tool: toolFetchTrendingLists, args: map[string]any{fieldLimit: maxLimit + 1}, wantErr: invalid(fieldLimit)},
+		{name: "popular type official", tool: toolListLists, args: map[string]any{fieldKind: listKindPopular, fieldListType: listTypeOfficial}, route: routePopularLists + "/official", body: emptyList},
+		{name: "popular type personal", tool: toolListLists, args: map[string]any{fieldKind: listKindPopular, fieldListType: listTypePersonal}, route: routePopularLists + "/personal", body: emptyList},
+		{name: "popular type unknown", tool: toolListLists, args: map[string]any{fieldKind: listKindPopular, fieldListType: "x"}, wantErr: invalid(fieldListType)},
+		{name: "popular type all is not a trakt type", tool: toolListLists, args: map[string]any{fieldKind: listKindPopular, fieldListType: mediaAll}, wantErr: invalid(fieldListType)},
+		{name: "trending type official", tool: toolListLists, args: map[string]any{fieldKind: listKindTrending, fieldListType: listTypeOfficial}, route: routeTrendingLists + "/official", body: emptyList},
+		{name: "trending type traversal", tool: toolListLists, args: map[string]any{fieldKind: listKindTrending, fieldListType: traversalID}, wantErr: invalid(fieldListType)},
+		{name: "trending page zero", tool: toolListLists, args: map[string]any{fieldKind: listKindTrending, fieldPage: 0}, wantErr: invalid(fieldPage)},
+		{name: "trending limit over max", tool: toolListLists, args: map[string]any{fieldKind: listKindTrending, fieldLimit: maxLimit + 1}, wantErr: invalid(fieldLimit)},
 	}
 
 	runArgCases(t, cases)
@@ -167,8 +229,8 @@ func TestListTraktFailures(t *testing.T) {
 	runUpstreamFailures(t, toolFetchList, map[string]any{argListID: testListSlug}, routeListGlobal, notAnArray)
 	runUpstreamFailures(t, toolFetchListItems, map[string]any{argListID: testListSlug, argUser: testOtherUser}, "GET "+pathUserListItems+"all/rank/asc", notAList)
 	runUpstreamFailures(t, toolFetchListItems, map[string]any{argListID: testListSlug}, "GET "+pathGlobalListItems+"all/rank/asc", notAList)
-	runUpstreamFailures(t, toolFetchTrendingLists, map[string]any{}, routeTrendingLists, notAList)
-	runUpstreamFailures(t, toolFetchPopularLists, map[string]any{}, routePopularLists, notAList)
+	runUpstreamFailures(t, toolListLists, map[string]any{fieldKind: listKindTrending}, routeTrendingLists, notAList)
+	runUpstreamFailures(t, toolListLists, map[string]any{fieldKind: listKindPopular}, routePopularLists, notAList)
 }
 
 // TestListTextIsBounded requires list names, descriptions, item notes and
@@ -221,7 +283,7 @@ func TestListTextIsBounded(t *testing.T) {
 
 		var out Listing[TrendingList]
 
-		h.ok(toolFetchTrendingLists, map[string]any{}, &out)
+		h.ok(toolListLists, map[string]any{fieldKind: listKindTrending}, &out)
 		checkList(t, out.Items[0].List)
 	})
 
@@ -242,4 +304,22 @@ func TestListTextIsBounded(t *testing.T) {
 			t.Errorf("item = %+v, want bounded text", i)
 		}
 	})
+}
+
+// TestListItemsSingularType checks the singular media types of the list
+// items filter.
+func TestListItemsSingularType(t *testing.T) {
+	t.Parallel()
+
+	path := func(plural string) string { return pathUserListItems + plural + "/added/asc" }
+
+	runArgCases(t, singularFilterCases(singularFilter{
+		tool: toolFetchListItems,
+		args: func(typ string) map[string]any {
+			return map[string]any{argListID: testListSlug, argUser: testOtherUser, argType: typ, argSort: listSortAdded}
+		},
+		path:      path,
+		accepted:  listItemTypes,
+		emptyPath: path(mediaAll),
+	}))
 }

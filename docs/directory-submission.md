@@ -79,11 +79,11 @@ Five that should work:
 
 | Prompt                                                | Tools                                 | Expected behavior                               |
 | ----------------------------------------------------- | ------------------------------------- | ----------------------------------------------- |
-| What are the trending shows this week?                | `fetch_trending_shows`                | Returns a short list of trending shows.         |
-| Add Dune: Part Two to my watchlist.                   | `search_movies`, `add_to_watchlist`   | Finds the movie, then adds it to the watchlist. |
-| What is the next episode of Severance I should watch? | `search_shows`, `fetch_show_progress` | Returns the next unwatched episode.             |
-| Mark Severance season 1 episode 1 as watched.         | `search_shows`, `add_to_history`      | Adds one play to the user's history.            |
-| Rate Arrival 9 out of 10.                             | `search_movies`, `add_ratings`        | Saves the rating.                               |
+| What are the trending shows this week?                | `list_trending`                       | Returns a short list of trending shows.         |
+| Add Dune: Part Two to my watchlist.                   | `search`, `add_to_watchlist`          | Finds the movie, then adds it to the watchlist. |
+| What is the next episode of Severance I should watch? | `search`, `get_show_progress`         | Returns the next unwatched episode.             |
+| Mark Severance season 1 episode 1 as watched.         | `search`, `add_to_history`            | Adds one play to the user's history.            |
+| Rate Arrival 9 out of 10.                             | `search`, `add_ratings`               | Saves the rating.                               |
 
 Three that should not trigger the plugin:
 

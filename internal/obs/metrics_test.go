@@ -17,7 +17,7 @@ import (
 const metricPrefix = "trakt_mcp_"
 
 func exercise(m *Metrics) {
-	m.ToolCall("fetch_trending_movies", "ok", 30*time.Millisecond)
+	m.ToolCall("list_trending", "ok", 30*time.Millisecond)
 	m.TraktCall("movies", 200, 20*time.Millisecond)
 	m.RateLimited("write")
 	m.Grant("authorization_code")
@@ -68,7 +68,7 @@ func TestMetrics_Values(t *testing.T) {
 	exercise(m)
 	m.TraktCall("movies", 0, time.Millisecond)
 
-	if got := testutil.ToFloat64(m.toolCalls.WithLabelValues("fetch_trending_movies", "ok")); got != 1 {
+	if got := testutil.ToFloat64(m.toolCalls.WithLabelValues("list_trending", "ok")); got != 1 {
 		t.Errorf("tool calls = %v, want 1", got)
 	}
 

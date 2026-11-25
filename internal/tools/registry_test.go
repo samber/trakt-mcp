@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -28,20 +29,24 @@ const (
 	// writeHold keeps each test write inside its handler long enough for the
 	// others to arrive while it runs.
 	writeHold = 30 * time.Millisecond
-	// trendingRoute is the fake Trakt route of fetch_trending_movies.
+	// trendingRoute is the fake Trakt route of list_trending for movies.
 	trendingRoute = "GET /movies/trending"
 )
 
 // TestShowToolDescriptionsSayTVShow keeps the word "show" from reading as a
-// movie: every tool about shows, seasons or episodes must say TV show/series.
+// movie: every tool about shows, seasons or episodes, by name, by taking an
+// ItemRef (type and id arguments) or by a type argument that accepts show
+// (ItemRef or bare TypeArg), must say TV show/series.
 func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 	t.Parallel()
 
 	srv := NewServer(offlineDeps())
+	listed := listTools(t, srv)
 	checked := 0
 
 	for _, spec := range srv.Specs() {
-		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") {
+		if !strings.Contains(spec.Name, "show") && !strings.Contains(spec.Name, "season") && !strings.Contains(spec.Name, "episode") &&
+			!takesItemRef(listed[spec.Name]) && !typeAcceptsShow(listed[spec.Name]) {
 			continue
 		}
 
@@ -56,24 +61,105 @@ func TestShowToolDescriptionsSayTVShow(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("no show, season or episode tool found")
 	}
+
+	requireSelectorControls(t, listed)
+}
+
+// requireSelectorControls fails unless the selectors above find the tools they
+// are meant to: without it a schema lookup could silently select nothing.
+// get_summary is selected by its ItemRef only. The bare type tools are
+// selected by their type property only: list_trending and search take no id,
+// and neither does list_recommendations.
+func requireSelectorControls(t *testing.T, listed map[string]*mcp.Tool) {
+	t.Helper()
+
+	if !takesItemRef(listed[toolGetSummary]) {
+		t.Fatalf("%s: type and id properties not found in the listed input schema", toolGetSummary)
+	}
+
+	for _, name := range []string{toolTrending, toolSearch, toolListRecommendations} {
+		if !typeAcceptsShow(listed[name]) || takesItemRef(listed[name]) {
+			t.Fatalf("%s: want a type property accepting show and no id in the listed input schema", name)
+		}
+	}
+}
+
+// typeAcceptsShow reports whether the listed tool has a type argument whose
+// description names show among its values.
+func typeAcceptsShow(tool *mcp.Tool) bool {
+	if tool == nil {
+		return false
+	}
+
+	schema, ok := tool.InputSchema.(map[string]any)
+	if !ok {
+		return false
+	}
+
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	prop, ok := props[argType].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	desc, _ := prop["description"].(string)
+
+	return typeShowWord.MatchString(desc)
+}
+
+// typeShowWord matches the singular value show, not the plural shows that the
+// type filters of lists and collections take.
+var typeShowWord = regexp.MustCompile(`\bshow\b`)
+
+// takesItemRef reports whether the listed tool takes an ItemRef: a type
+// argument naming the media type and an id. A type argument alone also
+// filters lists and collections, whose descriptions are checked by name.
+func takesItemRef(tool *mcp.Tool) bool {
+	return hasInputProperty(tool, argType) && hasInputProperty(tool, argID)
+}
+
+// hasInputProperty reports whether the listed tool's input schema has the
+// named top-level property.
+func hasInputProperty(tool *mcp.Tool, name string) bool {
+	if tool == nil {
+		return false
+	}
+
+	schema, ok := tool.InputSchema.(map[string]any)
+	if !ok {
+		return false
+	}
+
+	props, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+
+	_, ok = props[name]
+
+	return ok
 }
 
 // destroyPrefixes are the tool name prefixes that must be Destroy (spec §8).
 var destroyPrefixes = []string{"remove_", "cancel_", "delete_"}
 
 // accessByPrefix pins every tool name prefix to its access level, so a new
-// tool cannot be mislabeled (a fetch_ tool marked Write, an add_ tool marked
+// tool cannot be mislabeled (a list_ tool marked Write, an add_ tool marked
 // Read) and a new prefix must be added here deliberately.
 var accessByPrefix = map[string]Access{
-	"fetch_": Read, "search_": Read,
-	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "reorder_": Write,
+	"search_": Read, "get_": Read, "list_": Read, "search": Read,
+	"add_": Write, "create_": Write, "update_": Write, "hide_": Write, "unhide_": Write, "checkin_": Write, "checkin": Write, "reorder_": Write,
 	"reset_": Write, "undo_": Write,
 	"remove_": Destroy, "cancel_": Destroy, "delete_": Destroy,
 }
 
 // untrustedTextTools return text written by Trakt users (list names and
 // descriptions), so their descriptions must carry untrustedNote.
-var untrustedTextTools = []string{"fetch_season_lists", "fetch_episode_lists", "fetch_movie_lists", "fetch_show_lists", "search_by_id", "fetch_user_lists", "fetch_list", "fetch_list_items", "fetch_trending_lists", "fetch_popular_lists", "create_list", "update_list", "fetch_note", "fetch_user_notes", "create_note", "update_note", "fetch_favorites", "fetch_movie_releases"}
+var untrustedTextTools = []string{"list_item_lists", "list_person_credits", "search_by_id", "list_user_lists", "get_list", "list_list_items", "list_lists", "create_list", "update_list", "get_note", "list_user_notes", "create_note", "update_note", "list_favorites", "list_movie_releases", "list_smart_lists", "list_smart_list_items"}
 
 func TestToolAnnotations(t *testing.T) {
 	t.Parallel()
@@ -246,9 +332,9 @@ func TestRateLimitedToolError(t *testing.T) {
 
 		h := newHarness(t, withLimiter(limits.New(1, testRateBudget)))
 		h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-		h.ok(toolTrending, map[string]any{}, nil)
+		h.ok(toolTrending, trendingArgs(nil), nil)
 
-		res := h.call(toolTrending, map[string]any{})
+		res := h.call(toolTrending, trendingArgs(nil))
 		if !res.IsError || !strings.HasPrefix(resultText(res), "rate limited, retry after ") || !strings.HasSuffix(resultText(res), " s") {
 			t.Fatalf("second read = %q, want rate limited with a delay in seconds", resultText(res))
 		}
@@ -267,7 +353,7 @@ func TestRateLimitedToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.trakt.respond(trendingRoute, http.StatusTooManyRequests, `{}`, map[string]string{"Retry-After": "7"})
-		h.fail(toolTrending, map[string]any{}, "rate limited, retry after 7 s")
+		h.fail(toolTrending, trendingArgs(nil), "rate limited, retry after 7 s")
 
 		if rec := toolLine(t, h.logs, toolTrending); rec[keyStatus] != statusRateLimited || rec["trakt_status"] != float64(http.StatusTooManyRequests) {
 			t.Errorf("log line = %v, want rate_limited with trakt_status 429", rec)
@@ -284,9 +370,9 @@ func TestGlobalBudgetSpentIsRateLimited(t *testing.T) {
 
 	h := newHarness(t, withLimiter(limits.New(testRateBudget, testRateBudget, limits.WithGlobal(1))))
 	h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-	h.ok(toolTrending, map[string]any{}, nil)
+	h.ok(toolTrending, trendingArgs(nil), nil)
 
-	res := h.call(toolTrending, map[string]any{})
+	res := h.call(toolTrending, trendingArgs(nil))
 	if !res.IsError || !strings.HasPrefix(resultText(res), "rate limited, retry after ") {
 		t.Fatalf("call over the global budget = %q, want rate limited", resultText(res))
 	}
@@ -308,7 +394,7 @@ func TestUpstreamAuthToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.clients.setErr(trakt.ErrUpstreamAuth)
-		h.fail(toolTrending, map[string]any{}, msgUpstreamAuth)
+		h.fail(toolTrending, trendingArgs(nil), msgUpstreamAuth)
 	})
 
 	t.Run("trakt refuses the token", func(t *testing.T) {
@@ -316,7 +402,7 @@ func TestUpstreamAuthToolError(t *testing.T) {
 
 		h := newHarness(t)
 		h.trakt.respond(trendingRoute, http.StatusUnauthorized, `{"error":"invalid_token"}`, nil)
-		h.fail(toolTrending, map[string]any{}, msgUpstreamAuth)
+		h.fail(toolTrending, trendingArgs(nil), msgUpstreamAuth)
 	})
 }
 
@@ -367,7 +453,7 @@ func TestErrorKindMapping(t *testing.T) {
 		t.Errorf("unknown error = %q, want %q", got, msgInternal)
 	}
 
-	if got := mapError(invalidArgument("movie_id")).Error(); got != "invalid argument: movie_id" {
+	if got := mapError(invalidArgument("id")).Error(); got != "invalid argument: id" {
 		t.Errorf("validation error = %q", got)
 	}
 }
@@ -382,9 +468,9 @@ func TestToolCallLogHasNoArguments(t *testing.T) {
 
 	h := newHarness(t)
 	h.trakt.respond("GET /movies/"+secretSlug, http.StatusOK, movieJSON(secretSlug, secretOverview), nil)
-	h.ok(toolMovieSummary, map[string]any{fieldMovieID: secretSlug}, nil)
+	h.ok(toolGetSummary, movieItem(secretSlug), nil)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 	if rec["level"] != "INFO" {
 		t.Errorf("level = %v, want INFO", rec["level"])
 	}
@@ -426,13 +512,13 @@ func TestToolCallLogDebugHasPayload(t *testing.T) {
 
 	h := newHarness(t, withLogLevel(slog.LevelDebug))
 	h.trakt.respond("GET /movies/the-matrix-1999", http.StatusOK, movieJSON("the-matrix-1999", "debug overview"), nil)
-	h.ok(toolMovieSummary, map[string]any{fieldMovieID: "the-matrix-1999"}, nil)
+	h.ok(toolGetSummary, movieItem("the-matrix-1999"), nil)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 
 	args, ok := rec["args"].(map[string]any)
-	if !ok || args["movie_id"] != "the-matrix-1999" {
-		t.Errorf("args = %v, want movie_id", rec["args"])
+	if !ok || args[argID] != "the-matrix-1999" {
+		t.Errorf("args = %v, want id", rec["args"])
 	}
 
 	if !strings.Contains(h.logs.String(), "debug overview") {
@@ -446,9 +532,9 @@ func TestToolCallInternalErrorHidesCause(t *testing.T) {
 	h := newHarness(t)
 	cause := errors.New("store: disk I/O error")
 	h.clients.setErr(cause)
-	h.fail(toolMovieSummary, map[string]any{fieldMovieID: "secret-arg"}, msgInternal)
+	h.fail(toolGetSummary, movieItem("secret-arg"), msgInternal)
 
-	rec := toolLine(t, h.logs, toolMovieSummary)
+	rec := toolLine(t, h.logs, toolGetSummary)
 	if rec[keyStatus] != statusError || rec["level"] != "ERROR" || rec[keyErrorClass] != errorClassInternal ||
 		rec[keyErrorType] != "*errors.errorString" {
 		t.Errorf("line = %v, want ERROR, class internal and the cause's type", rec)
@@ -470,7 +556,7 @@ func TestToolCallUnreachableIsWarn(t *testing.T) {
 	closed.Close()
 
 	h := newHarness(t, withAPIBaseURL(closed.URL))
-	h.fail(toolTrending, map[string]any{}, msgUnreachable)
+	h.fail(toolTrending, trendingArgs(nil), msgUnreachable)
 
 	rec := toolLine(t, h.logs, toolTrending)
 	if rec[keyStatus] != statusError || rec["trakt_status"] != float64(0) || rec["level"] != "WARN" ||
@@ -512,7 +598,7 @@ func TestToolCallMetrics(t *testing.T) {
 
 	h := newHarness(t)
 	h.trakt.respond(trendingRoute, http.StatusOK, `[]`, nil)
-	h.ok(toolTrending, map[string]any{}, nil)
+	h.ok(toolTrending, trendingArgs(nil), nil)
 
 	checks := []struct {
 		name   string
@@ -524,6 +610,35 @@ func TestToolCallMetrics(t *testing.T) {
 	for _, c := range checks {
 		if got := metricValue(t, h.reg, c.name, c.labels); got != 1 {
 			t.Errorf("%s%v = %v, want 1", c.name, c.labels, got)
+		}
+	}
+}
+
+// legacyToolPrefix is a verb prefix no tool name may use: names start with
+// get_, list_, search, checkin or a write verb.
+const legacyToolPrefix = "fetch_"
+
+// summaryToolName is a tool that must stay registered; it anchors the
+// non-empty check of TestNoFetchPrefix.
+const summaryToolName = "get_summary"
+
+func TestNoFetchPrefix(t *testing.T) {
+	t.Parallel()
+
+	specs := NewServer(offlineDeps()).Specs()
+
+	// Positive control: an empty or truncated registry would pass the loop vacuously.
+	if len(specs) == 0 {
+		t.Fatal("registry is empty")
+	}
+
+	if !slices.ContainsFunc(specs, func(s Spec) bool { return s.Name == summaryToolName }) {
+		t.Fatalf("registry lacks %s", summaryToolName)
+	}
+
+	for _, spec := range specs {
+		if strings.HasPrefix(spec.Name, legacyToolPrefix) {
+			t.Errorf("%s: name starts with %q, want get_ or list_", spec.Name, legacyToolPrefix)
 		}
 	}
 }
