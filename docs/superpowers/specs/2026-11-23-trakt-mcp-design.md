@@ -158,7 +158,7 @@ The registry holds 90 tools. Tools that cover several kinds of item are merged a
 
 Charts (`type` movie or show): `list_trending`, `list_popular`, `list_anticipated`, `list_favorited` (`period`), `list_played` (`period`), `list_watched` (`period`), `list_related`, plus `list_boxoffice`.
 
-Details (`type` movie, show, season or episode): `get_summary` (`extended`), `get_ratings`, `get_stats`, `list_watching`, `list_people` (`include_guest_stars`), `list_videos` (`embed_markdown`), `list_translations` (`language`), `list_item_lists` (`list_type`, `sort`; `list_type` values follow Trakt's enum, singular `watchlist`). Movie or show only: `list_aliases`, `list_studios`. Shows and seasons: `list_seasons`, `list_season_episodes`, `get_next_episode`, `get_last_episode`, `list_show_certifications`. Movies: `list_movie_releases`.
+Details (`type` movie, show, season or episode): `get_summary` (`extended`), `get_ratings`, `get_stats`, `list_watching`, `list_people` (`include_guest_stars`), `list_videos` (`embed_markdown`), `list_translations` (`language`), `list_item_lists` (`list_type`, `sort`; `list_type` values follow Trakt's enum, singular `watchlist`). Movie or show only: `list_aliases`, `list_studios`. Shows and seasons (these take a show `id` and no `type`): `list_seasons`, `list_season_episodes`, `get_next_episode`, `get_last_episode`, `list_show_certifications`. Movies: `list_movie_releases`.
 
 ### 8.2 Search and reference data (7)
 
@@ -174,7 +174,7 @@ Comments: `list_comments` (`type` movie, show, season or episode), `get_comment`
 
 | Area | Tools |
 | --- | --- |
-| Watched | `list_user_watched` (`type` movies or shows: last watched, play count), `list_history` (`history_type`, `item_id`, `start_at`, `end_at`), `add_to_history`, `remove_from_history`, `get_show_progress` (`hidden`, `specials`, `count_specials`, `last_activity`, `verbose`), `list_playback_progress` (`playback_type`), `remove_playback_item` |
+| Watched | `list_user_watched` (`type` movies or shows: last watched, play count), `list_history` (`history_type`, `item_id`, `start_at`, `end_at`), `add_to_history`, `remove_from_history`, `get_show_progress` (`hidden`, `specials`, `count_specials`, `last_activity`, `verbose`), `get_show_collection_progress`, `list_playback_progress` (`playback_type`), `remove_playback_item` |
 | Watchlist | `list_watchlist` (`type`: all, movies, shows, seasons, episodes; `sort`: rank, added, title, released, runtime, popularity, percentage, votes), `add_to_watchlist` (optional `notes`, VIP only, 500 characters), `remove_from_watchlist` |
 | Collection | `list_collection` (`type`), `add_to_collection`, `remove_from_collection` |
 | Ratings | `list_user_ratings`, `add_ratings`, `remove_ratings` |

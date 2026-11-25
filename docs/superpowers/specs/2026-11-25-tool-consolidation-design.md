@@ -223,3 +223,14 @@ type Typed struct {
 - `id` errors name `id`, not the legacy `movie_id` or `show_id`.
 - Arguments that apply to some types only are refused for the others, never ignored:
   `get_summary` refuses `extended` with `type: season` or `episode`.
+
+### Argument vocabulary
+
+- Every tool that takes one movie, show or person takes it as `id` (slug, Trakt id or IMDb id);
+  other entities keep their typed names (`comment_id`, `list_id`, `note_id`).
+- `type` on merged tools is the singular media type (movie, show, season, episode); list
+  filters keep Trakt's plural values (movies, shows). `list_lists` uses `kind` for
+  trending or popular and `list_type` for personal or official.
+- Deferred follow-ups, not in this change: accept singular `movie` and `show` as synonyms in the
+  plural filters; let `checkin` accept `type: episode`; a `MovieShowRef` so movie or show only
+  tools do not expose `season` and `episode` in their schema; tool-selection evals.

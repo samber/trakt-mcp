@@ -55,7 +55,7 @@ Trakt MCP uses the Trakt API but is not affiliated with, endorsed by, or certifi
 | `list_show_certifications` | Age ratings of a show by country.                                                 |
 | `list_movie_releases`      | Release dates of a movie by country.                                              |
 
-Tools that cover several kinds of item take `type`: `movie`, `show`, `season` or `episode`. `season` is required for types `season` and `episode`, `episode` for type `episode` (season 0 is the specials). Tools marked movie or show take those two types only.
+Tools that cover several kinds of item take `type`: `movie`, `show`, `season` or `episode`. `season` is required for types `season` and `episode`, `episode` for type `episode` (season 0 is the specials). Tools marked movie or show take those two types only. `list_seasons`, `list_season_episodes`, `get_next_episode`, `get_last_episode` and `list_show_certifications` take `id` (the show) and no `type`; every tool taking one movie, show or person names it `id`.
 
 ### People and comments (5)
 
@@ -132,7 +132,7 @@ Write tools take up to 50 items per call, each `{type, id}` with `type` one of `
 | `list_user_lists`   | Your custom lists, or another user's public ones.                                         |
 | `get_list`          | One list: name, privacy, item count, likes.                                               |
 | `list_list_items`   | Items on a list.                                                                          |
-| `list_lists`        | Lists from Trakt's rankings (`kind` `trending` or `popular`).                             |
+| `list_lists`        | Lists from Trakt's rankings (`kind` `trending` or `popular`; `list_type`).                |
 | `create_list`       | Creates a list (`privacy`: private, link, friends or public).                             |
 | `update_list`       | Renames a list or changes its description and privacy (private, link, friends or public). |
 | `add_list_items`    | Adds up to 50 items to one of your lists.                                                 |
