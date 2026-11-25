@@ -453,7 +453,7 @@ func TestWriteToolsSendOneRequest(t *testing.T) {
 		t.Run(bt.tool, func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(bt.tool))
 			log := captureBodies(h, bt.route, http.StatusCreated, `{}`)
 
 			h.ok(bt.tool, merge(manyMovies(maxBatchItems), bt.extra), nil)
@@ -485,7 +485,7 @@ func TestAccountToolsOutputs(t *testing.T) {
 		t.Run(tc.tool, func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(tc.tool))
 
 			status := tc.status
 			if status == 0 {

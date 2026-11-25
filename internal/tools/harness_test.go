@@ -279,6 +279,16 @@ func withTools(groups ...func(*Server)) harnessOption {
 	return func(c *harnessConfig) { c.extra = append(c.extra, groups...) }
 }
 
+// withOnlyTools registers just the named tools; see Deps.onlyTools.
+func withOnlyTools(names ...string) harnessOption {
+	return func(c *harnessConfig) {
+		c.deps.onlyTools = map[string]struct{}{}
+		for _, n := range names {
+			c.deps.onlyTools[n] = struct{}{}
+		}
+	}
+}
+
 func withLogLevel(level slog.Level) harnessOption {
 	return func(c *harnessConfig) { c.logLevel = level }
 }

@@ -740,6 +740,8 @@ func TestCallbackExchangeFailureShowsErrorPage(t *testing.T) {
 			t.Errorf("status %d: page shows the upstream body: %s", status, body)
 		}
 
+		assertRetryLink(t, body)
+
 		e.assertNoUser()
 	}
 }
@@ -757,6 +759,8 @@ func TestCallbackProfileFailureShowsErrorPage(t *testing.T) {
 			t.Errorf("status %d: page shows the upstream body: %s", status, body)
 		}
 
+		assertRetryLink(t, body)
+
 		e.assertNoUser()
 	}
 
@@ -764,7 +768,7 @@ func TestCallbackProfileFailureShowsErrorPage(t *testing.T) {
 	e := newEnv(t)
 	e.trakt.set(func(f *fakeTrakt) { f.slug = "" })
 	cp := e.authorize(authorizeParams(newPKCE()))
-	errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusBadGateway, "Trakt sign-in failed")
+	assertRetryLink(t, errorPage(t, e.callback(e.approve(cp), cp.cookie), http.StatusBadGateway, "Trakt sign-in failed"))
 }
 
 func TestCallback_AccessDeniedShowsRetryPage(t *testing.T) {
@@ -795,8 +799,17 @@ func TestCallback_OtherUpstreamErrorShowsGenericPage(t *testing.T) {
 	cp := e.authorize(authorizeParams(newPKCE()))
 	state := e.approve(cp)
 	rec := e.get(pathCallback+"?"+url.Values{paramState: {state}, "error": {"server_error"}}.Encode(), cp.cookie)
-	errorPage(t, rec, http.StatusBadGateway, "Trakt sign-in failed")
+	assertRetryLink(t, errorPage(t, rec, http.StatusBadGateway, "Trakt sign-in failed"))
 	e.assertNoUser()
+}
+
+// assertRetryLink fails unless the error page links back to our authorize URL.
+func assertRetryLink(t *testing.T, body string) {
+	t.Helper()
+
+	if !strings.Contains(body, `href="`+testBaseURL+`/oauth/authorize?`) {
+		t.Errorf("no retry link: %s", body)
+	}
 }
 
 func TestCallback_WrongState(t *testing.T) {

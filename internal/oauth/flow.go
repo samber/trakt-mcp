@@ -142,11 +142,22 @@ var (
 		status: http.StatusInternalServerError, Title: "Something went wrong",
 		Message: "The server could not complete the sign-in. Try again in a moment.",
 	}
-	pageUpstreamFailed = &page{
-		status: http.StatusBadGateway, Title: "Trakt sign-in failed",
-		Message: "Trakt did not complete the sign-in. Try again from your assistant.",
-	}
 )
+
+// upstreamFailedPage is shown when Trakt did not complete the sign-in. Its
+// retry link restarts the client's original request.
+func (s *Server) upstreamFailedPage(form url.Values) *page {
+	return &page{
+		status: http.StatusBadGateway, Title: "Trakt sign-in failed",
+		Message:  "Trakt did not complete the sign-in. Try again.",
+		RetryURL: s.retryURL(form),
+	}
+}
+
+// retryURL is our authorize URL for the client's original request.
+func (s *Server) retryURL(form url.Values) string {
+	return s.issuer + pathAuthorize + "?" + form.Encode()
+}
 
 // accessDeniedPage is shown when the user refused the application on Trakt's
 // consent page. Its retry link restarts the client's original request.
@@ -154,7 +165,7 @@ func (s *Server) accessDeniedPage(form url.Values) *page {
 	return &page{
 		status: http.StatusForbidden, Title: "Trakt access not granted",
 		Message:  "You did not approve this server on Trakt's page, and access to your Trakt account is required for it to work.",
-		RetryURL: s.issuer + pathAuthorize + "?" + form.Encode(),
+		RetryURL: s.retryURL(form),
 	}
 }
 
@@ -333,7 +344,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Upstream errors carry a status and an OAuth error code, never a body.
 		s.log.WarnContext(ctx, "oauth: trakt code exchange failed", slog.Any("error", err))
-		s.renderError(w, r, pageUpstreamFailed)
+		s.renderError(w, r, s.upstreamFailedPage(p.Form))
 
 		return
 	}
@@ -341,7 +352,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	profile, err := s.up.Profile(ctx, tok.AccessToken)
 	if err != nil {
 		s.log.WarnContext(ctx, "oauth: trakt profile lookup failed", slog.Any("error", err))
-		s.renderError(w, r, pageUpstreamFailed)
+		s.renderError(w, r, s.upstreamFailedPage(p.Form))
 
 		return
 	}
@@ -387,7 +398,7 @@ func (s *Server) renderUpstreamError(w http.ResponseWriter, r *http.Request, uer
 	}
 
 	s.log.InfoContext(r.Context(), "oauth: trakt returned an error", slog.String("error", code))
-	s.renderError(w, r, pageUpstreamFailed)
+	s.renderError(w, r, s.upstreamFailedPage(form))
 }
 
 // parseAuthorize validates an authorization request. It returns a page when

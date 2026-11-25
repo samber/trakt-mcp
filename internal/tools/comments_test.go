@@ -128,7 +128,7 @@ func TestCommentToolsOutputs(t *testing.T) {
 		t.Run(tc.tool, func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(tc.tool))
 			h.trakt.respond(tc.route, http.StatusOK, fixture(t, tc.fixture), tc.headers)
 
 			var out any
@@ -174,7 +174,7 @@ func TestCommentToolsNeverReturnNullArrays(t *testing.T) {
 			t.Run(tc.tool+"/"+body, func(t *testing.T) {
 				t.Parallel()
 
-				h := newHarness(t)
+				h := newHarness(t, withOnlyTools(tc.tool))
 				h.trakt.respond(tc.route, http.StatusOK, body, nil)
 
 				var out any
@@ -202,7 +202,7 @@ func TestCommentNotFoundIsToolError(t *testing.T) {
 		t.Run(tc.tool, func(t *testing.T) {
 			t.Parallel()
 
-			newHarness(t).fail(tc.tool, tc.args, msgNotFound)
+			newHarness(t, withOnlyTools(tc.tool)).fail(tc.tool, tc.args, msgNotFound)
 		})
 	}
 }
@@ -222,7 +222,7 @@ func TestCommentsDropSpoilersByDefault(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/show_spoilers=%v", tc.tool, showSpoilers), func(t *testing.T) {
 				t.Parallel()
 
-				h := newHarness(t)
+				h := newHarness(t, withOnlyTools(tc.tool))
 				h.trakt.respond(tc.route, http.StatusOK, fixture(t, tc.fixture), nil)
 
 				args := map[string]any{}
