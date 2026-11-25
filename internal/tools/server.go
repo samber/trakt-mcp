@@ -106,14 +106,25 @@ func NewServer(deps Deps) *Server {
 // peaks around 3 GB on CI. Cached schemas are read-only after creation.
 var schemaCache = mcp.NewSchemaCache()
 
+// serverCapabilities advertises tools/listChanged explicitly: the SDK infers it
+// only once a tool is registered. A non-nil Capabilities replaces the SDK
+// default, so logging is restated here to keep it advertised.
+func serverCapabilities() *mcp.ServerCapabilities {
+	return &mcp.ServerCapabilities{
+		Logging: &mcp.LoggingCapabilities{}, //nolint:staticcheck // SA1019: deprecated since protocol 2026-07-28 but still served to clients on older versions
+		Tools:   &mcp.ToolCapabilities{ListChanged: true},
+	}
+}
+
 // newServer builds the MCP server with the given tool groups registered in
 // order; tests add their own groups.
 func newServer(deps Deps, groups []func(*Server)) *Server {
 	s := &Server{
 		deps: deps,
 		mcp: mcp.NewServer(&mcp.Implementation{Name: serverName, Version: deps.Version, Icons: serverIcons()}, &mcp.ServerOptions{
-			Logger:      deps.logger(),
-			SchemaCache: schemaCache,
+			Logger:       deps.logger(),
+			SchemaCache:  schemaCache,
+			Capabilities: serverCapabilities(),
 			SupportedProtocolVersions: []string{
 				protocolVersion20260728,
 				protocolVersion20251125,
