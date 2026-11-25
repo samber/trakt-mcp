@@ -61,6 +61,22 @@ type Deps struct {
 	Logger *slog.Logger
 	// Metrics records tool calls and rate-limit refusals; nil disables them.
 	Metrics *obs.Metrics
+
+	// onlyTools, when non-nil, registers just the named tools. Tests that call
+	// one tool set it: registering all 143 tools remarshals every input schema,
+	// which costs minutes per suite under the race detector.
+	onlyTools map[string]struct{}
+}
+
+// skipsTool reports whether Register must leave the tool out.
+func (d Deps) skipsTool(name string) bool {
+	if d.onlyTools == nil {
+		return false
+	}
+
+	_, keep := d.onlyTools[name]
+
+	return !keep
 }
 
 func (d Deps) logger() *slog.Logger {
@@ -83,13 +99,21 @@ func NewServer(deps Deps) *Server {
 	return newServer(deps, catalog)
 }
 
+// schemaCache shares inferred and resolved tool schemas across every Server in
+// the process. The 143 tools use a fixed set of Go types, and resolving their
+// schemas dominates the cost of newServer: production builds one server, but
+// each test builds its own, and without the cache the race-enabled suite
+// peaks around 3 GB on CI. Cached schemas are read-only after creation.
+var schemaCache = mcp.NewSchemaCache()
+
 // newServer builds the MCP server with the given tool groups registered in
 // order; tests add their own groups.
 func newServer(deps Deps, groups []func(*Server)) *Server {
 	s := &Server{
 		deps: deps,
 		mcp: mcp.NewServer(&mcp.Implementation{Name: serverName, Version: deps.Version, Icons: serverIcons()}, &mcp.ServerOptions{
-			Logger: deps.logger(),
+			Logger:      deps.logger(),
+			SchemaCache: schemaCache,
 			SupportedProtocolVersions: []string{
 				protocolVersion20260728,
 				protocolVersion20251125,

@@ -50,7 +50,7 @@ func runTraktFailureMatrix(t *testing.T, tools []failureTool) {
 			t.Run(tl.tool+"/"+f.name, func(t *testing.T) {
 				t.Parallel()
 
-				h := newHarness(t)
+				h := newHarness(t, withOnlyTools(tl.tool))
 				h.trakt.respond(tl.route, f.status, f.body, nil)
 				h.fail(tl.tool, tl.args, f.want)
 
@@ -63,7 +63,7 @@ func runTraktFailureMatrix(t *testing.T, tools []failureTool) {
 		t.Run(tl.tool+"/rate limited", func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(tl.tool))
 			h.trakt.respond(tl.route, testStatusRateLimited, hostile, nil)
 
 			res := h.call(tl.tool, tl.args)
@@ -76,7 +76,7 @@ func runTraktFailureMatrix(t *testing.T, tools []failureTool) {
 			t.Run(tl.tool+"/malformed body", func(t *testing.T) {
 				t.Parallel()
 
-				h := newHarness(t)
+				h := newHarness(t, withOnlyTools(tl.tool))
 				h.trakt.respond(tl.route, http.StatusOK, `{"not": "closed"`, nil)
 				h.fail(tl.tool, tl.args, msgInternal)
 			})

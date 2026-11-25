@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -157,6 +158,10 @@ func Register[In, Out any](s *Server, spec Spec, h func(ctx context.Context, c *
 		panic("tools: tool registered twice: " + spec.Name)
 	}
 
+	if s.deps.skipsTool(spec.Name) {
+		return
+	}
+
 	if spec.Access.writes() && !strings.Contains(spec.Description, writeWarning) {
 		spec.Description = strings.TrimSpace(spec.Description) + " " + writeWarning
 	}
@@ -171,9 +176,35 @@ func Register[In, Out any](s *Server, spec Spec, h func(ctx context.Context, c *
 	s.specs = append(s.specs, spec)
 }
 
-// outputSchema infers Out's schema, describing trakt.Page as Listing
-// marshals it (the go-sdk validates every output against this schema).
+// outputSchemas maps each Out type to its inferred schema. go-sdk's schema
+// cache keys provided schemas by pointer, so returning the same pointer per
+// type is what lets schemaCache skip re-resolving it for every Server.
+var outputSchemas sync.Map // reflect.Type -> *jsonschema.Schema
+
+// outputSchema returns the schema of Out, inferring it once per type.
 func outputSchema[Out any]() *jsonschema.Schema {
+	rt := reflect.TypeFor[Out]()
+	if cached, ok := outputSchemas.Load(rt); ok {
+		if schema, isSchema := cached.(*jsonschema.Schema); isSchema {
+			return schema
+		}
+	}
+
+	// Another goroutine may have stored a schema first: keep that one, so
+	// every caller shares one pointer.
+	stored, _ := outputSchemas.LoadOrStore(rt, inferOutputSchema[Out]())
+
+	schema, isSchema := stored.(*jsonschema.Schema)
+	if !isSchema {
+		panic(fmt.Sprintf("tools: cached output schema of %v has type %T", rt, stored))
+	}
+
+	return schema
+}
+
+// inferOutputSchema infers Out's schema, describing trakt.Page as Listing
+// marshals it (the go-sdk validates every output against this schema).
+func inferOutputSchema[Out any]() *jsonschema.Schema {
 	pageSchema, err := jsonschema.For[pageJSON](nil)
 	if err != nil {
 		panic(fmt.Sprintf("tools: page schema: %v", err))

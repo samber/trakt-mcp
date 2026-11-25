@@ -132,7 +132,7 @@ func runUpstreamFailures(t *testing.T, tool string, args map[string]any, route, 
 		t.Run(tool+"/"+f.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(tool))
 			h.trakt.respond(route, f.status, f.body, nil)
 			h.fail(tool, args, f.want)
 

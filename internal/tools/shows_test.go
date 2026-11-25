@@ -420,7 +420,7 @@ func runArgCases(t *testing.T, cases []argCase) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			h := newHarness(t)
+			h := newHarness(t, withOnlyTools(tc.tool))
 
 			if tc.wantErr != "" {
 				h.fail(tc.tool, tc.args, tc.wantErr)
